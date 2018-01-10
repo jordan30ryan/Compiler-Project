@@ -10,4 +10,7 @@ public:
 private:
     std::ifstream input_file;
     int line_number;
+    CharClass ascii_mapping[128] = {TokenType::UNDEFINED};
+
+    CharClass getClass(char c);
 };
