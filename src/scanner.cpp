@@ -2,9 +2,12 @@
 #include <iostream>
 #include <ctype.h>
 
-bool Scanner::init(char* filename)
+bool Scanner::init(const char* filename)
 {
     this->input_file.open(filename, std::ifstream::in);
+
+    if (this->input_file.bad()) return false;
+    
     this->line_number = 1;
 
     // TODO: Init some tables (e.g. reserved words)
@@ -69,6 +72,8 @@ bool Scanner::init(char* filename)
     {
         std::cout << k << ' ' << ascii_mapping[k] << '\n';
     }
+
+    return true;
 }
 
 CharClass Scanner::getClass(char c)
@@ -107,8 +112,11 @@ Token Scanner::getToken()
         ch = this->input_file.peek();
     }
 
-    // Iterate through to get the next token
-    while (this->input_file.get(ch))
+    // Iterate through to get the next token (May not need the while?)
+    //while (
+        this->input_file.get(ch)
+        ;
+    //)
     {
         // If the current token is a string or char, the letters should not 
         //  be uppercased. Otherwise, convert ch to upper for simpler scanning
@@ -117,10 +125,9 @@ Token Scanner::getToken()
             ch = toupper(ch);
         }
         
-        // TODO: break once a complete token is found
-        switch (getClass(ch))
+        switch (ch)
         {
-            case TokenType::NEWLINE:
+            case '\n':
                 // Newlines terminate line comments and increment 
                 //  the line_number counter
                 this->line_number++;
@@ -130,10 +137,23 @@ Token Scanner::getToken()
             case '\t': 
                 // TODO: Whitespace
                 break;
-            case TokenType::FWD_SLASH:
+            case '*':
+                if (input_file.peek() == '/')
+                {
+                    block_comment_level--;
+                }
+            case '/':
                 if (input_file.peek() == '/')
                 {
                     line_comment = true;
+                }
+                else if (input_file.peek() == '*')
+                {
+                    block_comment_level++;
+                }
+                else 
+                {
+                    token.type = TokenType::DIVISION;
                 }
                 break;
         }
