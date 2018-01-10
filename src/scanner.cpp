@@ -21,27 +21,27 @@ bool Scanner::init(char* filename)
         // Only uppercase letters are used unless it's within a string
         this->ascii_mapping[i] = CharClass::LETTER;
     }
-    this->ascii_mapping[10] = CharClass::SYMBOLS
-    this->ascii_mapping[33] = CharClass::OPERATORS
-    this->ascii_mapping[34] = CharClass::
-    this->ascii_mapping[38] = CharClass::
-    this->ascii_mapping[39] = CharClass::
-    this->ascii_mapping[40] = CharClass::
-    this->ascii_mapping[41] = CharClass::
-    this->ascii_mapping[42] = CharClass::
-    this->ascii_mapping[43] = CharClass::
-    this->ascii_mapping[44] = CharClass::
-    this->ascii_mapping[45] = CharClass::
-    this->ascii_mapping[46] = CharClass::
-    this->ascii_mapping[47] = CharClass::
-    this->ascii_mapping[58] = CharClass::
-    this->ascii_mapping[59] = CharClass::
-    this->ascii_mapping[60] = CharClass::
-    this->ascii_mapping[61] = CharClass::
-    this->ascii_mapping[62] = CharClass::
-    this->ascii_mapping[91] = CharClass::
-    this->ascii_mapping[93] = CharClass::
-    this->ascii_mapping[95] = CharClass::
+    //this->ascii_mapping[10] = CharClass::SYMBOLS
+    //this->ascii_mapping[33] = CharClass::OPERATORS
+    //this->ascii_mapping[34] = CharClass::
+    //this->ascii_mapping[38] = CharClass::
+    //this->ascii_mapping[39] = CharClass::
+    //this->ascii_mapping[40] = CharClass::
+    //this->ascii_mapping[41] = CharClass::
+    //this->ascii_mapping[42] = CharClass::
+    //this->ascii_mapping[43] = CharClass::
+    //this->ascii_mapping[44] = CharClass::
+    //this->ascii_mapping[45] = CharClass::
+    //this->ascii_mapping[46] = CharClass::
+    //this->ascii_mapping[47] = CharClass::
+    //this->ascii_mapping[58] = CharClass::
+    //this->ascii_mapping[59] = CharClass::
+    //this->ascii_mapping[60] = CharClass::
+    //this->ascii_mapping[61] = CharClass::
+    //this->ascii_mapping[62] = CharClass::
+    //this->ascii_mapping[91] = CharClass::
+    //this->ascii_mapping[93] = CharClass::
+    //this->ascii_mapping[95] = CharClass::
 
     //this->ascii_mapping[10] = ::NEWLINE;
     //this->ascii_mapping[33] = ::EXCLAIMATION_POINT;
@@ -71,9 +71,9 @@ bool Scanner::init(char* filename)
     }
 }
 
-TokenType Scanner::getClass(char c)
+CharClass Scanner::getClass(char c)
 {
-    TokenType type = this->ascii_mapping[c];
+    CharClass type = this->ascii_mapping[c];
     return type;
 }
 
