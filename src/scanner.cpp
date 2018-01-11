@@ -15,16 +15,19 @@ bool Scanner::init(const char* filename)
 
     // Init ascii character class mapping
     //this->ascii_mapping = {0};
-    for (int k = 48; k < 58; k++)
+    for (char k = '0'; k <= '9'; k++)
     {
         this->ascii_mapping[k] = CharClass::DIGIT;
     }
-    for (int i = 65; i < 91; i++)
+    for (char i = 'A'; i <= 'Z'; i++)
     {
         // Only uppercase letters are used unless it's within a string
         this->ascii_mapping[i] = CharClass::LETTER;
     }
-    //this->ascii_mapping[10] = CharClass::SYMBOLS
+    this->ascii_mapping['\t'] = CharClass::WHITESPACE;  
+    this->ascii_mapping['\n'] = CharClass::WHITESPACE; 
+    this->ascii_mapping[' '] = CharClass::WHITESPACE; 
+
     //this->ascii_mapping[33] = CharClass::OPERATORS
     //this->ascii_mapping[34] = CharClass::
     //this->ascii_mapping[38] = CharClass::
@@ -82,6 +85,27 @@ CharClass Scanner::getClass(char c)
     return type;
 }
 
+void Scanner::consume(const char* until)
+{
+    char ch;
+    bool checking = false;
+    int idx = 0;
+    while (this->input_file.get(ch))
+    {
+        if (!until[idx]) break;
+        if (ch == until[idx])
+        {
+            checking = true;
+            idx++;
+        }
+        else if (checking)
+        {
+            checking = false;
+            idx = 0;
+        }
+    }
+}
+
 Token Scanner::getToken()
 {
     // The token to be returned; defaults to an identifier with no val
@@ -104,62 +128,159 @@ Token Scanner::getToken()
     char ch;
 
     // Consume all leading whitespace 
-    while ((ch = this->input_file.peek()) && (ch == ' ' || ch == '\t' || ch == '\n'))
+    while ((ch = this->input_file.peek()) 
+            && getClass(ch) == CharClass::WHITESPACE)
     {
-        // Throw away whitespace char
+        if (ch == '\n') this->line_number++;
+
         this->input_file.get();
     }
 
-    // Iterate through to get the next token (May not need the while?)
-    //while (
-        this->input_file.get(ch)
-        ;
-    //)
+    this->input_file.get(ch);
+    // If the current token is a string or char, the letters should not 
+    //  be uppercased. Otherwise, convert ch to upper for simpler scanning
+    //if (token.type != TokenType::STRING && token.type != TokenType::CHAR)
     {
-        // If the current token is a string or char, the letters should not 
-        //  be uppercased. Otherwise, convert ch to upper for simpler scanning
-        if (token.type != TokenType::STRING && token.type != TokenType::CHAR)
-        {
-            ch = toupper(ch);
-        }
-        
-        switch (ch)
-        {
-/*
-            case '\n':
-                // Newlines terminate line comments and increment 
-                //  the line_number counter
-                this->line_number++;
-                line_comment = false;
-                // No break - move on to whitespace parsing
-            case ' ':
-            case '\t': 
-                // TODO: Whitespace (break)
-                break;
-*/
-            case '*':
-                if (input_file.peek() == '/')
-                {
-                    block_comment_level--;
-                }
-            case '/':
-                if (input_file.peek() == '/')
-                {
-                    line_comment = true;
-                }
-                else if (input_file.peek() == '*')
-                {
-                    block_comment_level++;
-                }
-                else 
-                {
-                    token.type = TokenType::DIVISION;
-                }
-                break;
-        }
+        ch = toupper(ch);
     }
-    // TODO: Check for file errors
+    
+    switch (ch)
+    {
+/*
+        case '\n':
+            // Newlines terminate line comments and increment 
+            //  the line_number counter
+            this->line_number++;
+            line_comment = false;
+            // No break - move on to whitespace parsing
+        case ' ':
+        case '\t': 
+            // TODO: Whitespace (break)
+            break;
+*/
 
+        case '(':
+            token.type = TokenType::L_PAREN;
+            break;
+        case ')':
+            token.type = TokenType::R_PAREN;
+            break;
+         case '[':
+            token.type = TokenType::L_BRACKET;
+            break;
+         case ']':
+            token.type = TokenType::R_BRACKET;
+            break;
+         case ';':
+            token.type = TokenType::SEMICOLON;
+            break;
+        case '"':
+            // String token
+            token.type = TokenType::STRING;
+            // Need the extra scope level because k is defined in a case
+            {
+                int k = 0;
+                while ((ch = this->input_file.get()) != '"')
+                {
+                    // TODO: check chars in the quote for being valid string chars 
+                    token.val.string_value[k++] = ch;
+                }
+            }
+            break;
+        case '\'':
+            token.type = TokenType::CHAR;
+            this->input_file.get(ch);
+            // TODO: Check ch for validity
+            token.val.char_value = ch;
+            break;
+        case '*':
+            if (this->input_file.peek() == '/')
+            {
+                block_comment_level--;
+            }
+            else 
+            {
+                token.type = TokenType::MULTIPLICATION;
+                break;
+            }
+            break;
+        case '+':
+            token.type = TokenType::PLUS;
+            break;
+        case '-':
+            token.type = TokenType::MINUS;
+            break;
+        case '=':
+            if (this->input_file.peek() == '=')
+            {
+                this->input_file.get();
+                token.type = TokenType::EQUAL;
+            }
+            break;
+        case ':':
+            if (this->input_file.peek() == '=') 
+            {
+                this->input_file.get();
+                token.type = TokenType::ASSIGNMENT;
+            }
+            break;
+        case '/':
+            if (input_file.peek() == '/')
+            {
+                line_comment = true;
+                // Consume all chars until \n
+                consume("\n");
+            }
+            else if (input_file.peek() == '*')
+            {
+                block_comment_level++;
+                // TODO: Consume all chars until */
+                consume("*/");
+            }
+            else 
+            {
+                token.type = TokenType::DIVISION;
+            }
+            break;
+        case '1': case '2': case '3': case '4': case '5':
+        case '6': case '7': case '8': case '9': case '0':
+            token.type = TokenType::INTEGER;
+            token.val.int_value = ch - '0';
+            // TODO
+            //while (this->input_file.get(ch))
+            //{
+            //    if (ch == '.')
+            //    {
+            //        token.type = TokenType::FLOAT;
+            //    }
+            //    else if (getClass(ch) != CharClass::DIGIT) 
+            //    {
+            //        break;
+            //    }
+            //    
+            //    // TODO: What's a better way to do this? Is it easier to make
+            //    //  a string first and call a to int method? Or what
+            //    token.val.int_value += token.val.int_value * 10 + (ch - '0');
+            //    // TODO: deal with floats
+            //}
+            break;
+        default:
+            // TODO: Turn this into a big case block for letters
+            /*
+            if (getClass(ch) == CharClass::LETTER)
+            {
+                for (int k = 0; 
+                        getClass(ch) != CharClass::WHITESPACE; 
+                        this->input_file.get(ch), k++)
+                {
+                    token.val.string_value[k] = ch; 
+                }
+            }
+            */
+            break;
+    }
+
+    // TODO: Check for file errors
     
     return token;
 }

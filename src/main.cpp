@@ -33,8 +33,8 @@ std::vector<Token> scan(char* filename)
 
 /*
 Return codes
-1 - File error
-2 - Scanner error
+1 - No filename given
+2 - Empty file or I/O error (no tokens given by scanner)
 */
 int main(int argc, char** argv)
 {
@@ -46,6 +46,18 @@ int main(int argc, char** argv)
 
     std::vector<Token> tokens = scan(argv[1]);
     if (tokens.size() == 0) return 2;
+
+    // DEBUG
+
+    init_debug();
+
+    for (auto it = tokens.begin(); it != tokens.end(); ++it)
+    {
+        std::cout << debug_typemap[it->type] << '\t' << it->val.int_value << '\t' << it->val.char_value << '\n';
+    }
+
+    // DEBUG END
+
     //TODO Parse the tokens
     //TODO Type checking
     //TODO Code generation
