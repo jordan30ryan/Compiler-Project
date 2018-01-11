@@ -18,3 +18,4 @@ struct Token
         int double_value;
     } val;
 };
+

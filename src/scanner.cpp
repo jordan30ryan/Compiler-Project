@@ -67,11 +67,11 @@ bool Scanner::init(const char* filename)
     //this->ascii_mapping[91] = ::L_BRACKET;
     //this->ascii_mapping[93] = ::R_BRACKET;
     //this->ascii_mapping[95] = ::UNDERSCORE;
-    this->ascii_mapping[124] = ::OR;
-    for (int k = 0; k < 128; k++) 
-    {
-        std::cout << k << ' ' << ascii_mapping[k] << '\n';
-    }
+    //this->ascii_mapping[124] = ::OR;
+    //for (int k = 0; k < 128; k++) 
+    //{
+    //    std::cout << k << ' ' << ascii_mapping[k] << '\n';
+    //}
 
     return true;
 }
@@ -104,12 +104,10 @@ Token Scanner::getToken()
     char ch;
 
     // Consume all leading whitespace 
-    ch = this->input_file.peek();
-    while (ch == ' ' || ch == '\t' || ch == '\n')
+    while ((ch = this->input_file.peek()) && (ch == ' ' || ch == '\t' || ch == '\n'))
     {
         // Throw away whitespace char
         this->input_file.get();
-        ch = this->input_file.peek();
     }
 
     // Iterate through to get the next token (May not need the while?)
@@ -127,6 +125,7 @@ Token Scanner::getToken()
         
         switch (ch)
         {
+/*
             case '\n':
                 // Newlines terminate line comments and increment 
                 //  the line_number counter
@@ -135,8 +134,9 @@ Token Scanner::getToken()
                 // No break - move on to whitespace parsing
             case ' ':
             case '\t': 
-                // TODO: Whitespace
+                // TODO: Whitespace (break)
                 break;
+*/
             case '*':
                 if (input_file.peek() == '/')
                 {

@@ -23,3 +23,4 @@ private:
 
     CharClass getClass(char c);
 };
+

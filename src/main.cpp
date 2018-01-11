@@ -20,7 +20,6 @@ std::vector<Token> scan(char* filename)
     if (!init_success)
     {
         reportError("Scanner initialization failed. Ensure the input file is valid.");
-        // TODO: Return an error somehow
     }
 
     Token next_token;
@@ -32,15 +31,21 @@ std::vector<Token> scan(char* filename)
     return tokens;
 }
 
+/*
+Return codes
+1 - File error
+2 - Scanner error
+*/
 int main(int argc, char** argv)
 {
     if (argc < 2) 
     {
         reportError("No filename provided.");
-        return -1;
+        return 1;
     }
 
     std::vector<Token> tokens = scan(argv[1]);
+    if (tokens.size() == 0) return 2;
     //TODO Parse the tokens
     //TODO Type checking
     //TODO Code generation
