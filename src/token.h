@@ -1,12 +1,13 @@
 #include <map>
 
+#define MAX_STRING_LEN 256
+
 
 // Reserved words begin with RS_
 enum TokenType 
 {
     PERIOD, SEMICOLON, L_PAREN, R_PAREN, COMMA, L_BRACKET, R_BRACKET, COLON, AND, OR, PLUS, MINUS, LT, GT, LT_EQ, GT_EQ, ASSIGNMENT, EQUAL, NOTEQUAL, MULTIPLICATION, DIVISION, FILE_END, STRING, CHAR, INTEGER, FLOAT, BOOL, RS_IN, RS_OUT, RS_INOUT, RS_PROGRAM, RS_IS, RS_BEGIN, RS_END, RS_GLOBAL, RS_PROCEDURE, RS_CHAR, RS_INTEGER, RS_FLOAT, RS_BOOL, RS_IF, RS_THEN, RS_ELSE, RS_FOR, RS_RETURN, RS_TRUE, RS_FALSE, RS_NOT, IDENTIFIER, UNKNOWN
 };
-
 
 enum CharClass 
 {
@@ -18,8 +19,7 @@ struct Token
     TokenType type;
     union
     {
-        //TODO: how to not limit strings to 256 chars
-        char string_value[256];
+        char string_value[MAX_STRING_LEN];
         char char_value;
         int int_value;
         int double_value;
@@ -28,9 +28,9 @@ struct Token
 
 struct ReservedWordRecord
 {
-    ReservedWordRecord(TokenType type, char* value) : type(type), value(value) {}
+    ReservedWordRecord(TokenType type, const char* value) : type(type), value(value) {}
     TokenType type;
-    char* value;
+    const char* value;
 };
 
 // DEBUG
@@ -89,8 +89,6 @@ static void init_debug()
     debug_typemap[TokenType::RS_NOT] = "RS_NOT";
     debug_typemap[TokenType::IDENTIFIER] = "IDENTIFIER";
     debug_typemap[TokenType::UNKNOWN] = "UNKNOWN";
-
-
 }
 
 // END DEBUG

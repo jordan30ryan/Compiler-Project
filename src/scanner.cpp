@@ -1,6 +1,7 @@
 #include "scanner.h"
 #include <iostream>
 #include <ctype.h>
+#include <string.h>
 
 bool Scanner::init(const char* filename)
 {
@@ -33,7 +34,6 @@ bool Scanner::init(const char* filename)
     reserved_words_map.emplace_back(TokenType::RS_FALSE, "FALSE");
     reserved_words_map.emplace_back(TokenType::RS_NOT, "NOT");
 
-
     // Init ascii character class mapping
     for (char k = '0'; k <= '9'; k++)
     {
@@ -47,6 +47,7 @@ bool Scanner::init(const char* filename)
 
     this->ascii_mapping['\t'] = CharClass::WHITESPACE;  
     this->ascii_mapping['\n'] = CharClass::WHITESPACE; 
+    this->ascii_mapping['\r'] = CharClass::WHITESPACE; 
     this->ascii_mapping[' '] = CharClass::WHITESPACE; 
 
     this->ascii_mapping['_'] = CharClass::UNDERSCORE;
@@ -96,12 +97,6 @@ Token Scanner::getToken()
     Token token;
     token.type = TokenType::UNKNOWN;
 
-    if (this->input_file.eof())
-    {
-        token.type = TokenType::FILE_END;
-        return token;
-    }
-
     // Comment handling
     // Block comment level is saved to support nested block comments
     // A level of 0 indicates the current token is not a block comment 
@@ -121,9 +116,12 @@ Token Scanner::getToken()
     }
 
     this->input_file.get(ch);
-    // If the current token is a string or char, the letters should not 
-    //  be uppercased. Otherwise, convert ch to upper for simpler scanning
-    //if (token.type != TokenType::STRING && token.type != TokenType::CHAR)
+
+    if (this->input_file.eof())
+    {
+        token.type = TokenType::FILE_END;
+        return token;
+    }
         
     //ch = toupper(ch);
     
@@ -144,6 +142,9 @@ Token Scanner::getToken()
         case ';':
             token.type = TokenType::SEMICOLON;
             break;
+        case '.':
+            token.type = TokenType::PERIOD;
+            break;
         case '"':
             // String token
             token.type = TokenType::STRING;
@@ -153,7 +154,7 @@ Token Scanner::getToken()
                 while ((ch = this->input_file.get()) != '"')
                 {
                     // TODO: check chars in the quote for being valid string chars 
-                    token.val.string_value[k++] = ch;
+                    //token.val.string_value[k++] = ch;
                 }
             }
             break;
@@ -240,7 +241,7 @@ Token Scanner::getToken()
             {
                 token.type = TokenType::IDENTIFIER;
                 int k;
-                for (k = 0; isValidIdentifier(ch); k++)
+                for (k = 0; k < MAX_STRING_LEN, isValidIdentifier(ch); k++)
                 {
                     token.val.string_value[k] = toupper(ch);
                     this->input_file.get(ch);
@@ -253,7 +254,7 @@ Token Scanner::getToken()
                 // Check for whether the identifier is a reserved word
                 //if (this->reserved_words_map.count(token.val.string_value) > 0)
                 {
-                    token.type = reserved_words_map[token.val.string_value];
+                    //token.type = reserved_words_map[token.val.string_value];
                 }
             }
             
@@ -261,7 +262,13 @@ Token Scanner::getToken()
     }
 
     // TODO: Check for file errors
-    
+
+    // For debugging purposes mostly
+    if (token.type == TokenType::UNKNOWN)
+    {
+        token.val.char_value = ch;
+    }
+
     return token;
 }
 

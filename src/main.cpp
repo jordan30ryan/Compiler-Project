@@ -61,6 +61,10 @@ int main(int argc, char** argv)
         {
             std::cout << it->val.int_value;
         }
+        if (it->type == TokenType::UNKNOWN)
+        {
+            std::cout << (int)(it->val.char_value);
+        }
         std::cout << std::endl;
         //std::cout << '\t' << it->val.string_value << '\n';
     }
