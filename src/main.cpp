@@ -54,7 +54,6 @@ int main(int argc, char** argv)
     // DEBUG
 
     init_debug();
-
     for (auto it = tokens.begin(); it != tokens.end(); ++it)
     {
         std::cout << debug_typemap[it->type] << '\t';
@@ -71,7 +70,6 @@ int main(int argc, char** argv)
             std::cout << (int)(it->val.char_value);
         }
         std::cout << std::endl;
-        //std::cout << '\t' << it->val.string_value << '\n';
     }
 
     // DEBUG END

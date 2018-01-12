@@ -27,6 +27,6 @@ private:
     CharClass getClass(char c);
     bool isValidIdentifier(char ch);
 
-    void consume(const char* until);
+    //void consume(const char* until);
 };
 
