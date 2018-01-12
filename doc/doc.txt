@@ -9,7 +9,9 @@ scanner.h   - Scanner class definition
 scanner.cpp - Implementation of scanner.h methods
 
 
+
 === NOTES ===
+
 
 
 struct TokenType 
@@ -37,6 +39,8 @@ Seems to be referenced as a usable type in the language spec but it's not in the
 
 
 Is TokenType::BOOL unneeded?
+It would represent boolean literals (similar to how INTEGER/FLOAT represent literal numbers)
+But the only boolean literals, TRUE/FALSE, would be easier to store as reserved words.
 
 
 

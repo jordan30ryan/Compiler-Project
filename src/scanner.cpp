@@ -208,7 +208,7 @@ Token Scanner::getToken()
             this->input_file.get(ch);
             // TODO: Check ch for validity
             token.val.char_value = ch;
-            this->input_file.peek(ch);
+            ch = this->input_file.peek();
             if (ch != '\'')
             {
                 // TODO: error: single quote containing more than one char
