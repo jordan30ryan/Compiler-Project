@@ -54,12 +54,13 @@ int main(int argc, char** argv)
     // DEBUG
 
     init_debug();
+
     for (auto it = tokens.begin(); it != tokens.end(); ++it)
     {
         std::cout << debug_typemap[it->type] << '\t';
-        if (it->type == TokenType::IDENTIFIER)
+        if (it->type == TokenType::IDENTIFIER || it->type == TokenType::STRING)
         {
-            std::cout << it->val.string_value;
+            std::cout << '"' << it->val.string_value << '"';
         }
         if (it->type == TokenType::INTEGER)
         {

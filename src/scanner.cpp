@@ -191,7 +191,8 @@ Token Scanner::getToken()
             // Need the extra scope level because k is defined in a case
             {
                 int k = 0;
-                while (ch = this->input_file.get() && ch != '"')
+                while (this->input_file.get(ch) && ch != '"')
+                //while ((ch = this->input_file.get()) != '"')
                 {
                     // TODO: check chars in the quote for being valid string chars 
                     token.val.string_value[k++] = ch;
@@ -318,12 +319,19 @@ Token Scanner::getToken()
     }
 
     // TODO: Check for file errors
-
-    // For debugging purposes mostly
+    
     if (token.type == TokenType::UNKNOWN)
     {
+        // TODO: Error, unknown char ch
         token.val.char_value = ch;
     }
+
+    // DEBUG
+
+    init_debug();
+    std::cout << "LINE: " << line_number << " TOKEN: " << debug_typemap[token.type] << std::endl;
+
+    // END DEBUG
 
     return token;
 }
