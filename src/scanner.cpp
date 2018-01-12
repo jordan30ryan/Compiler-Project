@@ -91,6 +91,19 @@ bool Scanner::isValidIdentifier(char ch)
 
 }
 
+TokenType Scanner::getWordTokenType(char* str)
+{
+    // TODO: Optimize. Use hashing?
+    for (int k = 0; k < this->reserved_words_map.size(); k++)
+    {
+        if (!strcmp(this->reserved_words_map[k].value, str))
+        {
+            return this->reserved_words_map[k].type;
+        }
+    }
+    return TokenType::IDENTIFIER;
+}
+
 Token Scanner::getToken()
 {
     // The token to be returned; defaults to an identifier with no val
@@ -123,8 +136,6 @@ Token Scanner::getToken()
         return token;
     }
         
-    //ch = toupper(ch);
-    
     switch (ch)
     {
         case '(':
@@ -145,17 +156,51 @@ Token Scanner::getToken()
         case '.':
             token.type = TokenType::PERIOD;
             break;
+        case ',':
+            token.type = TokenType::COMMA;
+            break;
+        case '&':
+            token.type = TokenType::AND;
+            break;
+        case '|':
+            token.type = TokenType::OR;
+            break;
+        case '<':
+            if (this->input_file.peek() == '=')
+            {
+                this->input_file.get();
+                token.type = TokenType::LT_EQ;
+            }
+            else 
+                token.type = TokenType::LT;
+
+            break;
+        case '>':
+            if (this->input_file.peek() == '=')
+            {
+                this->input_file.get();
+                token.type = TokenType::GT_EQ;
+            }
+            else 
+                token.type = TokenType::GT;
+
+            break;
         case '"':
             // String token
             token.type = TokenType::STRING;
             // Need the extra scope level because k is defined in a case
             {
                 int k = 0;
-                while ((ch = this->input_file.get()) != '"')
+                while (ch = this->input_file.get() && ch != '"')
                 {
                     // TODO: check chars in the quote for being valid string chars 
-                    //token.val.string_value[k++] = ch;
+                    token.val.string_value[k++] = ch;
                 }
+                if (ch != '"') 
+                {
+                    // TODO: error: reached EOF and string quotes were never closed.
+                }
+                token.val.string_value[k] = 0;
             }
             break;
         case '\'':
@@ -163,6 +208,11 @@ Token Scanner::getToken()
             this->input_file.get(ch);
             // TODO: Check ch for validity
             token.val.char_value = ch;
+            this->input_file.peek(ch);
+            if (ch != '\'')
+            {
+                // TODO: error: single quote containing more than one char
+            }
             break;
         case '*':
             if (this->input_file.peek() == '/')
@@ -185,7 +235,7 @@ Token Scanner::getToken()
             if (this->input_file.peek() == '=')
             {
                 this->input_file.get();
-                token.type = TokenType::EQUAL;
+                token.type = TokenType::EQUALS;
             }
             break;
         case ':':
@@ -194,7 +244,18 @@ Token Scanner::getToken()
                 this->input_file.get();
                 token.type = TokenType::ASSIGNMENT;
             }
+            else 
+            {
+                token.type = TokenType::COLON;
+            }
             break;
+
+        case '!':
+            if (this->input_file.peek() == '=') 
+            {
+                this->input_file.get();
+                token.type = TokenType::NOTEQUAL;
+            }
         case '/':
             if (input_file.peek() == '/')
             {
@@ -216,8 +277,7 @@ Token Scanner::getToken()
         case '1': case '2': case '3': case '4': case '5':
         case '6': case '7': case '8': case '9': case '0':
             token.type = TokenType::INTEGER;
-            token.val.int_value = ch - '0';
-            // TODO
+            token.val.int_value = (int)(ch - '0');
             while (this->input_file.get(ch))
             {
                 if (ch == '.')
@@ -226,12 +286,13 @@ Token Scanner::getToken()
                 }
                 else if (getClass(ch) != CharClass::DIGIT) 
                 {
+                    this->input_file.putback(ch);
                     break;
                 }
                 
                 // TODO: What's a better way to do this? Is it easier to make
                 //  a string first and call a to int method? Or what
-                token.val.int_value += token.val.int_value * 10 + (ch - '0');
+                token.val.int_value = 10 * token.val.int_value + (int)(ch - '0');
                 // TODO: deal with floats
             }
             break;
@@ -239,7 +300,6 @@ Token Scanner::getToken()
             // TODO: Turn this into a big case block for letters?
             if (getClass(ch) == CharClass::LETTER)
             {
-                token.type = TokenType::IDENTIFIER;
                 int k;
                 for (k = 0; k < MAX_STRING_LEN, isValidIdentifier(ch); k++)
                 {
@@ -251,13 +311,9 @@ Token Scanner::getToken()
                 // Null terminate the string
                 token.val.string_value[k] = 0;
 
-                // Check for whether the identifier is a reserved word
-                //if (this->reserved_words_map.count(token.val.string_value) > 0)
-                {
-                    //token.type = reserved_words_map[token.val.string_value];
-                }
+                // Check whether this is a reserved word or identifier
+                token.type = getWordTokenType(token.val.string_value);
             }
-            
             break;
     }
 

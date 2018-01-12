@@ -1,0 +1,42 @@
+=== FILES ===
+
+
+main.cpp    - Entry point. Handles command line args and each step of the compile process
+
+token.h     - Stores custom data types (i.e. Token, TokenType, etc.)
+
+scanner.h   - Scanner class definition
+scanner.cpp - Implementation of scanner.h methods
+
+
+=== NOTES ===
+
+
+struct TokenType 
+This contains every type of token the scanner can output and the parser uses.
+
+A few notable entries:
+
+TokenType:: - Value - Explanation
+---------------------------------
+EQUALS      - ==    - Comparision; "is equal to". Returns a bool
+ASSIGNMENT  - :=    - Assigns the right side expression to the left variable 
+RS_[...]    - [...] - The reserved word [...]. 
+
+
+
+
+
+=== TODO ===
+
+Handle comments properly
+
+
+Is string a valid type_mark?
+Seems to be referenced as a usable type in the language spec but it's not in the type_mark bnf
+
+
+Is TokenType::BOOL unneeded?
+
+
+

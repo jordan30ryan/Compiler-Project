@@ -45,7 +45,11 @@ int main(int argc, char** argv)
     }
 
     std::vector<Token> tokens = scan(argv[1]);
-    if (tokens.size() == 0) return 2;
+    if (tokens.size() == 0) 
+    {
+        reportError("No tokens found. Ensure the file is not empty.");
+        return 2;
+    }
 
     // DEBUG
 

@@ -22,10 +22,10 @@ private:
     int line_number;
     CharClass ascii_mapping[128] = {CharClass::DEFAULT};
     std::vector<ReservedWordRecord> reserved_words_map;
+    TokenType getWordTokenType(char* str);
 
     CharClass getClass(char c);
     bool isValidIdentifier(char ch);
-
 
     void consume(const char* until);
 };
