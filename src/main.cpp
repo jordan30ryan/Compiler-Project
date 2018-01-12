@@ -50,10 +50,19 @@ int main(int argc, char** argv)
     // DEBUG
 
     init_debug();
-
     for (auto it = tokens.begin(); it != tokens.end(); ++it)
     {
-        std::cout << debug_typemap[it->type] << '\t' << it->val.int_value << '\t' << it->val.char_value << '\n';
+        std::cout << debug_typemap[it->type] << '\t';
+        if (it->type == TokenType::IDENTIFIER)
+        {
+            std::cout << it->val.string_value;
+        }
+        if (it->type == TokenType::INTEGER)
+        {
+            std::cout << it->val.int_value;
+        }
+        std::cout << std::endl;
+        //std::cout << '\t' << it->val.string_value << '\n';
     }
 
     // DEBUG END

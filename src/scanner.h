@@ -1,4 +1,5 @@
 #include <fstream>
+#include <vector>
 #include "token.h"
 
 class Scanner
@@ -19,9 +20,12 @@ public:
 private:
     std::ifstream input_file;
     int line_number;
-    CharClass ascii_mapping[128] = {CharClass::UNDEFINED};
+    CharClass ascii_mapping[128] = {CharClass::DEFAULT};
+    std::vector<ReservedWordRecord> reserved_words_map;
 
     CharClass getClass(char c);
+    bool isValidIdentifier(char ch);
+
 
     void consume(const char* until);
 };
