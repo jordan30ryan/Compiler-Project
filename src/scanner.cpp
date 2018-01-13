@@ -124,17 +124,14 @@ void Scanner::consumeWhitespaceAndComments()
         if (ch == '/')
         {
             // First, consume the / so we can peek the next char 
-            //  (ch will still be set to / in case the next char isn't / or *
-            //  so division will still be parsed)
             input_file.get();
-            char next = input_file.peek();
-            // TODO: Remove comments
-            if (next == '/')
+            ch = input_file.peek();
+            if (ch == '/')
             {
                 // Consume line comment
                 while (input_file.get() != '\n') {}
             }
-            else if (next == '*')
+            else if (ch == '*')
             {
                 input_file.get();
 
@@ -157,7 +154,13 @@ void Scanner::consumeWhitespaceAndComments()
                     }
                 }
             }
-            else break;
+            else 
+            {
+                // The / was not followed by a / or *, so it's not a comment.
+                // Put it back and let the switch handle it below
+                input_file.unget();
+                break;
+            }
         }
         else
         {
@@ -358,14 +361,14 @@ Token Scanner::getToken()
         // TODO: Error, unknown char ch
         token.val.char_value = ch;
     }
-
+/*
     // DEBUG
 
     init_debug();
     std::cout << "LINE: " << line_number << " TOKEN: " << debug_typemap[token.type] << std::endl;
 
     // END DEBUG
-
+*/
     return token;
 }
 
