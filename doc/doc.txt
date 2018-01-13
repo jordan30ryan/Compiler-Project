@@ -31,8 +31,7 @@ RS_[...]    - [...] - The reserved word [...].
 
 === TODO ===
 
-Handle comments 
-
+Test everything
 
 Is string a valid type_mark?
 Seems to be referenced as a usable type in the language spec but it's not in the type_mark bnf
@@ -42,5 +41,9 @@ Is TokenType::BOOL unneeded?
 It would represent boolean literals (similar to how INTEGER/FLOAT represent literal numbers)
 But the only boolean literals, TRUE/FALSE, would be easier to store as reserved words.
 
+
+=== DONE ===
+
+Handle comments 
 
 

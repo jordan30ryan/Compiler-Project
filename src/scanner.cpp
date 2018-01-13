@@ -113,6 +113,62 @@ TokenType Scanner::getWordTokenType(char* str)
 //    // TODO: Handle I/O Error
 //}
 
+// Consume all leading whitespace and comments first
+void Scanner::consumeWhitespaceAndComments()
+{
+    // Buffer
+    char ch;
+    while ((ch = input_file.peek()) 
+            && ((getClass(ch) == CharClass::WHITESPACE) || ch == '/'))
+    {
+        if (ch == '/')
+        {
+            // First, consume the / so we can peek the next char 
+            //  (ch will still be set to / in case the next char isn't / or *
+            //  so division will still be parsed)
+            input_file.get();
+            char next = input_file.peek();
+            // TODO: Remove comments
+            if (next == '/')
+            {
+                // Consume line comment
+                while (input_file.get() != '\n') {}
+            }
+            else if (next == '*')
+            {
+                input_file.get();
+
+                // Support nested comments
+                int comment_level = 1;
+                
+                // Consume block comment
+                while (input_file.get(ch))
+                {
+                    if (ch == '*' && input_file.peek() == '/')
+                    {
+                        input_file.get();
+                        comment_level--;
+                        if (comment_level == 0) break;
+                    }
+                    else if (ch == '/' && input_file.peek() == '*')
+                    {
+                        input_file.get();
+                        comment_level++;
+                    }
+                }
+            }
+            else break;
+        }
+        else
+        {
+            // Consume the whitespace token
+            input_file.get();
+
+            if (ch == '\n') line_number++;
+        }
+    }
+}
+
 Token Scanner::getToken()
 {
     // The token to be returned; defaults to an identifier with no val
@@ -122,28 +178,7 @@ Token Scanner::getToken()
     // Stores next char read from file
     char ch;
 
-    // Consume all leading whitespace and comments first
-    while ((ch = input_file.peek()) 
-            && ((getClass(ch) == CharClass::WHITESPACE) || ch == '/'))
-    {
-        if (ch == '\n') line_number++;
-        if (ch == '/')
-        {
-            // TODO: Remove comments
-            if (input_file.peek() == '/')
-            {
-                // Consume line comment
-            }
-            else if (input_file.peek() == '*')
-            {
-                // Consume block comment
-            }
-            else break;
-        }
-
-        // Consume the token
-        input_file.get();
-    }
+    consumeWhitespaceAndComments();
 
     // Store next char of file in ch
     input_file.get(ch);
@@ -154,23 +189,6 @@ Token Scanner::getToken()
         token.type = TokenType::FILE_END;
         return token;
     }
-
-    // Old comment removal code
-    //if (ch == '/') 
-    //{
-    //    if (input_file.peek() == '/')
-    //    {
-    //        line_comment = true;
-    //        // Consume all chars until \n
-    //        consume("\n");
-    //    }
-    //    else if (input_file.peek() == '*')
-    //    {
-    //        block_comment_level++;
-    //        // TODO: Consume all chars until */
-    //        consume("*/");
-    //    }
-    //}
 
     // Main switch to get token type (and value if necessary)
     switch (ch)
@@ -301,7 +319,7 @@ Token Scanner::getToken()
             }
             else if (getClass(ch) != CharClass::DIGIT) 
             {
-                input_file.putback(ch);
+                input_file.unget();
                 break;
             }
             
@@ -323,7 +341,7 @@ Token Scanner::getToken()
                 input_file.get(ch);
             }
             // Put back most recently read char
-            input_file.putback(ch);
+            input_file.unget();
             // Null terminate the string
             token.val.string_value[k] = 0;
 

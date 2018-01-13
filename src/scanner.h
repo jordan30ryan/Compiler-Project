@@ -28,5 +28,6 @@ private:
     bool isValidIdentifier(char ch);
 
     //void consume(const char* until);
+    void consumeWhitespaceAndComments();
 };
 
