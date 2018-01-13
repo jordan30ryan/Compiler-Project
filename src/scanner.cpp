@@ -335,7 +335,7 @@ Token Scanner::getToken()
         if (getClass(ch) == CharClass::LETTER)
         {
             int k;
-            for (k = 0; k < MAX_STRING_LEN, isValidIdentifier(ch); k++)
+            for (k = 0; k < MAX_STRING_LEN && isValidIdentifier(ch); k++)
             {
                 token.val.string_value[k] = toupper(ch);
                 input_file.get(ch);
