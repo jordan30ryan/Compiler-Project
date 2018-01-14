@@ -28,18 +28,25 @@ RS_[...]    - [...] - The reserved word [...].
 
 
 
-
-=== TODO ===
-
-Test everything
+=== QUESTIONS ===
 
 Is string a valid type_mark?
 Seems to be referenced as a usable type in the language spec but it's not in the type_mark bnf
 
 
+What is the default value of a newly declared var (test1.src declares an integer but never sets it)
+Should that integer be set to 0 initially?
+
+
+=== TODO ===
+
+Test everything
+
 Is TokenType::BOOL unneeded?
 It would represent boolean literals (similar to how INTEGER/FLOAT represent literal numbers)
 But the only boolean literals, TRUE/FALSE, would be easier to store as reserved words.
+
+Performnace of ifstream::unget(), alternate methods?
 
 
 === DONE ===

@@ -130,10 +130,11 @@ void Scanner::consumeWhitespaceAndComments()
             {
                 // Consume line comment
                 while (input_file.get() != '\n') {}
+                line_number++;
             }
             else if (ch == '*')
             {
-                input_file.get();
+                input_file.get(); // Consume the *
 
                 // Support nested comments
                 int comment_level = 1;
@@ -152,6 +153,7 @@ void Scanner::consumeWhitespaceAndComments()
                         input_file.get();
                         comment_level++;
                     }
+                    else if (ch == '\n') line_number++;
                 }
             }
             else 
@@ -224,6 +226,7 @@ Token Scanner::getToken()
         token.type = TokenType::MINUS;
         break;
     case '/':
+        // Comments filtered out above
         token.type = TokenType::DIVISION;
         break;
     case '*':
