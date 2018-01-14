@@ -1,0 +1,15 @@
+
+PROGRAM grant IS
+begin
+	integer a_ := 1;
+	integer b := 2;
+	integer c := a_ / b;
+	putInteger(c);	
+	integer d := a_ / b / c // / 0
+/*
+* /
+//*/	
+*/*/
+;
+end program.
+
