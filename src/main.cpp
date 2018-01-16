@@ -66,8 +66,16 @@ int main(int argc, char** argv)
     scanner->setErrHandler(err_handler);
 
     // TODO: Scanner debugging only. 
-    // Remove before parsing (scanner_debug consumes tokens)
+    // This should be commented out when parsing (scanner_debug consumes tokens)
     scanner_debug(scanner);
+
+    if (err_handler->has_errors)
+    {
+        std::cout << "Some errors reported during scanner debug phase.";
+        return 3;
+    }
+
+
 
 
     //TODO Parse the tokens

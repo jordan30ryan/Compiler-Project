@@ -227,7 +227,7 @@ Token Scanner::getToken()
                     break;
                 }
                 
-                // TODO: Is there a better way to do this?
+                // Is there a better way to do this?
                 if (is_fractional_part)
                 {
                     token.val.double_value += fract_mult * (ch - '0');
@@ -304,7 +304,7 @@ Token Scanner::getToken()
 
             break;
         case '"':
-            // Need the extra scope level because k is defined in a case
+            // Need the extra scope level because k is defined in the case
             {
                 // String token
                 token.type = TokenType::STRING;
@@ -373,8 +373,6 @@ Token Scanner::getToken()
             break;
         }
     }
-
-    // TODO: Check for file errors
     
     if (token.type == TokenType::UNKNOWN)
     {
