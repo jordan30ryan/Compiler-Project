@@ -1,6 +1,7 @@
+#include "token.h"
+#include "errhandler.h"
 #include <fstream>
 #include <vector>
-#include "token.h"
 
 class Scanner
 {
@@ -17,6 +18,11 @@ public:
     bool init(const char* filename);
 
     /*
+        Sets the error handler for error reporting
+    */
+    void setErrHandler(ErrHandler* h);
+
+    /*
         returns - The next token in input_file
     */
     Token getToken();
@@ -25,12 +31,17 @@ private:
     std::ifstream input_file;
     int line_number;
 
-    CharClass ascii_mapping[128] = {CharClass::DEFAULT};
+    ErrHandler* err_handler;
+
+    CharClass ascii_mapping[128] = {CharClass::SYMBOL};
     std::vector<ReservedWordRecord> reserved_words_map;
 
     TokenType getWordTokenType(char* str);
-    CharClass getClass(char c);
-    bool isValidIdentifier(char ch);
+
+    bool isValidInIdentifier(char ch);
+    bool isValidInString(char ch);
+    bool isValidChar(char ch);
+    bool isValidShared(char ch);
 
     void consumeWhitespaceAndComments();
 };

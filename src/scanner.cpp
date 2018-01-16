@@ -6,7 +6,7 @@
 bool Scanner::init(const char* filename)
 {
     input_file.open(filename, std::ifstream::in);
-    if (input_file.bad()) return false;
+    if (!input_file.is_open() || input_file.bad()) return false;
     
     line_number = 1;
 
@@ -20,6 +20,8 @@ bool Scanner::init(const char* filename)
     reserved_words_map.emplace_back(TokenType::RS_END, "END");
     reserved_words_map.emplace_back(TokenType::RS_GLOBAL, "GLOBAL");
     reserved_words_map.emplace_back(TokenType::RS_PROCEDURE, "PROCEDURE");
+    // String type?
+    reserved_words_map.emplace_back(TokenType::RS_STRING, "STRING");
     reserved_words_map.emplace_back(TokenType::RS_CHAR, "CHAR");
     reserved_words_map.emplace_back(TokenType::RS_INTEGER, "INTEGER");
     reserved_words_map.emplace_back(TokenType::RS_FLOAT, "FLOAT");
@@ -49,26 +51,38 @@ bool Scanner::init(const char* filename)
     ascii_mapping['\r'] = CharClass::WHITESPACE; 
     ascii_mapping[' '] = CharClass::WHITESPACE; 
 
-    ascii_mapping['_'] = CharClass::UNDERSCORE;
-
     return true;
 }
 
-// Get the character class of a given char
-CharClass Scanner::getClass(char c)
+void Scanner::setErrHandler(ErrHandler* h)
 {
-    CharClass type = ascii_mapping[c];
-    return type;
+    this->err_handler = h;
 }
 
 // Check if ch is a valid identifier character
-bool Scanner::isValidIdentifier(char ch)
+bool Scanner::isValidInIdentifier(char ch)
 {
-    CharClass cls = getClass(ch);
+    CharClass cls = ascii_mapping[ch];
     return cls == CharClass::LETTER 
             || cls == CharClass::DIGIT 
-            || cls == CharClass::UNDERSCORE;
+            || ch == '_';
+}
 
+bool Scanner::isValidInString(char ch)
+{
+    return isValidShared(ch) || ch == ',' || ch == '\'';
+}
+
+bool Scanner::isValidChar(char ch)
+{
+    return isValidShared(ch) || ch == '"';
+}
+
+// Simplifies checking for valid string or char literal characters by 
+//  checking for the chars shared by each type
+bool Scanner::isValidShared(char ch)
+{
+    return isValidInIdentifier(ch) || ch == ' ' || ch == ';' || ch == ':' || ch == '.';
 }
 
 // Return the proper TokenType if str is a reserved word.
@@ -86,40 +100,13 @@ TokenType Scanner::getWordTokenType(char* str)
     return TokenType::IDENTIFIER;
 }
 
-//void Scanner::consume(const char* until)
-//{
-//    char ch;
-//    bool checking = false;
-//    int idx = 0;
-//    while (input_file.get(ch))
-//    {
-//        if (!until[idx]) 
-//        {
-//            // Hit null terminator
-//            input_file.putback(ch);
-//            return;
-//        }
-//        if (ch == until[idx])
-//        {
-//            checking = true;
-//            idx++;
-//        }
-//        else if (checking)
-//        {
-//            checking = false;
-//            idx = 0;
-//        }
-//    }
-//    // TODO: Handle I/O Error
-//}
-
 // Consume all leading whitespace and comments first
 void Scanner::consumeWhitespaceAndComments()
 {
     // Buffer
     char ch;
     while ((ch = input_file.peek()) 
-            && ((getClass(ch) == CharClass::WHITESPACE) || ch == '/'))
+            && ((ascii_mapping[ch] == CharClass::WHITESPACE) || ch == '/'))
     {
         if (ch == '/')
         {
@@ -159,7 +146,7 @@ void Scanner::consumeWhitespaceAndComments()
             else 
             {
                 // The / was not followed by a / or *, so it's not a comment.
-                // Put it back and let the switch handle it below
+                // Put it back and let the switch handle it normally
                 input_file.unget();
                 break;
             }
@@ -176,7 +163,7 @@ void Scanner::consumeWhitespaceAndComments()
 
 Token Scanner::getToken()
 {
-    // The token to be returned; defaults to an identifier with no val
+    // The token to be returned; defaults to unknown
     Token token;
     token.type = TokenType::UNKNOWN;
 
@@ -184,6 +171,8 @@ Token Scanner::getToken()
     char ch;
 
     consumeWhitespaceAndComments();
+
+    token.line = line_number;
 
     // Store next char of file in ch
     input_file.get(ch);
@@ -196,182 +185,204 @@ Token Scanner::getToken()
     }
 
     // Main switch to get token type (and value if necessary)
-    switch (ch)
+    switch (ascii_mapping[ch])
     {
-    case '(':
-        token.type = TokenType::L_PAREN;
-        break;
-    case ')':
-        token.type = TokenType::R_PAREN;
-        break;
-    case '[':
-        token.type = TokenType::L_BRACKET;
-        break;
-    case ']':
-        token.type = TokenType::R_BRACKET;
-        break;
-    case ';':
-        token.type = TokenType::SEMICOLON;
-        break;
-    case '.':
-        token.type = TokenType::PERIOD;
-        break;
-    case ',':
-        token.type = TokenType::COMMA;
-        break;
-    case '+':
-        token.type = TokenType::PLUS;
-        break;
-    case '-':
-        token.type = TokenType::MINUS;
-        break;
-    case '/':
-        // Comments filtered out above
-        token.type = TokenType::DIVISION;
-        break;
-    case '*':
-        token.type = TokenType::MULTIPLICATION;
-        break;
-    case '&':
-        token.type = TokenType::AND;
-        break;
-    case '|':
-        token.type = TokenType::OR;
-        break;
-    case '<':
-        if (input_file.peek() == '=')
-        {
-            input_file.get();
-            token.type = TokenType::LT_EQ;
-        }
-        else 
-            token.type = TokenType::LT;
-
-        break;
-    case '>':
-        if (input_file.peek() == '=')
-        {
-            input_file.get();
-            token.type = TokenType::GT_EQ;
-        }
-        else 
-            token.type = TokenType::GT;
-
-        break;
-    case '"':
-        // String token
-        token.type = TokenType::STRING;
-        // Need the extra scope level because k is defined in a case
-        {
-            int k = 0;
-            while (input_file.get(ch) && ch != '"')
-            //while ((ch = input_file.get()) != '"')
-            {
-                // TODO: check chars in the quote for being valid string chars 
-                token.val.string_value[k++] = ch;
-            }
-            if (ch != '"') 
-            {
-                // TODO: error: reached EOF and string quotes were never closed.
-            }
-            token.val.string_value[k] = 0;
-        }
-        break;
-    case '\'':
-        token.type = TokenType::CHAR;
-        input_file.get(ch);
-        // TODO: Check ch for validity
-        token.val.char_value = ch;
-        ch = input_file.peek();
-        if (ch != '\'')
-        {
-            // TODO: error: single quote containing more than one char
-        }
-        break;
-    case '=':
-        if (input_file.peek() == '=')
-        {
-            input_file.get();
-            token.type = TokenType::EQUALS;
-        }
-        break;
-    case ':':
-        if (input_file.peek() == '=') 
-        {
-            input_file.get();
-            token.type = TokenType::ASSIGNMENT;
-        }
-        else 
-        {
-            token.type = TokenType::COLON;
-        }
-        break;
-    case '!':
-        if (input_file.peek() == '=') 
-        {
-            input_file.get();
-            token.type = TokenType::NOTEQUAL;
-        }
-        break;
-    case '1': case '2': case '3': case '4': case '5':
-    case '6': case '7': case '8': case '9': case '0':
-        token.type = TokenType::INTEGER;
-        token.val.int_value = (int)(ch - '0');
-        while (input_file.get(ch))
-        {
-            if (ch == '.')
-            {
-                token.type = TokenType::FLOAT;
-            }
-            else if (getClass(ch) != CharClass::DIGIT) 
-            {
-                input_file.unget();
-                break;
-            }
-            
-            // TODO: What's a better way to do this? Is it easier to make
-            //  a string first and call a to int method? Or what
-            token.val.int_value = 10 * token.val.int_value + (int)(ch - '0');
-            // TODO: deal with floats
-        }
-        break;
-    default:
-        // TODO: Turn this into a bunch of cases for each letter?
+    case CharClass::LETTER:
         // Identifiers/Reserved words must all start with a letter
-        if (getClass(ch) == CharClass::LETTER)
+        int k;
+        for (k = 0; k < MAX_STRING_LEN && isValidInIdentifier(ch); k++)
         {
-            int k;
-            for (k = 0; k < MAX_STRING_LEN && isValidIdentifier(ch); k++)
-            {
-                token.val.string_value[k] = toupper(ch);
-                input_file.get(ch);
-            }
-            // Put back most recently read char
-            input_file.unget();
-            // Null terminate the string
-            token.val.string_value[k] = 0;
+            token.val.string_value[k] = toupper(ch);
+            input_file.get(ch);
+        }
+        // Put back most recently read char
+        input_file.unget();
+        // Null terminate the string
+        token.val.string_value[k] = 0;
 
-            // Check whether this is a reserved word or identifier
-            token.type = getWordTokenType(token.val.string_value);
+        // Check whether this is a reserved word or identifier
+        token.type = getWordTokenType(token.val.string_value);
+        break;
+    case CharClass::DIGIT:
+        // Extra scope level needed becuase of variables defined in this case
+        {
+            token.type = TokenType::INTEGER;
+            token.val.int_value = (int)(ch - '0');
+
+            bool is_fractional_part = false;
+            double fract_mult = 0.1;
+
+            while (input_file.get(ch))
+            {
+                if (ch == '.')
+                {
+                    token.type = TokenType::FLOAT;
+                    token.val.double_value = token.val.int_value;
+                    is_fractional_part = true;
+                    continue;
+                }
+                else if (ascii_mapping[ch] != CharClass::DIGIT) 
+                {
+                    input_file.unget();
+                    break;
+                }
+                
+                // TODO: Is there a better way to do this?
+                if (is_fractional_part)
+                {
+                    token.val.double_value += fract_mult * (ch - '0');
+                    fract_mult *= 0.1;
+                }
+                else 
+                {
+                    token.val.int_value = 10 * token.val.int_value + (int)(ch - '0');
+                }
+            }
         }
         break;
+    case CharClass::SYMBOL:
+        switch (ch)
+        {
+        case '(':
+            token.type = TokenType::L_PAREN;
+            break;
+        case ')':
+            token.type = TokenType::R_PAREN;
+            break;
+        case '[':
+            token.type = TokenType::L_BRACKET;
+            break;
+        case ']':
+            token.type = TokenType::R_BRACKET;
+            break;
+        case ';':
+            token.type = TokenType::SEMICOLON;
+            break;
+        case '.':
+            token.type = TokenType::PERIOD;
+            break;
+        case ',':
+            token.type = TokenType::COMMA;
+            break;
+        case '+':
+            token.type = TokenType::PLUS;
+            break;
+        case '-':
+            token.type = TokenType::MINUS;
+            break;
+        case '/':
+            // Comments get filtered out above
+            token.type = TokenType::DIVISION;
+            break;
+        case '*':
+            token.type = TokenType::MULTIPLICATION;
+            break;
+        case '&':
+            token.type = TokenType::AND;
+            break;
+        case '|':
+            token.type = TokenType::OR;
+            break;
+        case '<':
+            if (input_file.peek() == '=')
+            {
+                input_file.get();
+                token.type = TokenType::LT_EQ;
+            }
+            else 
+                token.type = TokenType::LT;
+
+            break;
+        case '>':
+            if (input_file.peek() == '=')
+            {
+                input_file.get();
+                token.type = TokenType::GT_EQ;
+            }
+            else 
+                token.type = TokenType::GT;
+
+            break;
+        case '"':
+            // Need the extra scope level because k is defined in a case
+            {
+                // String token
+                token.type = TokenType::STRING;
+
+                int k = 0;
+                while (input_file.get(ch) && ch != '"')
+                {
+                    if (!isValidInString(ch))
+                    {
+                        std::string err = "Char not valid in a string: ";
+                        err += ch;
+                        err_handler->reportError(err, line_number);
+                    }
+                    else 
+                    {
+                        token.val.string_value[k++] = ch;
+                    }
+                }
+                if (ch != '"') 
+                {
+                    err_handler->reportError("Reached EOF and string quotes were never closed.", line_number);
+                }
+                token.val.string_value[k] = 0;
+            }
+            break;
+        case '\'':
+            token.type = TokenType::CHAR;
+            input_file.get(ch);
+            if (!isValidChar(ch))
+            {
+                std::string err = "Not a valid char literal: ";
+                err += ch;
+                err_handler->reportError(err, line_number);
+            }
+            token.val.char_value = ch;
+            ch = input_file.get();
+            if (ch != '\'')
+            {
+                err_handler->reportError("Single quote containing more than one char", line_number);
+            }
+            break;
+        case '=':
+            if (input_file.peek() == '=')
+            {
+                input_file.get();
+                token.type = TokenType::EQUALS;
+            }
+            break;
+        case ':':
+            if (input_file.peek() == '=') 
+            {
+                input_file.get();
+                token.type = TokenType::ASSIGNMENT;
+            }
+            else 
+            {
+                token.type = TokenType::COLON;
+            }
+            break;
+        case '!':
+            if (input_file.peek() == '=') 
+            {
+                input_file.get();
+                token.type = TokenType::NOTEQUAL;
+            }
+            break;
+        }
     }
 
     // TODO: Check for file errors
     
     if (token.type == TokenType::UNKNOWN)
     {
-        // TODO: Error, unknown char ch
-        token.val.char_value = ch;
+        std::string err = "Unknown token: ";
+        err += ch;
+        err_handler->reportError(err, line_number);
     }
-/*
-    // DEBUG
 
-    init_debug();
-    std::cout << "LINE: " << line_number << " TOKEN: " << debug_typemap[token.type] << std::endl;
-
-    // END DEBUG
-*/
     return token;
 }
 

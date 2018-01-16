@@ -1,35 +1,43 @@
 #include "scanner.h"
 #include <vector>
+
+// DEBUG
+
 #include <iostream>
-
-void reportError(const char* message)
+const char* TokenTypeStrings[] = 
 {
-    std::cerr << message << '\n';
-}
-
-void reportWarning(const char* message)
-{
-    std::cout << message << '\n';
-}
+    "PERIOD", "SEMICOLON", "L_PAREN", "R_PAREN", "COMMA", "L_BRACKET", "R_BRACKET", "COLON", "AND", "OR", "PLUS", "MINUS", "LT", "GT", "LT_EQ", "GT_EQ", "ASSIGNMENT", "EQUALS", "NOTEQUAL", "MULTIPLICATION", "DIVISION", "FILE_END", "STRING", "CHAR", "INTEGER", "FLOAT", "BOOL", "RS_IN", "RS_OUT", "RS_INOUT", "RS_PROGRAM", "RS_IS", "RS_BEGIN", "RS_END", "RS_GLOBAL", "RS_PROCEDURE", "RS_STRING", "RS_CHAR", "RS_INTEGER", "RS_FLOAT", "RS_BOOL", "RS_IF", "RS_THEN", "RS_ELSE", "RS_FOR", "RS_RETURN", "RS_TRUE", "RS_FALSE", "RS_NOT", "IDENTIFIER", "UNKNOWN"
+};
 
 // Gets a vector of tokens from the scanner
-std::vector<Token> scan(char* filename) 
+void scanner_debug(Scanner* scanner) 
 {
-    Scanner scanner;
-    bool init_success = scanner.init(filename);
-    if (!init_success)
+    Token token;
+    while ((token = scanner->getToken()).type != TokenType::FILE_END)
     {
-        reportError("Scanner initialization failed. Ensure the input file is valid.");
+        std::cout << token.line << '\t';
+        std::cout << TokenTypeStrings[token.type] << '\t';
+        if (token.type == TokenType::IDENTIFIER || token.type == TokenType::STRING)
+        {
+            std::cout << '"' << token.val.string_value << '"';
+        }
+        if (token.type == TokenType::CHAR)
+        {
+            std::cout << '\'' << token.val.char_value << '\'';
+        }
+        if (token.type == TokenType::INTEGER)
+        {
+            std::cout << token.val.int_value;
+        }
+        if (token.type == TokenType::FLOAT)
+        {
+            std::cout << token.val.double_value;
+        }
+        std::cout << std::endl;
     }
-
-    Token next_token;
-    std::vector<Token> tokens;
-    while ((next_token = scanner.getToken()).type != TokenType::FILE_END)
-    {
-        tokens.push_back(next_token);
-    }
-    return tokens;
 }
+
+// END DEBUG
 
 /*
 Return codes
@@ -38,46 +46,37 @@ Return codes
 */
 int main(int argc, char** argv)
 {
+
+    ErrHandler* err_handler = new ErrHandler();
+
     if (argc < 2) 
     {
-        reportError("No filename provided.");
+        err_handler->reportError("No filename provided.");
         return 1;
     }
 
-    std::vector<Token> tokens = scan(argv[1]);
-    if (tokens.size() == 0) 
+    Scanner* scanner = new Scanner();
+    bool init_success = scanner->init(argv[1]);
+    if (!init_success)
     {
-        reportError("No tokens found. Ensure the file is not empty.");
+        err_handler->reportError("Scanner initialization failed. Ensure the input file is valid.");
         return 2;
     }
 
+    scanner->setErrHandler(err_handler);
 
-    // DEBUG
+    // TODO: Scanner debugging only. 
+    // Remove before parsing (scanner_debug consumes tokens)
+    scanner_debug(scanner);
 
-    init_debug();
-    for (auto it = tokens.begin(); it != tokens.end(); ++it)
-    {
-        std::cout << debug_typemap[it->type] << '\t';
-        if (it->type == TokenType::IDENTIFIER || it->type == TokenType::STRING)
-        {
-            std::cout << '"' << it->val.string_value << '"';
-        }
-        if (it->type == TokenType::INTEGER)
-        {
-            std::cout << it->val.int_value;
-        }
-        if (it->type == TokenType::UNKNOWN)
-        {
-            std::cout << (int)(it->val.char_value);
-        }
-        std::cout << std::endl;
-    }
-
-    // DEBUG END
 
     //TODO Parse the tokens
-    //TODO Type checking
-    //TODO Code generation
+
+    // The parser takes the scanner as input and gets tokens one at a time
+    //Parser parser(scanner);
+    //parser.parse();
+
+    //TODO Type checking and other tasks
     
     return 0;
 }
