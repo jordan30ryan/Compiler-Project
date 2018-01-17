@@ -55,15 +55,13 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    Scanner* scanner = new Scanner();
+    Scanner* scanner = new Scanner(err_handler);
     bool init_success = scanner->init(argv[1]);
     if (!init_success)
     {
         err_handler->reportError("Scanner initialization failed. Ensure the input file is valid.");
         return 2;
     }
-
-    scanner->setErrHandler(err_handler);
 
     // TODO: Scanner debugging only. 
     // This should be commented out when parsing (scanner_debug consumes tokens)

@@ -3,6 +3,8 @@
 #include <ctype.h>
 #include <string.h>
 
+Scanner::Scanner(ErrHandler* handler) : err_handler(handler) {}
+
 bool Scanner::init(const char* filename)
 {
     input_file.open(filename, std::ifstream::in);
@@ -52,11 +54,6 @@ bool Scanner::init(const char* filename)
     ascii_mapping[' '] = CharClass::WHITESPACE; 
 
     return true;
-}
-
-void Scanner::setErrHandler(ErrHandler* h)
-{
-    this->err_handler = h;
 }
 
 // Check if ch is a valid identifier character

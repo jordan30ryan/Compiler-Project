@@ -6,6 +6,9 @@
 class Scanner
 {
 public:
+
+    Scanner(ErrHandler* handler);
+
     /*
         Sets up the scanner to read from a file.
         Initializes variables in the class.
@@ -16,11 +19,6 @@ public:
                     (mainly whether the file was initialized for reading)
     */
     bool init(const char* filename);
-
-    /*
-        Sets the error handler for error reporting
-    */
-    void setErrHandler(ErrHandler* h);
 
     /*
         returns - The next token in input_file
