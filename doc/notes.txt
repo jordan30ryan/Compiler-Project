@@ -56,7 +56,23 @@ Garbage collection maybe?
 
 
 
-
 Do LLVM rather than C
+
+
+
+
+
+1/22 (MON)
+
+Some questions
+
+Is string a valid type_mark?
+Seems to be referenced as a usable type in the language spec but it's not in the type_mark bnf
+
+
+What is the default value of a newly declared var 
+    (test1.src declares an integer but never sets it)
+Should that integer be set to 0 initially?
+
 
 
