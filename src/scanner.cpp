@@ -220,6 +220,7 @@ Token Scanner::getToken()
                 }
                 else if (ascii_mapping[ch] != CharClass::DIGIT) 
                 {
+                    if (ch == '_') continue;
                     input_file.unget();
                     break;
                 }
