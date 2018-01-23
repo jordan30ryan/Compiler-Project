@@ -43,6 +43,7 @@ void scanner_debug(Scanner* scanner)
 Return codes
 1 - No filename given
 2 - Empty file or I/O error (no tokens given by scanner)
+3 - Some errors reported by err_handler
 */
 int main(int argc, char** argv)
 {
@@ -56,29 +57,32 @@ int main(int argc, char** argv)
     }
 
     Scanner* scanner = new Scanner(err_handler);
-    bool init_success = scanner->init(argv[1]);
-    if (!init_success)
+    if (!scanner->init(argv[1]))
     {
         err_handler->reportError("Scanner initialization failed. Ensure the input file is valid.");
         return 2;
     }
 
-    // TODO: Scanner debugging only. 
-    // This should be commented out when parsing (scanner_debug consumes tokens)
+    // TODO: START SCANNER DEBUG
+    // This should be commented out when parsing 
+    //  (scanner_debug consumes tokens, which the parser should do)
+
     scanner_debug(scanner);
 
-    if (err_handler->has_errors)
+    if (err_handler->errors)
     {
-        std::cout << "Some errors reported during scanner debug phase.";
+        std::cout << err_handler->errors << " error(s) reported during scanner debug phase.\n";
         return 3;
     }
 
+    // TODO: END DEBUG
 
 
 
     //TODO Parse the tokens
 
-    // The parser takes the scanner as input and gets tokens one at a time
+    // The parser is constructed with a reference to the scanner
+    //  so it can consume tokens one at a time.
     //Parser parser(scanner);
     //parser.parse();
 

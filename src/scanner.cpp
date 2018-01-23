@@ -383,4 +383,3 @@ Token Scanner::getToken()
 
 Scanner::~Scanner() { input_file.close(); }
 
-
