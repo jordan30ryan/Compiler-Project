@@ -79,4 +79,70 @@ Should that integer be set to 0 initially?
 1/23 (TUES)
 
 
+Dynamic linking
+
+backend is NPC
+NPC (NP Complete)
+
+
+-O flags in gcc (Error levels)
+-Os should make program smaller
+For my compiler, it adds 2k to the program size. Why?
+
+Dynamic cast?
+
+
+1/25 (THURS)
+
+
+Student presentations:
+
+Next Thurs
+LLVM?
+
+LLVM language
+
+In memory format - Tie in to LLVM API for syntax tree 
+
+LLVM Optimization
+
+Flex - lexical analyzer generator (one student)
+
+
+
+
+Intro to parsing
+
+Sequence of tokens -> (abstract) syntax tree
+
+Check the syntax (structure) of the program
+
+Can't be specified with FSA or regex;
+languages have non-regular constructs
+    -Nesting
+    -Recursion
+
+
+BNF usually refers to EBNF (Extended BNF)
+
+Syntax      - The sequence of tokens work together (parsing)
+Semantics   - The types match and make sense (type checking)
+
+
+Derivations
+rightmost   - rightmost non-terminal is replaced at each step
+leftmost    - leftmost ""
+
+E =*> 3 + 8 - 2
+E goes to the statement through derivations
+
+Precedence in expressions is done with expr, term, factor 
+    expr is composed of lowest precedence operators (+-) and terms
+    terms are composed of higher precedence operators (*/) and factors
+    factors - numbers/ids
+Same parse tree under both leftmost/rightmost derivations
+
+
+
+LLVM In-memory format
 
