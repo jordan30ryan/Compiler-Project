@@ -146,3 +146,16 @@ Same parse tree under both leftmost/rightmost derivations
 
 LLVM In-memory format
 
+
+
+Symbol table in parser
+
+main symbol table --- f1() symbol table --- f2() symbol table
+
+while in f2, it checks f2 symbol table first but can check the ones up the stack as well
+
+
+
+In scanner, simplify adding operators; the Token struct would be like: (TokenType::ADDING, specific token = + | -)
+
+
