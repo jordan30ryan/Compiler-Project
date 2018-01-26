@@ -22,7 +22,6 @@ bool Scanner::init(const char* filename)
     reserved_words_map.emplace_back(TokenType::RS_END, "END");
     reserved_words_map.emplace_back(TokenType::RS_GLOBAL, "GLOBAL");
     reserved_words_map.emplace_back(TokenType::RS_PROCEDURE, "PROCEDURE");
-    // String type?
     reserved_words_map.emplace_back(TokenType::RS_STRING, "STRING");
     reserved_words_map.emplace_back(TokenType::RS_CHAR, "CHAR");
     reserved_words_map.emplace_back(TokenType::RS_INTEGER, "INTEGER");
@@ -184,6 +183,9 @@ Token Scanner::getToken()
     // Main switch to get token type (and value if necessary)
     switch (ascii_mapping[ch])
     {
+    case CharClass::WHITESPACE:
+        // Something in consumeWhitespace... is not working correctly...
+        break;
     case CharClass::LETTER:
         // Identifiers/Reserved words must all start with a letter
         int k;

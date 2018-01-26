@@ -1,4 +1,5 @@
 #include "scanner.h"
+#include "parser.h"
 #include <vector>
 
 // DEBUG
@@ -56,6 +57,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    // Init scanner
     Scanner* scanner = new Scanner(err_handler);
     if (!scanner->init(argv[1]))
     {
@@ -63,6 +65,7 @@ int main(int argc, char** argv)
         return 2;
     }
 
+/*
     // TODO: START SCANNER DEBUG
     // This should be commented out when parsing 
     //  (scanner_debug consumes tokens, which the parser should do)
@@ -76,14 +79,14 @@ int main(int argc, char** argv)
     }
 
     // TODO: END DEBUG
-
+*/
 
 
     //TODO Parse the tokens
 
     // The parser is constructed with a reference to the scanner
     //  so it can consume tokens one at a time.
-    //Parser parser(scanner);
+    Parser parser(scanner);
     //parser.parse();
 
     //TODO Type checking and other tasks

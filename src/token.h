@@ -1,3 +1,4 @@
+#pragma once
 #include <map>
 
 #define MAX_STRING_LEN 256
