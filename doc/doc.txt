@@ -37,6 +37,9 @@ But the only boolean literals, TRUE/FALSE, would be easier to store as reserved 
 
 Performnace of ifstream::unget(); alternate methods?
 
+Might be interesting to make getToken() (in the parser) also check for type
+i.e. pass in the TokenType we expect to getToken() and getToken checks for that token type and handles errors.
+
 
 === DONE ===
 

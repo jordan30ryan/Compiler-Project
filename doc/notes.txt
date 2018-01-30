@@ -220,3 +220,14 @@ empty string in FIRST(a) - first token of a
 
 
 
+
+
+QUESTION:
+
+When to get first token of a group? before entering that group or while in that group
+When looking at program_body, a token is needed before entering statement because it needs to check for 
+    program begin/end. This means that while in statement/declaration, the first token of that block
+    may already be consumed. We can't put back and we can't peek tokens, so how do we deal with this?
+Possible solution: 
+    assume that the group above on the call stack will get the first token of the current group
+

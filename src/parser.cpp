@@ -43,31 +43,74 @@ void scanner_debug(Scanner* scanner)
 
 Parser::Parser(Scanner* scan) : scanner(scan) { }
 
+Token Parser::getToken()
+{
+    curr_token = scanner->getToken();
+    return curr_token;
+}
+
+Token Parser::getToken(TokenType type)
+{
+    getToken();
+    if (curr_token.type != type)
+    {
+        // Error handling
+    }
+    return curr_token;
+}
+
 void Parser::parse() 
 {
+    // TODO: handle all errors
     //scanner_debug(scanner);
-    Token token = scanner->getToken();
-    if (token.type == TokenType::RS_PROGRAM) 
-    {
-        program();
-    }
+    program();
+    getToken(TokenType::FILE_END);
 }
 
 void Parser::program()
 {
-    Token id = scanner->getToken();
-    if (id.type == TokenType::IDENTIFIER)
-    {
-        char* program_name = id.val.string_value;
-        std::cout << "Prog. name is " << program_name << '\n';
-    }
+    std::cout << "program" << '\n';
+    // NOTE: First token of a certain group is always consumed
+    //  before entering that group (to allow for 
+    getToken(TokenType::RS_PROGRAM); 
+    program_header(); 
+    program_body(); 
+    getToken(TokenType::PERIOD); 
 }
+
 void Parser::program_header()
 {
+    std::cout << "header" << '\n';
+    getToken(TokenType::IDENTIFIER); 
+    if (curr_token.type == TokenType::IDENTIFIER)
+    {
+        char* program_name = curr_token.val.string_value;
+        std::cout << "Prog. name is " << program_name << '\n';
+    }
+    getToken(TokenType::RS_IS); 
 }
 
 void Parser::program_body()
 {
+    std::cout << "body" << '\n';
+    bool declarations = true;
+    while (true)
+    {
+        getToken(); // <(BEGIN)|(END)|(first of decl|stmnt)>
+        if (curr_token.type == TokenType::RS_BEGIN)
+        {
+            declarations = false;
+            getToken(); // <first of stmnt>
+        }
+        else if (curr_token.type == TokenType::RS_END)
+        {
+            getToken(); // RS_PROGRAM
+            return;
+        }
+        if (declarations) declaration();
+        else statement();
+        getToken(TokenType::SEMICOLON); 
+    }
 }
 
 void Parser::identifier()
@@ -76,15 +119,31 @@ void Parser::identifier()
 
 void Parser::declaration()
 {
+    bool global;
+    if (curr_token.type == TokenType::RS_GLOBAL)
+    {
+        global = true;
+    }
+    getToken();
+    if (curr_token.type == TokenType::RS_PROCEDURE)
+    {
+        proc_declaration();
+    }
+    else var_declaration();
 }
-
 
 void Parser::proc_declaration()
 {
+    proc_header();
+    proc_body();
 }
 
 void Parser::proc_header()
 {
+    getToken(TokenType::IDENTIFIER);
+    getToken(TokenType::L_PAREN);
+    //TODO
+    getToken(); //Either R_PAREN or first of param_list
 }
 
 void Parser::proc_body()
@@ -102,6 +161,9 @@ void Parser::parameter()
 
 void Parser::var_declaration()
 {
+    TokenType typemark = curr_token.type;
+    char* id = getToken(TokenType::IDENTIFIER).val.string_value;
+    // TODO: lower/upper bound stuff
 }
 
 void Parser::type_mark()
