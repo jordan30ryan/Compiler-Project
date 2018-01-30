@@ -21,7 +21,7 @@ Scanner - just get the next token - don't return all at once (other than for deb
 Go back in and make sure newlines always increment the line counter - carry along with the token so it can be identified at later stages. Also check for windows line endings (\r\n). Also \r should be in the whitespace category
 
 
-
+================================================================================
 
 1/18 (THURS)
 
@@ -60,7 +60,7 @@ Do LLVM rather than C
 
 
 
-
+================================================================================
 
 1/22 (MON)
 
@@ -75,6 +75,7 @@ What is the default value of a newly declared var
 Should that integer be set to 0 initially?
 
 
+================================================================================
 
 1/23 (TUES)
 
@@ -91,6 +92,8 @@ For my compiler, it adds 2k to the program size. Why?
 
 Dynamic cast?
 
+
+================================================================================
 
 1/25 (THURS)
 
@@ -157,5 +160,19 @@ while in f2, it checks f2 symbol table first but can check the ones up the stack
 
 
 In scanner, simplify adding operators; the Token struct would be like: (TokenType::ADDING, specific token = + | -)
+
+
+================================================================================
+
+1/30 (TUES)
+
+Parsing
+
+Top down parsing
+
+
+One pass compiler
+Don't try to solve future problems yet, just do the parser.
+
 
 

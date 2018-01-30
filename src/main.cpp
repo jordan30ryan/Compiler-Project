@@ -35,12 +35,10 @@ int main(int argc, char** argv)
     Parser parser(scanner);
     parser.parse();
 
-// DEBUG
     if (err_handler->errors)
     {
         std::cout << err_handler->errors << " error(s) reported during scanner debug phase.\n";
     }    
-// END DEBUG
 
     //TODO Type checking and other tasks
     
