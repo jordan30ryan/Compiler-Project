@@ -166,13 +166,57 @@ In scanner, simplify adding operators; the Token struct would be like: (TokenTyp
 
 1/30 (TUES)
 
-Parsing
+Parsing (Slides pt 2)
 
 Top down parsing
 
 
-One pass compiler
+One pass compiler (no intermediate form)
 Don't try to solve future problems yet, just do the parser.
+
+
+Need to recognize EOF
+
+
+Parser should know what to expect next based on the structure of the language. 
+e.g. 
+IDENTIFIER := 
+parser should expect an rvalue that can be assigned to an identifier, that is an expr or other valid rvalue
+
+LL(1) - only look at single token
+LL(k) - bad; grows exponentially
+
+
+Top down parsers can only handle right recursive grammars
+Our parser is left recursive, so we need a bottom up parser
+
+Eliminate left recursion - left factoring
+
+expr'() {
+    token = scan()
+    if token.tt == adding {
+        token = scan()
+        term()
+        expr'()
+    }
+}
+
+expr() {
+    term()
+    expr'()
+}
+
+
+Don't worry about errors yet
+
+
+Given A -> a | b
+a intersection b must be empty set
+That is, a cannot contain the same symbols as b. 
+First token of A must uniquely identify that it's type a or b.
+
+
+empty string in FIRST(a) - first token of a
 
 
 
