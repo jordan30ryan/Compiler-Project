@@ -46,6 +46,7 @@ Parser::Parser(Scanner* scan) : scanner(scan) { }
 Token Parser::getToken()
 {
     curr_token = scanner->getToken();
+    std::cout << "Got: " << TokenTypeStrings[curr_token.type] << '\n';
     return curr_token;
 }
 
@@ -54,15 +55,16 @@ Token Parser::getToken(TokenType type)
     getToken();
     if (curr_token.type != type)
     {
-        // Error handling
+        // TODO Error handling
+        std::cerr << "Bad token (expected " << TokenTypeStrings[type] << ", found " << TokenTypeStrings[curr_token.type] << ").\n";
     }
     return curr_token;
 }
 
 void Parser::parse() 
 {
-    // TODO: handle all errors
     //scanner_debug(scanner);
+
     program();
     getToken(TokenType::FILE_END);
 }
@@ -80,7 +82,7 @@ void Parser::program()
 
 void Parser::program_header()
 {
-    std::cout << "header" << '\n';
+    std::cout << "program header" << '\n';
     getToken(TokenType::IDENTIFIER); 
     if (curr_token.type == TokenType::IDENTIFIER)
     {
@@ -92,7 +94,7 @@ void Parser::program_header()
 
 void Parser::program_body()
 {
-    std::cout << "body" << '\n';
+    std::cout << "program body" << '\n';
     bool declarations = true;
     while (true)
     {
@@ -104,7 +106,7 @@ void Parser::program_body()
         }
         else if (curr_token.type == TokenType::RS_END)
         {
-            getToken(); // RS_PROGRAM
+            getToken(TokenType::RS_PROGRAM); // RS_PROGRAM
             return;
         }
         if (declarations) declaration();
@@ -115,16 +117,18 @@ void Parser::program_body()
 
 void Parser::identifier()
 {
+    std::cout << "identifier" << '\n';
 }
 
 void Parser::declaration()
 {
+    std::cout << "declaration" << '\n';
     bool global;
     if (curr_token.type == TokenType::RS_GLOBAL)
     {
         global = true;
+        getToken(); // <procedure|typemark>
     }
-    getToken();
     if (curr_token.type == TokenType::RS_PROCEDURE)
     {
         proc_declaration();
@@ -134,33 +138,65 @@ void Parser::declaration()
 
 void Parser::proc_declaration()
 {
+    std::cout << "proc decl" << '\n';
     proc_header();
     proc_body();
 }
 
 void Parser::proc_header()
 {
+    std::cout << "proc header" << '\n';
     getToken(TokenType::IDENTIFIER);
     getToken(TokenType::L_PAREN);
     //TODO
-    getToken(); //Either R_PAREN or first of param_list
+    getToken(); // <R_PAREN|param_list>
+    if (curr_token.type == TokenType::R_PAREN)
+    {
+        return;
+    }
+    else 
+    {
+        parameter_list(); 
+    }
 }
 
 void Parser::proc_body()
 {
+    std::cout << "proc body" << '\n';
+    bool declarations = true;
+    while (true)
+    {
+        getToken(); // <(BEGIN)|(END)|(first of decl|stmnt)>
+        if (curr_token.type == TokenType::RS_BEGIN)
+        {
+            declarations = false;
+            getToken(); // <first of stmnt>
+        }
+        else if (curr_token.type == TokenType::RS_END)
+        {
+            getToken(TokenType::RS_PROCEDURE); 
+            return;
+        }
+        if (declarations) declaration();
+        else statement();
+        getToken(TokenType::SEMICOLON); 
+    }
 }
 
 void Parser::parameter_list()
 {
+    std::cout << "param list" << '\n';
 }
 
 void Parser::parameter()
 {
+    std::cout << "param" << '\n';
 }
 
 
 void Parser::var_declaration()
 {
+    std::cout << "var decl" << '\n';
     TokenType typemark = curr_token.type;
     char* id = getToken(TokenType::IDENTIFIER).val.string_value;
     // TODO: lower/upper bound stuff
