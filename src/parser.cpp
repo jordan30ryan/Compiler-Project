@@ -50,17 +50,6 @@ Token Parser::getToken()
     return curr_token;
 }
 
-Token Parser::getToken(TokenType type)
-{
-    getToken();
-    if (curr_token.type != type)
-    {
-        // TODO Error handling
-        std::cout << "Bad token (expected " << TokenTypeStrings[type] << ", found " << TokenTypeStrings[curr_token.type] << ").\n";
-    }
-    return curr_token;
-}
-
 void Parser::parse() 
 {
     //scanner_debug(scanner);
@@ -73,17 +62,17 @@ void Parser::program()
 {
     std::cout << "program" << '\n';
     // NOTE: First token of a certain group is always consumed
-    //  before entering that group (to allow for 
-    getToken(TokenType::RS_PROGRAM); 
+    //  before entering that group 
+    getToken(); // RS_PROGRAM
     program_header(); 
     program_body(); 
-    getToken(TokenType::PERIOD); 
+    getToken(); // PERIOD
 }
 
 void Parser::program_header()
 {
     std::cout << "program header" << '\n';
-    getToken(TokenType::IDENTIFIER); 
+    getToken(); // IDENTIFIER
     if (curr_token.type == TokenType::IDENTIFIER)
     {
         char* program_name = curr_token.val.string_value;
