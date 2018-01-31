@@ -127,13 +127,13 @@ void Parser::declaration()
     if (curr_token.type == TokenType::RS_GLOBAL)
     {
         global = true;
-        getToken(); // <procedure|typemark>
+        getToken(); // <RS_PROCEDURE|typemark>
     }
     if (curr_token.type == TokenType::RS_PROCEDURE)
     {
         proc_declaration();
     }
-    else var_declaration();
+    else var_declaration(); // typemark - continue into var decl
 }
 
 void Parser::proc_declaration()
@@ -158,6 +158,7 @@ void Parser::proc_header()
     {
         parameter_list(); 
     }
+    getToken(TokenType::R_PAREN);
 }
 
 void Parser::proc_body()
