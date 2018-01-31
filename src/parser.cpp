@@ -56,7 +56,7 @@ Token Parser::getToken(TokenType type)
     if (curr_token.type != type)
     {
         // TODO Error handling
-        std::cerr << "Bad token (expected " << TokenTypeStrings[type] << ", found " << TokenTypeStrings[curr_token.type] << ").\n";
+        std::cout << "Bad token (expected " << TokenTypeStrings[type] << ", found " << TokenTypeStrings[curr_token.type] << ").\n";
     }
     return curr_token;
 }
@@ -123,7 +123,7 @@ void Parser::identifier()
 void Parser::declaration()
 {
     std::cout << "declaration" << '\n';
-    bool global;
+    bool global = false;
     if (curr_token.type == TokenType::RS_GLOBAL)
     {
         global = true;
@@ -205,85 +205,105 @@ void Parser::var_declaration()
 
 void Parser::type_mark()
 {
+    std::cout << "type_mark" << '\n';
 }
 
 void Parser::lower_bound()
 {
+    std::cout << "lower_bound" << '\n';
 }
 
 void Parser::upper_bound()
 {
+    std::cout << "upper_bound" << '\n';
 }
 
 
 void Parser::statement()
 {
+    std::cout << "stmnt" << '\n';
 }
 
 void Parser::assignment_statement()
 {
+    std::cout << "assignment stmnt" << '\n';
 }
 
 void Parser::if_statement()
 {
+    std::cout << "if" << '\n';
 }
 
 void Parser::loop_statement()
 {
+    std::cout << "loop" << '\n';
 }
 
 void Parser::return_statement()
 {
+    std::cout << "return" << '\n';
 }
 
 void Parser::proc_call()
 {
+    std::cout << "proc call" << '\n';
 }
 
 
 void Parser::argument_list()
 {
+    std::cout << "arg list" << '\n';
 }
 
 void Parser::destination()
 {
+    std::cout << "destination" << '\n';
 }
 
 
 void Parser::expression()
 {
+    std::cout << "expr" << '\n';
 }
 
 void Parser::arith_op()
 {
+    std::cout << "arith op" << '\n';
 }
 
 void Parser::relation()
 {
+    std::cout << "relation" << '\n';
 }
 
 void Parser::term()
 {
+    std::cout << "term" << '\n';
 }
 
 void Parser::factor()
 {
+    std::cout << "factor" << '\n';
 }
 
 void Parser::name()
 {
+    std::cout << "name" << '\n';
 }
 
 void Parser::number()
 {
+    std::cout << "number" << '\n';
 }
 
 void Parser::string_literal()
 {
+    std::cout << "string literal" << '\n';
 }
 
 void Parser::char_literal()
 {
+    std::cout << "char literal" << '\n';
 }
 
 

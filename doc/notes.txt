@@ -220,14 +220,46 @@ empty string in FIRST(a) - first token of a
 
 
 
-
+================================================================================
 
 QUESTION:
 
 When to get first token of a group? before entering that group or while in that group
-When looking at program_body, a token is needed before entering statement because it needs to check for 
-    program begin/end. This means that while in statement/declaration, the first token of that block
-    may already be consumed. We can't put back and we can't peek tokens, so how do we deal with this?
-Possible solution: 
-    assume that the group above on the call stack will get the first token of the current group
+e.g. when looking at program_body, a token is needed before entering declaration or statement 
+    because it needs to check for program begin/end. 
+    This means that while in statement/declaration, the first token of that block
+    may already be consumed. 
+    We can't put back and we can't peek tokens, so how do we deal with this?
+
+Possible solution: assume that the group above on the call stack will 
+    get the first token of the current group
+
+
+What about optional things? 
+    For a variable decl, there is optionally a [n] after for defining arrays.
+    This may or may not be there, and there may just be a semicolon 
+        or in|out|inout if it's a parameter. 
+    But, the semicolon belongs in 
+
+        <program_body> | <procedure_body> 
+        
+    and not <variable_declaration> or even <declaration>.
+
+    If we let <variable_declaration> consume the semicolon, we need to:
+        - Make sure all other declarations consume the optional semicolon
+            - That is, <proc_declaration> has to consume one more token, even
+                though that should always be a semicolon
+        - Make sure every other usage of <variable_declaration> knows that it will
+            consume an extra token 
+            - That is, <parameter> needs to know that a call to 
+                <variable_declaration> consumes the in|out|inout following it.
+
+
+
+
+How exactly do in|out|inout work?
+
+
+What is a declared variable set to by default?
+
 
