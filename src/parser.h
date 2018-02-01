@@ -13,7 +13,9 @@ private:
     Token getToken();
     // Get a token, and check the type. If wrong type, throw error
     Token getToken(TokenType type);
+
     Token curr_token;
+    Token next_token;
 
     void program();
     void program_header();

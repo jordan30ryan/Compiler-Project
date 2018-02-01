@@ -46,50 +46,38 @@ Parser::Parser(Scanner* scan) : scanner(scan) { }
 Token Parser::getToken()
 {
     curr_token = scanner->getToken();
-    std::cout << "Got: " << TokenTypeStrings[curr_token.type] << '\n';
-    return curr_token;
-}
-
-Token Parser::getToken(TokenType type)
-{
-    getToken();
-    if (curr_token.type != type)
-    {
-        // TODO Error handling
-        std::cerr << "Bad token (expected " << TokenTypeStrings[type] << ", found " << TokenTypeStrings[curr_token.type] << ").\n";
-    }
+    std::cout << "Got: " << TokenTypeStrings[next_token.type] << '\n';
     return curr_token;
 }
 
 void Parser::parse() 
 {
     //scanner_debug(scanner);
-
     program();
-    getToken(TokenType::FILE_END);
+    getToken(); // FILE_END
 }
 
 void Parser::program()
 {
     std::cout << "program" << '\n';
     // NOTE: First token of a certain group is always consumed
-    //  before entering that group (to allow for 
-    getToken(TokenType::RS_PROGRAM); 
+    //  before entering that group 
     program_header(); 
     program_body(); 
-    getToken(TokenType::PERIOD); 
+    getToken(); // PERIOD
 }
 
 void Parser::program_header()
 {
+    getToken(); // RS_PROGRAM
     std::cout << "program header" << '\n';
-    getToken(TokenType::IDENTIFIER); 
+    getToken(); // IDENTIFIER
     if (curr_token.type == TokenType::IDENTIFIER)
     {
         char* program_name = curr_token.val.string_value;
         std::cout << "Prog. name is " << program_name << '\n';
     }
-    getToken(TokenType::RS_IS); 
+    getToken(); // RS_IS
 }
 
 void Parser::program_body()
@@ -111,7 +99,7 @@ void Parser::program_body()
         }
         if (declarations) declaration();
         else statement();
-        getToken(TokenType::SEMICOLON); 
+        getToken(); // SEMICOLON
     }
 }
 
@@ -123,7 +111,7 @@ void Parser::identifier()
 void Parser::declaration()
 {
     std::cout << "declaration" << '\n';
-    bool global;
+    bool global = false;
     if (curr_token.type == TokenType::RS_GLOBAL)
     {
         global = true;
@@ -146,8 +134,8 @@ void Parser::proc_declaration()
 void Parser::proc_header()
 {
     std::cout << "proc header" << '\n';
-    getToken(TokenType::IDENTIFIER);
-    getToken(TokenType::L_PAREN);
+    getToken(); // IDENTIFIER
+    getToken(); // L_PAREN
     //TODO
     getToken(); // <R_PAREN|param_list>
     if (curr_token.type == TokenType::R_PAREN)
@@ -158,7 +146,7 @@ void Parser::proc_header()
     {
         parameter_list(); 
     }
-    getToken(TokenType::R_PAREN);
+    getToken(); // R_PAREN
 }
 
 void Parser::proc_body()
@@ -175,12 +163,12 @@ void Parser::proc_body()
         }
         else if (curr_token.type == TokenType::RS_END)
         {
-            getToken(TokenType::RS_PROCEDURE); 
+            getToken(); // RS_PROCEDURE
             return;
         }
         if (declarations) declaration();
         else statement();
-        getToken(TokenType::SEMICOLON); 
+        getToken(); // SEMICOLON
     }
 }
 
@@ -199,91 +187,112 @@ void Parser::var_declaration()
 {
     std::cout << "var decl" << '\n';
     TokenType typemark = curr_token.type;
-    char* id = getToken(TokenType::IDENTIFIER).val.string_value;
+    getToken(); // IDENTIFIER
+    char* id = curr_token.val.string_value;
     // TODO: lower/upper bound stuff
 }
 
 void Parser::type_mark()
 {
+    std::cout << "type_mark" << '\n';
 }
 
 void Parser::lower_bound()
 {
+    std::cout << "lower_bound" << '\n';
 }
 
 void Parser::upper_bound()
 {
+    std::cout << "upper_bound" << '\n';
 }
 
 
 void Parser::statement()
 {
+    std::cout << "stmnt" << '\n';
 }
 
 void Parser::assignment_statement()
 {
+    std::cout << "assignment stmnt" << '\n';
 }
 
 void Parser::if_statement()
 {
+    std::cout << "if" << '\n';
 }
 
 void Parser::loop_statement()
 {
+    std::cout << "loop" << '\n';
 }
 
 void Parser::return_statement()
 {
+    std::cout << "return" << '\n';
 }
 
 void Parser::proc_call()
 {
+    std::cout << "proc call" << '\n';
 }
 
 
 void Parser::argument_list()
 {
+    std::cout << "arg list" << '\n';
 }
 
 void Parser::destination()
 {
+    std::cout << "destination" << '\n';
 }
 
 
 void Parser::expression()
 {
+    std::cout << "expr" << '\n';
 }
 
 void Parser::arith_op()
 {
+    std::cout << "arith op" << '\n';
 }
 
 void Parser::relation()
 {
+    std::cout << "relation" << '\n';
 }
 
 void Parser::term()
 {
+    std::cout << "term" << '\n';
 }
 
 void Parser::factor()
 {
+    std::cout << "factor" << '\n';
 }
 
 void Parser::name()
 {
+    std::cout << "name" << '\n';
 }
 
 void Parser::number()
 {
+    std::cout << "number" << '\n';
 }
 
 void Parser::string_literal()
 {
+    std::cout << "string literal" << '\n';
 }
 
 void Parser::char_literal()
 {
+    std::cout << "char literal" << '\n';
 }
 
 
