@@ -46,16 +46,15 @@ Parser::Parser(Scanner* scan) : scanner(scan) { }
 Token Parser::getToken()
 {
     curr_token = scanner->getToken();
-    std::cout << "Got: " << TokenTypeStrings[curr_token.type] << '\n';
+    std::cout << "Got: " << TokenTypeStrings[next_token.type] << '\n';
     return curr_token;
 }
 
 void Parser::parse() 
 {
     //scanner_debug(scanner);
-
     program();
-    getToken(TokenType::FILE_END);
+    getToken(); // FILE_END
 }
 
 void Parser::program()
@@ -63,7 +62,6 @@ void Parser::program()
     std::cout << "program" << '\n';
     // NOTE: First token of a certain group is always consumed
     //  before entering that group 
-    getToken(); // RS_PROGRAM
     program_header(); 
     program_body(); 
     getToken(); // PERIOD
@@ -71,6 +69,7 @@ void Parser::program()
 
 void Parser::program_header()
 {
+    getToken(); // RS_PROGRAM
     std::cout << "program header" << '\n';
     getToken(); // IDENTIFIER
     if (curr_token.type == TokenType::IDENTIFIER)
@@ -78,7 +77,7 @@ void Parser::program_header()
         char* program_name = curr_token.val.string_value;
         std::cout << "Prog. name is " << program_name << '\n';
     }
-    getToken(TokenType::RS_IS); 
+    getToken(); // RS_IS
 }
 
 void Parser::program_body()
@@ -100,7 +99,7 @@ void Parser::program_body()
         }
         if (declarations) declaration();
         else statement();
-        getToken(TokenType::SEMICOLON); 
+        getToken(); // SEMICOLON
     }
 }
 
@@ -135,8 +134,8 @@ void Parser::proc_declaration()
 void Parser::proc_header()
 {
     std::cout << "proc header" << '\n';
-    getToken(TokenType::IDENTIFIER);
-    getToken(TokenType::L_PAREN);
+    getToken(); // IDENTIFIER
+    getToken(); // L_PAREN
     //TODO
     getToken(); // <R_PAREN|param_list>
     if (curr_token.type == TokenType::R_PAREN)
@@ -147,7 +146,7 @@ void Parser::proc_header()
     {
         parameter_list(); 
     }
-    getToken(TokenType::R_PAREN);
+    getToken(); // R_PAREN
 }
 
 void Parser::proc_body()
@@ -164,12 +163,12 @@ void Parser::proc_body()
         }
         else if (curr_token.type == TokenType::RS_END)
         {
-            getToken(TokenType::RS_PROCEDURE); 
+            getToken(); // RS_PROCEDURE
             return;
         }
         if (declarations) declaration();
         else statement();
-        getToken(TokenType::SEMICOLON); 
+        getToken(); // SEMICOLON
     }
 }
 
@@ -188,7 +187,8 @@ void Parser::var_declaration()
 {
     std::cout << "var decl" << '\n';
     TokenType typemark = curr_token.type;
-    char* id = getToken(TokenType::IDENTIFIER).val.string_value;
+    getToken(); // IDENTIFIER
+    char* id = curr_token.val.string_value;
     // TODO: lower/upper bound stuff
 }
 

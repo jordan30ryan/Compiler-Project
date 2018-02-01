@@ -263,3 +263,21 @@ How exactly do in|out|inout work?
 What is a declared variable set to by default?
 
 
+
+================================================================================
+2/1 (THURS)
+
+Symbol table usage
+Lexer   -   Looks up symbols 
+Parser  -   Holds scope / type information 
+
+
+Non constant lower/upper bound for arrays
+Array can be indexed starting at lower bound (instead of 0 or 1)
+
+Get conditional based parsing like arrays and else
+
+
+Email him the test programs that need correcting 
+
+Strings are a type
