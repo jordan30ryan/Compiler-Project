@@ -290,3 +290,10 @@ test1
 test1b
 
 
+
+Should we unconditionally call functions 
+    or determine whether we should enter them beforehand?
+i.e. for something like statement, should we check whether 
+    it's an if/for/whatever or just call if();for();
+
+

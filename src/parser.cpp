@@ -60,8 +60,6 @@ void Parser::parse()
 void Parser::program()
 {
     std::cout << "program" << '\n';
-    // NOTE: First token of a certain group is always consumed
-    //  before entering that group 
     program_header(); 
     program_body(); 
     getToken(); // PERIOD
@@ -69,8 +67,8 @@ void Parser::program()
 
 void Parser::program_header()
 {
-    getToken(); // RS_PROGRAM
     std::cout << "program header" << '\n';
+    getToken(); // RS_PROGRAM
     getToken(); // IDENTIFIER
     if (curr_token.type == TokenType::IDENTIFIER)
     {
@@ -94,7 +92,7 @@ void Parser::program_body()
         }
         else if (curr_token.type == TokenType::RS_END)
         {
-            getToken(TokenType::RS_PROGRAM); // RS_PROGRAM
+            getToken(); // RS_PROGRAM
             return;
         }
         if (declarations) declaration();
@@ -122,6 +120,7 @@ void Parser::declaration()
         proc_declaration();
     }
     else var_declaration(); // typemark - continue into var decl
+    // curr_token should be SEMICOLON
 }
 
 void Parser::proc_declaration()
@@ -137,7 +136,7 @@ void Parser::proc_header()
     getToken(); // IDENTIFIER
     getToken(); // L_PAREN
     //TODO
-    getToken(); // <R_PAREN|param_list>
+    getToken(); // <R_PAREN|param_list[0]>
     if (curr_token.type == TokenType::R_PAREN)
     {
         return;
@@ -145,8 +144,9 @@ void Parser::proc_header()
     else 
     {
         parameter_list(); 
+        // curr_Token should be R_PAREN
+        return;
     }
-    getToken(); // R_PAREN
 }
 
 void Parser::proc_body()
@@ -164,7 +164,7 @@ void Parser::proc_body()
         else if (curr_token.type == TokenType::RS_END)
         {
             getToken(); // RS_PROCEDURE
-            return;
+            break;
         }
         if (declarations) declaration();
         else statement();
@@ -175,26 +175,54 @@ void Parser::proc_body()
 void Parser::parameter_list()
 {
     std::cout << "param list" << '\n';
+    // curr_token should be parameter[0]
+    while (true)
+    {
+        parameter(); 
+        getToken(); // COMMA|R_PAREN
+        if (curr_token.type == TokenType::COMMA)
+        {
+            getToken(); // parameter[0]
+            continue;
+        }
+        else 
+        {
+            return;
+        }
+    }
 }
 
 void Parser::parameter()
 {
     std::cout << "param" << '\n';
+    var_declaration();
+    // curr_token should be <IN|OUT|INOUT>
 }
 
 
 void Parser::var_declaration()
 {
     std::cout << "var decl" << '\n';
-    TokenType typemark = curr_token.type;
+    type_mark();
     getToken(); // IDENTIFIER
     char* id = curr_token.val.string_value;
-    // TODO: lower/upper bound stuff
+    getToken(); // L_BRACKET|SEMICOLON
+    if (curr_token.type == TokenType::L_BRACKET)
+    {
+        getToken(); // Lower bound
+        lower_bound();
+        getToken(); // COLON
+        getToken(); // Upper bound
+        upper_bound();
+        getToken(); // R_BRACKET
+    }
+    else return;
 }
 
 void Parser::type_mark()
 {
     std::cout << "type_mark" << '\n';
+    TokenType typemark = curr_token.type;
 }
 
 void Parser::lower_bound()
@@ -211,6 +239,23 @@ void Parser::upper_bound()
 void Parser::statement()
 {
     std::cout << "stmnt" << '\n';
+    // curr_token is statement[0]
+    if (curr_token.type == TokenType::IDENTIFIER)
+    {
+        // Assignment or proc call
+    }
+    else if (curr_token.type == TokenType::RS_IF)
+    {
+        if_statement();
+    }
+    else if (curr_token.type == TokenType::RS_FOR)
+    {
+        loop_statement();
+    }
+    else if (curr_token.type == TokenType::RS_RETURN)
+    {
+        return_statement();
+    }
 }
 
 void Parser::assignment_statement()
@@ -221,6 +266,14 @@ void Parser::assignment_statement()
 void Parser::if_statement()
 {
     std::cout << "if" << '\n';
+    getToken(); // (
+    expression();
+    getToken(); // )
+    getToken(); // RS_THEN
+    // TODO: (statement;)+
+    // TODO: else
+    getToken(); // RS_END
+    getToken(); // RS_IF
 }
 
 void Parser::loop_statement()
@@ -231,13 +284,13 @@ void Parser::loop_statement()
 void Parser::return_statement()
 {
     std::cout << "return" << '\n';
+    // curr_token = RS_RETURN
 }
 
 void Parser::proc_call()
 {
     std::cout << "proc call" << '\n';
 }
-
 
 void Parser::argument_list()
 {
@@ -248,7 +301,6 @@ void Parser::destination()
 {
     std::cout << "destination" << '\n';
 }
-
 
 void Parser::expression()
 {
@@ -294,6 +346,4 @@ void Parser::char_literal()
 {
     std::cout << "char literal" << '\n';
 }
-
-
 
