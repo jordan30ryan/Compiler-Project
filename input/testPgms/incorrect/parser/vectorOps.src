@@ -1,0 +1,63 @@
+program VectorOps is
+
+integer indx;
+integer size;
+float vect1[-5:5];
+float vect2[-5:5];
+float vect3[-2:8];
+float vect4[0:10];
+float vect5[10];  // Missing upper (or lower) bound line 28
+
+begin
+
+size := 0;
+for(indx := -5; indx < 4)
+	size := size + 1;
+	indx := indx + 1;
+//end for;  // Missing end for line 28
+
+for(indx := -5; indx < 5)
+	vect1[indx] := indx;    // [ -5, -4, -3, -2, -1,  0,  1,  2,  3,  4]
+	vect2[indx] := 1;       // [  1,  1,  1,  1,  1,  1,  1,  1,  1,  1]
+	indx := indx + 1;
+end for;
+
+putChar('a');
+for(indx := -5; indx < 5)
+	putFloat(vect1[indx]);
+	indx := indx + 1;
+end for;
+putChar('~');  // Invalid char ~ line 28
+
+putChar('b');
+for(indx := -5; indx < 5)
+	putFloat(vect2[indx]);
+	indx := indx + 1;
+end for;
+putChar(' ');
+
+vect3 := vect1 + vect2 + 1.0;    // [ -3, -2, -1,  0,  1,  2,  3,  4,  5,  6]
+vect4 := vect1 * (vect2 + 1.0);  // [-10, -8, -6, -4, -2,  0,  2,  4,  6,  8]
+vect5 := vect4 / (vect2 - 3.0);  // [  5,  4,  3,  2,  1,  0, -1, -2, -3, -4]
+
+putChar('c');
+for(indx := -2; indx < 8)
+	putFloat(vect3[indx]);
+	indx := indx + 1;
+end for;
+putChar(' ');
+
+putChar('d');
+for(indx := 0; indx < 10)
+	putFloat(vect4[indx]);
+	indx := indx + 1;
+end for;
+putChar(' ');
+
+putChar('e');
+for(indx := 10; indx < 20)
+	putFloat(vect5[indx]);
+	indx := indx + 1;
+end for;
+
+end program // Missing period line 63

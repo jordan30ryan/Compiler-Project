@@ -1,0 +1,30 @@
+program Maths is
+
+integer value;
+
+procedure Fib(integer val in, integer ret out)
+	integer tmp1;
+    integer tmp2;
+	begin
+	if(val == 0) then
+		ret := 0;
+		return;
+	end if;
+	if(val == 1) then
+		ret := 1;
+		return;
+	end if;
+	val := val - 1;
+	Fib(val, tmp1);
+	val := val - 1;
+	Fib(val, tmp2);
+	ret := tmp1 + tmp2;
+	return;
+end procedure;
+
+begin
+
+Fib(15, value);
+putInteger(value);
+
+end program.

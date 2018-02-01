@@ -4,7 +4,7 @@
 
 PROGRAM grant IS
 	global integer JAKE;
-	global integer ryan[3];
+	global integer ryan[0:3];
 	global integer zach;
 
 	procedure if_proc()

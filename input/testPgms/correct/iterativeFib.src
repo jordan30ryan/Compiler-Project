@@ -1,0 +1,36 @@
+program LoopFib is
+
+global integer x;
+integer i;
+integer max;
+
+procedure Fib(integer val in, integer ret out)
+	integer tmp[0:2]; // change to float
+	integer loopVal;
+
+	begin
+
+	tmp[0] := -1;
+	tmp[1] := 1;
+
+	for(loopVal := 0; loopVal <= val)
+		ret := tmp[0] + tmp[1];
+		tmp[0] := tmp[1];
+		tmp[1] := ret;
+		loopVal := loopVal + 1;
+	end for;
+
+	return;
+end procedure;
+
+
+begin
+
+getInteger(max);
+for(i := 0; i < max)
+	Fib(i, x);
+	putInteger(x);
+	i := i + 1;
+end for;
+
+end program.

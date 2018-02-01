@@ -1,0 +1,25 @@
+program AssignFloatToInt is
+
+global char x;
+bool res;
+
+integer arr[1:3];
+
+begin
+
+x := 'A';
+
+res := x;  // Cannot assign char to bool
+arr[1] := x; // Valid
+
+if (1) then // Valid
+    arr[2] := x;
+end if;
+
+x := res;  // Cannot assign bool to char
+x := 24;  // Valid
+
+putinteger(arr[2]);
+
+end program.
+

@@ -1,0 +1,36 @@
+program LoopFib is
+
+global integer x;
+integer i;
+integer max;
+
+procedure Fib(integer val in, integer ret out)
+	float tmp[0:]; // Mising second number line 8
+	integer loopVal;
+
+	begin
+	
+	tmp[0] := -1;
+	tmp[1] := 1;
+
+	for(loopVal := -1; loopVal < val)
+		ret := tmp[0] + tmp[1];
+		tmp[0] := tmp[1];
+		tmp[1] = ret; // Missing ':' in ':=' line 19
+		loopVal := loopVal + 1;
+	end for;
+
+	return;
+end procedure;
+
+
+begin
+
+getInteger(max);
+for(i := 0; i < max)
+	Fib(i, x);
+	putInteger(x);
+	i := i + 1;
+end for;
+
+end program.

@@ -1,0 +1,22 @@
+program InvalidChars is
+
+global bool x;
+global char c;
+
+begin
+
+getBool(x);
+if(x) then
+	putChar('~'); // Invalid character
+else
+	putChar('Ffffsdd');  // Invalid definition of character
+end if;
+
+getChar(c);
+if(c == 'A');
+	putChar('T');
+else
+	putChar('F');
+end if;
+
+end program.

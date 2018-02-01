@@ -1,0 +1,14 @@
+program AssignFloatToInt is
+
+global integer x;
+float y;
+
+begin
+
+x := 0.3; // Cannot assign float to integer
+
+y := 0.4;
+x := y; // Cannot assign float to integer
+
+end program.
+

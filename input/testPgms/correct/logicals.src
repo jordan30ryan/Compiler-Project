@@ -1,0 +1,22 @@
+program Logicals is
+
+global bool x;
+global char c;
+
+begin
+
+getBool(x);
+if(x) then
+	putChar('T');
+else
+	putChar('F');
+end if;
+
+getChar(c);
+if(c == 'A') then
+	putChar('T');
+else
+	putChar('F');
+end if;
+
+end program.
