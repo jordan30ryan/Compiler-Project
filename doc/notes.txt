@@ -281,3 +281,12 @@ Get conditional based parsing like arrays and else
 Email him the test programs that need correcting 
 
 Strings are a type
+
+
+
+Incorrect programs (don't contain lower bounds)
+
+test1
+test1b
+
+
