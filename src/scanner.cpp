@@ -194,7 +194,7 @@ Token Scanner::getToken()
             token.val.string_value[k] = toupper(ch);
             input_file.get(ch);
         }
-        // Put back most recently read char
+        // Put back most recently read char (it wasn't valid in an identifier)
         input_file.unget();
         // Null terminate the string
         token.val.string_value[k] = 0;
