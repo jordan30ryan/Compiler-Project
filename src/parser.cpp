@@ -166,7 +166,7 @@ void Parser::proc_header()
 {
     std::cout << "proc header" << '\n';
     require(TokenType::RS_PROCEDURE);
-    require(TokenType::RS_IDENTIFIER);
+    require(TokenType::IDENTIFIER);
     require(TokenType::L_PAREN);
     token(); // <R_PAREN|param_list[0]>
     if (curr_token.type == TokenType::R_PAREN)
@@ -297,7 +297,7 @@ void Parser::statement()
 
 void Parser::identifier_statement()
 {
-    const char* identifier = curr_token.val.string_value
+    const char* identifier = curr_token.val.string_value;
     advance();
     token(); // ASSIGNMENT|L_PAREN
     if (curr_token.type == TokenType::ASSIGNMENT)
@@ -352,7 +352,8 @@ void Parser::loop_statement()
     std::cout << "loop" << '\n';
     require(TokenType::RS_FOR);
     require(TokenType::L_PAREN);
-    assignment_statement(); 
+    require(TokenType::IDENTIFIER);
+    assignment_statement(curr_token.val.string_value); 
     require(TokenType::SEMICOLON);
     expression();
     require(TokenType::R_PAREN);
