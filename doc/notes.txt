@@ -380,3 +380,11 @@ struct {
     id: char*
     type: TokenType
 }
+
+
+Q: Should lower/upper bounds be numbers or integers only?
+
+
+
+Q: Should there even be integer/float literals or just "number" literals
+

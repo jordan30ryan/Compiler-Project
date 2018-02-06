@@ -203,9 +203,12 @@ Token Scanner::getToken()
         token.type = getWordTokenType(token.val.string_value);
         break;
     case CharClass::DIGIT:
+        // TODO: Do I need to differentiate between int/float?
         // Extra scope level needed becuase of variables defined in this case
         {
-            token.type = TokenType::INTEGER;
+            //token.type = TokenType::INTEGER;
+            token.type = TokenType::NUMBER;
+
             token.val.int_value = (int)(ch - '0');
 
             bool is_fractional_part = false;
@@ -215,7 +218,7 @@ Token Scanner::getToken()
             {
                 if (ch == '.')
                 {
-                    token.type = TokenType::FLOAT;
+                    //token.type = TokenType::FLOAT;
                     token.val.double_value = token.val.int_value;
                     is_fractional_part = true;
                     continue;
@@ -238,6 +241,8 @@ Token Scanner::getToken()
                     token.val.int_value = 10 * token.val.int_value + (int)(ch - '0');
                 }
             }
+            // TODO: Probably don't need to differentiate; but just to be sure
+            token.val.double_value = token.val.int_value;
         }
         break;
     case CharClass::SYMBOL:

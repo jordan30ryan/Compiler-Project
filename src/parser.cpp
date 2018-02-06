@@ -6,7 +6,7 @@
 #include <iostream>
 const char* TokenTypeStrings[] = 
 {
-"PERIOD", "SEMICOLON", "L_PAREN", "R_PAREN", "COMMA", "L_BRACKET", "R_BRACKET", "COLON", "AND", "OR", "PLUS", "MINUS", "LT", "GT", "LT_EQ", "GT_EQ", "ASSIGNMENT", "EQUALS", "NOTEQUAL", "MULTIPLICATION", "DIVISION", "FILE_END", "STRING", "CHAR", "INTEGER", "FLOAT", "BOOL", "IDENTIFIER", "UNKNOWN",
+"PERIOD", "SEMICOLON", "L_PAREN", "R_PAREN", "COMMA", "L_BRACKET", "R_BRACKET", "COLON", "AND", "OR", "PLUS", "MINUS", "LT", "GT", "LT_EQ", "GT_EQ", "ASSIGNMENT", "EQUALS", "NOTEQUAL", "MULTIPLICATION", "DIVISION", "FILE_END", "STRING", "CHAR", "NUMBER", "BOOL", "IDENTIFIER", "UNKNOWN",
 "RS_IN", "RS_OUT", "RS_INOUT", "RS_PROGRAM", "RS_IS", "RS_BEGIN", "RS_END", "RS_GLOBAL", "RS_PROCEDURE", "RS_STRING", "RS_CHAR", "RS_INTEGER", "RS_FLOAT", "RS_BOOL", "RS_IF", "RS_THEN", "RS_ELSE", "RS_FOR", "RS_RETURN", "RS_TRUE", "RS_FALSE", "RS_NOT"
 };
 
@@ -26,14 +26,16 @@ void scanner_debug(Scanner* scanner)
         {
             std::cout << '\'' << token.val.char_value << '\'';
         }
-        if (token.type == TokenType::INTEGER)
+        if (token.type == TokenType::NUMBER)
         {
-            std::cout << token.val.int_value;
+            std::cout << token.val.double_value;
         }
+/*
         if (token.type == TokenType::FLOAT)
         {
             std::cout << token.val.double_value;
         }
+*/
         std::cout << std::endl;
     }
 }
@@ -61,6 +63,7 @@ Token Parser::advance()
 {
     // Mark as consumed
     curr_token_valid = false;
+    // Return the current token to be used before getting next token 
     return curr_token;
 }
 
@@ -84,7 +87,6 @@ Token Parser::require(TokenType t)
 
 void Parser::parse() 
 {
-    token();
     program();
     require(TokenType::FILE_END);
 }
@@ -101,12 +103,11 @@ void Parser::program_header()
 {
     std::cout << "program header" << '\n';
     require(TokenType::RS_PROGRAM);
+
     require(TokenType::IDENTIFIER);
-    if (curr_token.type == TokenType::IDENTIFIER)
-    {
-        char* program_name = curr_token.val.string_value;
-        std::cout << "Prog. name is " << program_name << '\n';
-    }
+    char* program_name = curr_token.val.string_value;
+    std::cout << "Prog. name is " << program_name << '\n';
+
     require(TokenType::RS_IS);
 }
 
@@ -116,14 +117,13 @@ void Parser::program_body()
     bool declarations = true;
     while (true)
     {
-        token(); // <(BEGIN)|(END)|(first of decl|stmnt)>
-        if (curr_token.type == TokenType::RS_BEGIN)
+        if (token() == TokenType::RS_BEGIN)
         {
             advance();
             declarations = false;
-            token(); // BEGIN|END|(first of stmnt)
+            continue;
         }
-        else if (curr_token.type == TokenType::RS_END)
+        else if (token() == TokenType::RS_END)
         {
             advance();
             require(TokenType::RS_PROGRAM);
@@ -141,14 +141,13 @@ void Parser::declaration()
 {
     std::cout << "declaration" << '\n';
     bool global = false;
-    if (curr_token.type == TokenType::RS_GLOBAL)
+    if (token() == TokenType::RS_GLOBAL)
     {
         global = true;
         advance();
-        token(); 
     }
 
-    if (curr_token.type == TokenType::RS_PROCEDURE)
+    if (token() == TokenType::RS_PROCEDURE)
     {
         proc_declaration();
     }
@@ -168,8 +167,7 @@ void Parser::proc_header()
     require(TokenType::RS_PROCEDURE);
     require(TokenType::IDENTIFIER);
     require(TokenType::L_PAREN);
-    token(); // <R_PAREN|param_list[0]>
-    if (curr_token.type == TokenType::R_PAREN)
+    if (token() == TokenType::R_PAREN)
     {
         advance();
     }
@@ -185,14 +183,13 @@ void Parser::proc_body()
     bool declarations = true;
     while (true)
     {
-        token(); // <(BEGIN)|(END)|(first of decl|stmnt)>
-        if (curr_token.type == TokenType::RS_BEGIN)
+        if (token() == TokenType::RS_BEGIN)
         {
             advance();
             declarations = false;
-            token(); // BEGIN|END|(first of stmnt)
+            continue;
         }
-        else if (curr_token.type == TokenType::RS_END)
+        else if (token() == TokenType::RS_END)
         {
             advance();
             require(TokenType::RS_PROCEDURE);
@@ -212,8 +209,7 @@ void Parser::parameter_list()
     while (true)
     {
         parameter(); 
-        TokenType type = token(); 
-        if (type == TokenType::COMMA)
+        if (token() == TokenType::COMMA)
         {
             advance();
             continue;
@@ -228,8 +224,7 @@ void Parser::parameter()
 
     var_declaration();
 
-    token(); // IN|OUT|INOUT
-    TokenType param_type = curr_token.type;
+    TokenType param_type = token(); // IN|OUT|INOUT
     std::cout << "Param type: " << TokenTypeStrings[param_type] << '\n';
     advance();
 }
@@ -240,14 +235,10 @@ void Parser::var_declaration()
     std::cout << "var decl" << '\n';
     type_mark();
 
-    require(TokenType::IDENTIFIER);
-    char* id = curr_token.val.string_value;
+    char* id = require(TokenType::IDENTIFIER).val.string_value;
     std::cout << "Identifier: " << id << '\n';
 
-    TokenType type = token(); 
-
-    // Optionally L_BRACKET, otherwise, don't advance
-    if (type == TokenType::L_BRACKET)
+    if (token() == TokenType::L_BRACKET)
     {
         advance();
 
@@ -262,22 +253,20 @@ void Parser::var_declaration()
 void Parser::type_mark()
 {
     std::cout << "type_mark" << '\n';
-    TokenType typemark = curr_token.type;
+    TokenType typemark = token();
     advance();
 }
 
 void Parser::lower_bound()
 {
     std::cout << "lower_bound" << '\n';
-    //Type number - int or float
-    //require(TokenType::NUMBER);
+    require(TokenType::NUMBER);
 }
 
 void Parser::upper_bound()
 {
     std::cout << "upper_bound" << '\n';
-    //Type number - int or float
-    //require(TokenType::NUMBER);
+    require(TokenType::NUMBER);
 }
 
 void Parser::statement()
@@ -295,16 +284,18 @@ void Parser::statement()
     else ; // TODO: ERR
 }
 
+// Groups assignment and proc call statements, as both
+//  start with an identifier
 void Parser::identifier_statement()
 {
-    const char* identifier = curr_token.val.string_value;
-    advance();
-    token(); // ASSIGNMENT|L_PAREN
-    if (curr_token.type == TokenType::ASSIGNMENT)
+    // Advance to next token; returning the current token
+    //  and retrieving the identifier value
+    const char* identifier = advance().val.string_value;
+    if (token() == TokenType::ASSIGNMENT)
     {
         assignment_statement(identifier);
     }
-    else if (curr_token.type == TokenType::L_PAREN)
+    else if (token() == TokenType::L_PAREN)
     {
         proc_call(identifier);
     }
@@ -375,14 +366,12 @@ void Parser::return_statement()
 void Parser::argument_list()
 {
     std::cout << "arg list" << '\n';
-    token(); // expression[0]
     while (true)
     {
         expression();
-        token(); // maybe ,
-        if (curr_token.type == TokenType::COMMA) 
+        if (token() == TokenType::COMMA) 
         {
-            token(); // expression[0]
+            advance();
             continue;
         }
         else return;
@@ -393,8 +382,7 @@ void Parser::destination()
 {
     std::cout << "destination" << '\n';
     require(TokenType::IDENTIFIER);
-    token(); // maybe [
-    if (curr_token.type == TokenType::L_BRACKET)
+    if (token() == TokenType::L_BRACKET)
     {
         advance();
         expression();
@@ -413,6 +401,8 @@ void Parser::expression()
 void Parser::expression_pr()
 {
     std::cout << "expr prime" << '\n';
+
+    // TODO: Might need to separate & and | code for code generation stage
     if (token() == TokenType::AND || token() == TokenType::OR)
     {
         advance();
@@ -455,7 +445,6 @@ void Parser::relation()
 void Parser::relation_pr()
 {
     std::cout << "relation pr" << '\n';
-    //token(); // Relation
     if ((token() == TokenType::LT)
         | (token() == TokenType::GT)
         | (token() == TokenType::LT_EQ)
@@ -480,6 +469,7 @@ void Parser::term()
 void Parser::term_pr()
 {
     std::cout << "term pr" << '\n';
+
     if ((token() == TokenType::MULTIPLICATION)
         | (token() == TokenType::DIVISION))
     {
@@ -492,16 +482,46 @@ void Parser::term_pr()
 void Parser::factor()
 {
     std::cout << "factor" << '\n';
+
     // Token is either (expression), name, number, string, char, true, false
-    // TODO
-    return;
+    if (token() == TokenType::L_PAREN)
+    {
+        advance();
+        expression();
+        require(TokenType::R_PAREN);
+    }
+    else if (token() == TokenType::MINUS)
+    {
+        advance();
+        // Name or number
+        if (token() != TokenType::NUMBER)
+            name();
+    }
+    else if (token() == TokenType::STRING 
+            || token() == TokenType::CHAR 
+            || token() == TokenType::RS_TRUE 
+            || token() == TokenType::RS_FALSE 
+            || token() == TokenType::NUMBER)
+    {
+        // TODO: just return the value?
+        advance();
+    }
+    else 
+    {
+        name();
+    }
 }
 
 void Parser::name()
 {
     std::cout << "name" << '\n';
-    // curr_token type IDENTIFIER
-    // TODO: Get optional "[" expression "]"
+    require(TokenType::IDENTIFIER);
+    if (token() == TokenType::L_BRACKET)
+    {
+        advance();
+        expression();
+        require(TokenType::R_BRACKET);
+    }
 }
 
 
