@@ -279,6 +279,7 @@ Get conditional based parsing like arrays and else
 
 
 Email him the test programs that need correcting 
+-done
 
 Strings are a type
 
@@ -296,4 +297,40 @@ Should we unconditionally call functions
 i.e. for something like statement, should we check whether 
     it's an if/for/whatever or just call if();for();
 
+
+
+================================================================================
+2/5 (MON)
+
+Working on the parser; realized that LL(1) requires 1 token of lookahead, which
+    is something I was trying to avoid. LL(1) parsers do require that one token
+    can be checked without being read/consumed. 
+    
+We're doing a recursive descent parser though, which doesn't appear to require
+    lookahead. It seems to be enough to just accept/expect symbols and call 
+    nextsym (look at the wiki for recursive descent parsing).
+
+........................................
+
+GCC recursive descent parser ideas:
+
+/* Retrieve the code of the current token; if there is no current token, 
+   get the next one from the lexer.  */
+token()
+
+/* Retrieve the value of the current token (if any) and mark it consumed.
+   The next call to token() will get another token from the lexer.  */
+advance()
+
+/* If the next token does not have code T, report a parse error; otherwise
+   return the token's value.  */
+require (int t)
+
+
+
+TODO: Improve error handling. it's bad.
+
+
+
+program body and proc body are identical, other than the final RS word
 

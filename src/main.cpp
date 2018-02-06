@@ -29,15 +29,12 @@ int main(int argc, char** argv)
     }
 
     // Parse the tokens
-
-    // The parser is constructed with a reference to the scanner
-    //  so it can consume tokens one at a time.
-    Parser parser(scanner);
+    Parser parser(scanner, err_handler);
     parser.parse();
 
     if (err_handler->errors)
     {
-        std::cout << err_handler->errors << " error(s) reported during scanner debug phase.\n";
+        std::cout << err_handler->errors << " error(s) reported during scanner/parser phase.\n";
     }    
 
     //TODO Type checking and other tasks

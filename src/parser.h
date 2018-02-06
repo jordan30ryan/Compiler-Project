@@ -4,17 +4,21 @@
 class Parser
 {
 public:
-    Parser(Scanner* scan);
+    Parser(Scanner* scan, ErrHandler* handler);
     void parse();
 private:
     Scanner* scanner;
+    ErrHandler* err_handler;
 
-    // Get a token from scanner and store in curr_token (also return that same token)
-    Token getToken();
-    // Get a token, and check the type. If wrong type, throw error
-    //Token getToken(TokenType type);
+    // Get a token from scanner and store in curr_token if !curr_token_valid
+    TokenType token();
+    // Consume the token; subsequent calls to getToken will return a new token.
+    Token advance();
+    // Ensure current_token has type t; report err if not. 
+    Token require(TokenType t);
 
     Token curr_token;
+    bool curr_token_valid;
 
     void program();
     void program_header();
