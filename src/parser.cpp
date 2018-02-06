@@ -269,125 +269,106 @@ void Parser::type_mark()
 void Parser::lower_bound()
 {
     std::cout << "lower_bound" << '\n';
-    require(TokenType::NUMBER);
+    //Type number - int or float
+    //require(TokenType::NUMBER);
 }
 
 void Parser::upper_bound()
 {
     std::cout << "upper_bound" << '\n';
-    require(TokenType::NUMBER);
+    //Type number - int or float
+    //require(TokenType::NUMBER);
 }
 
-bool Parser::statement()
+void Parser::statement()
 {
     std::cout << "stmnt" << '\n';
-    // curr_token is statement[0]
-    bool valid = false;
-    if (curr_token.type == TokenType::IDENTIFIER)
-    {
-        const char* identifier = curr_token.val.string_value;
-        token(); // ASSIGNMENT|L_PAREN
-        if (curr_token.type == TokenType::ASSIGNMENT)
-        {
-            valid = assignment_statement();
-        }
-        else if (curr_token.type == TokenType::L_PAREN)
-        {
-            valid = proc_call();
-        }
-        else valid = false; // IDENTIFIER followed by something other 
-                            //   than ASSIGNMENT or L_PAREN; error.
-    }
-    else if (curr_token.type == TokenType::RS_IF)
-    {
-        valid = if_statement();
-    }
-    else if (curr_token.type == TokenType::RS_FOR)
-    {
-        valid = loop_statement();
-    }
-    else if (curr_token.type == TokenType::RS_RETURN)
-    {
-        valid = return_statement();
-    }
-    else valid = false;
 
-    token(); // SEMICOLON
-    return valid; 
+    if (token() == TokenType::IDENTIFIER)
+        identifier_statement();
+    else if (token() == TokenType::RS_IF)
+        if_statement();
+    else if (token() == TokenType::RS_FOR)
+        loop_statement();
+    else if (token() == TokenType::RS_RETURN)
+        return_statement();
+    else ; // TODO: ERR
 }
 
-bool Parser::assignment_statement()
+void Parser::identifier_statement()
+{
+    const char* identifier = curr_token.val.string_value
+    advance();
+    token(); // ASSIGNMENT|L_PAREN
+    if (curr_token.type == TokenType::ASSIGNMENT)
+    {
+        assignment_statement(identifier);
+    }
+    else if (curr_token.type == TokenType::L_PAREN)
+    {
+        proc_call(identifier);
+    }
+    else
+    {
+        //TODO err
+    }
+}
+
+void Parser::assignment_statement(const char* identifier)
 {
     std::cout << "assignment stmnt" << '\n';
+    // already have identifier
+    require(TokenType::ASSIGNMENT);
     expression();
-    return true;
 }
 
-bool Parser::if_statement()
-{
-    std::cout << "if" << '\n';
-    token(); // (
-    expression();
-    //token(); // )
-    token(); // RS_THEN
-    while (true)
-    {
-        token(); // statement[0]|ELSE|END
-        // TODO: Ensure there's at least one statement
-        if (!statement()) break;
-        // curr_token = SEMICOLON
-    }
-
-    if (curr_token.type == TokenType::RS_ELSE)
-    {
-        while (true)
-        {
-            token(); // statement[0]|END
-            // TODO: Ensure there's at least one statement
-            if (!statement()) break;
-            // curr_token = SEMICOLON
-        }       
-    }
-    // curr_token should be RS_END
-    token(); // RS_IF
-    return true;
-}
-
-bool Parser::loop_statement()
-{
-    std::cout << "loop" << '\n';
-    // curr_token = RS_FOR
-    token(); // (
-    assignment_statement(); 
-    token(); // ;
-    expression();
-    token(); // )
-    while (true)
-    {
-        token(); // statement[0]|END
-        if (!statement()) break;
-        // curr_token = SEMICOLON
-    }
-    // curr_token = RS_END
-    token(); // RS_FOR
-    return true;
-}
-
-bool Parser::return_statement()
-{
-    std::cout << "return" << '\n';
-    // curr_token = RS_RETURN
-    return true;
-}
-
-bool Parser::proc_call()
+void Parser::proc_call(const char* identifier)
 {
     std::cout << "proc call" << '\n';
-    // curr_token.type = IDENTIFIER
-    //token(); // L_PAREN
+    // already have identifier
+    require(TokenType::L_PAREN);
     argument_list();
-    // curr_token.type = R_PAREN
-    return true;
+    require(TokenType::R_PAREN);
+}
+
+void Parser::if_statement()
+{
+    std::cout << "if" << '\n';
+    require(TokenType::RS_IF);
+    require(TokenType::L_PAREN);
+    // TODO expression should return something
+    expression();
+    require(TokenType::R_PAREN);
+    require(TokenType::RS_THEN);
+
+    //TODO
+    
+    require(TokenType::RS_END);
+    require(TokenType::RS_IF);
+}
+
+void Parser::loop_statement()
+{
+    std::cout << "loop" << '\n';
+    require(TokenType::RS_FOR);
+    require(TokenType::L_PAREN);
+    assignment_statement(); 
+    require(TokenType::SEMICOLON);
+    expression();
+    require(TokenType::R_PAREN);
+    while (true)
+    {
+        // TODO
+        break;
+    }
+    require(TokenType::RS_END);
+    require(TokenType::RS_FOR);
+}
+
+void Parser::return_statement()
+{
+    std::cout << "return" << '\n';
+    require(TokenType::RS_RETURN);
 }
 
 void Parser::argument_list()
@@ -410,20 +391,19 @@ void Parser::argument_list()
 void Parser::destination()
 {
     std::cout << "destination" << '\n';
-    // curr_token type = IDENTIFIER
+    require(TokenType::IDENTIFIER);
     token(); // maybe [
     if (curr_token.type == TokenType::L_BRACKET)
     {
+        advance();
         expression();
-        token(); // ]
+        require(TokenType::R_BRACKET);
     }
-    else return;
 }
 
 void Parser::expression()
 {
     std::cout << "expr" << '\n';
-    token(); // expression[0]
 
     arith_op(); 
     expression_pr();
@@ -432,22 +412,20 @@ void Parser::expression()
 void Parser::expression_pr()
 {
     std::cout << "expr prime" << '\n';
-    //token(); // & or |
-    if (curr_token.type == TokenType::AND || curr_token.type == TokenType::OR)
+    if (token() == TokenType::AND || token() == TokenType::OR)
     {
+        advance();
         arith_op();
         expression_pr();
     }
-    else return;
 }
 
 void Parser::arith_op()
 {
     std::cout << "arith op" << '\n';
-    if (curr_token.type == TokenType::RS_NOT)
+    if (token() == TokenType::RS_NOT)
     {
-        // TODO: something.
-        token(); // the real arith_op[0]
+        advance();
     }
 
     relation();
@@ -457,18 +435,18 @@ void Parser::arith_op()
 void Parser::arith_op_pr()
 {
     std::cout << "arith op pr" << '\n';
-    //token(); // + or -
-    if (curr_token.type == TokenType::PLUS || curr_token.type == TokenType::MINUS)
+    if (token() == TokenType::PLUS || token() == TokenType::MINUS)
     {
+        advance();
         relation(); 
         arith_op_pr();
     }
-    else return;
 }
 
 void Parser::relation()
 {
     std::cout << "relation" << '\n';
+
     term();
     relation_pr();
 }
@@ -477,12 +455,12 @@ void Parser::relation_pr()
 {
     std::cout << "relation pr" << '\n';
     //token(); // Relation
-    if ((curr_token.type == TokenType::LT)
-        | (curr_token.type == TokenType::GT)
-        | (curr_token.type == TokenType::LT_EQ)
-        | (curr_token.type == TokenType::GT_EQ)
-        | (curr_token.type == TokenType::EQUALS)
-        | (curr_token.type == TokenType::NOTEQUAL))
+    if ((token() == TokenType::LT)
+        | (token() == TokenType::GT)
+        | (token() == TokenType::LT_EQ)
+        | (token() == TokenType::GT_EQ)
+        | (token() == TokenType::EQUALS)
+        | (token() == TokenType::NOTEQUAL))
     {
         term();
         relation_pr();
@@ -493,6 +471,7 @@ void Parser::relation_pr()
 void Parser::term()
 {
     std::cout << "term" << '\n';
+
     factor();
     term_pr();
 }
@@ -500,14 +479,13 @@ void Parser::term()
 void Parser::term_pr()
 {
     std::cout << "term pr" << '\n';
-    token(); // * or /
-    if ((curr_token.type == TokenType::MULTIPLICATION)
-        | (curr_token.type == TokenType::DIVISION))
+    if ((token() == TokenType::MULTIPLICATION)
+        | (token() == TokenType::DIVISION))
     {
+        advance();
         factor();
         term_pr();
     }
-    else return;
 }
 
 void Parser::factor()

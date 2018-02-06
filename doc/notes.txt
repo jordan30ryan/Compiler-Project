@@ -324,7 +324,7 @@ advance()
 
 /* If the next token does not have code T, report a parse error; otherwise
    return the token's value.  */
-require (int t)
+require(int t)
 
 
 
@@ -334,3 +334,49 @@ TODO: Improve error handling. it's bad.
 
 program body and proc body are identical, other than the final RS word
 
+
+================================================================================
+2/6 (TUES)
+
+Proc call or var assignment
+we can't tell which one in an LL(1) parser
+
+stmnt -> assign_stmnt | proc_call
+First(A) union First(B) != empty set
+
+Fix:
+
+stmnts -> 
+    identifier tail
+tail -> 
+    if tok.tt = ":="
+        assignment()
+    else
+        proc_call()
+        
+
+
+LLVM Presentation
+Assembler 
+    Show assembler
+    Show copmilation
+IR
+    Instantiating an IR tree 
+
+
+
+Optimization (not us)
+
+
+
+We can use slides from other universities
+Wikipedia is a valid source
+
+
+
+Symbol table
+Linked list of parameters
+struct {
+    id: char*
+    type: TokenType
+}

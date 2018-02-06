@@ -37,12 +37,13 @@ private:
     void lower_bound();
     void upper_bound();
 
-    bool statement();
-    bool assignment_statement();
-    bool if_statement();
-    bool loop_statement();
-    bool return_statement();
-    bool proc_call();
+    void statement();
+    void identifier_statement();
+    void proc_call(const char*);
+    void assignment_statement(const char*);
+    void if_statement();
+    void loop_statement();
+    void return_statement();
 
     void argument_list();
     void destination();
