@@ -319,9 +319,9 @@ Token Scanner::getToken()
                 {
                     if (!isValidInString(ch))
                     {
-                        std::string err = "Char not valid in a string: ";
-                        err += ch;
-                        err_handler->reportError(err, line_number);
+                        std::ostringstream stream;
+                        stream << "Char not valid in a string: " << ch;
+                        err_handler->reportError(stream, line_number);
                     }
                     else 
                     {

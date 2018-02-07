@@ -4,6 +4,7 @@
 
 
 #include <iostream>
+#include <sstream>
 const char* TokenTypeStrings[] = 
 {
 "PERIOD", "SEMICOLON", "L_PAREN", "R_PAREN", "COMMA", "L_BRACKET", "R_BRACKET", "COLON", "AND", "OR", "PLUS", "MINUS", "LT", "GT", "LT_EQ", "GT_EQ", "ASSIGNMENT", "EQUALS", "NOTEQUAL", "MULTIPLICATION", "DIVISION", "FILE_END", "STRING", "CHAR", "NUMBER", "BOOL", "IDENTIFIER", "UNKNOWN",
@@ -75,11 +76,9 @@ Token Parser::require(TokenType t)
     if (t != type) 
     {
         // Report err
-        // TODO clean this up lmao
-        err_handler->reportError("Bad type: ");
-        err_handler->reportError(TokenTypeStrings[type]);
-        err_handler->reportError("Expected: ");
-        err_handler->reportError(TokenTypeStrings[t]);
+        std::ostringstream stream;
+        stream << "Bad type: " << TokenTypeStrings[type] << "\tExpected: " << TokenTypeStrings[t];
+        err_handler->reportError(stream.str(), curr_token.line);
     }
     return curr_token;
 }

@@ -399,3 +399,15 @@ Solution: check for L_PAREN and go into proc_call from identifier_statement
 Otherwise, go into assignment statement.
 
 
+
+All 'correct' programs (other than the fixed one) now parse.
+
+As for incorrect programs...
+
+test1, 2 cause an infinite loop 
+(token() should automatically goto end or something when getting FILE_END)
+
+test3 does parse without infinite loops, but doesn't really resync properly.
+About 20 errors, when there is really ust one.
+
+
