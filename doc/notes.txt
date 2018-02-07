@@ -388,3 +388,14 @@ Q: Should lower/upper bounds be numbers or integers only?
 
 Q: Should there even be integer/float literals or just "number" literals
 
+
+================================================================================
+2/7 (WED)
+
+Issue with assignment statement: doesn't support indexed var assignment:
+var[0] := 1 
+
+Solution: check for L_PAREN and go into proc_call from identifier_statement
+Otherwise, go into assignment statement.
+
+

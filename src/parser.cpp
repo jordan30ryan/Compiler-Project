@@ -286,24 +286,27 @@ void Parser::identifier_statement()
     // Advance to next token; returning the current token
     //  and retrieving the identifier value
     const char* identifier = advance().val.string_value;
-    if (token() == TokenType::ASSIGNMENT)
-    {
-        assignment_statement(identifier);
-    }
-    else if (token() == TokenType::L_PAREN)
+    
+    if (token() == TokenType::L_PAREN)
     {
         proc_call(identifier);
     }
     else
     {
-        //TODO err
+        assignment_statement(identifier);
     }
 }
 
 void Parser::assignment_statement(const char* identifier)
 {
     std::cout << "assignment stmnt" << '\n';
-    // already have identifier
+    // already have identifier; need to check for indexing first
+    if (token() == TokenType::L_BRACKET)
+    {
+        advance();
+        expression();
+        require(TokenType::R_BRACKET);
+    }
     require(TokenType::ASSIGNMENT);
     expression();
 }
