@@ -512,6 +512,7 @@ void Parser::factor()
         // Name or number
         if (token() != TokenType::NUMBER)
             name();
+        else advance(); // Consume the number TODO
     }
     else if (token() == TokenType::STRING 
             || token() == TokenType::CHAR 
