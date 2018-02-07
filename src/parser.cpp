@@ -78,7 +78,7 @@ Token Parser::require(TokenType t)
         // TODO clean this up lmao
         err_handler->reportError("Bad type: ");
         err_handler->reportError(TokenTypeStrings[type]);
-        err_handler->reportError("Got: ");
+        err_handler->reportError("Expected: ");
         err_handler->reportError(TokenTypeStrings[t]);
     }
     return curr_token;
@@ -167,14 +167,9 @@ void Parser::proc_header()
     require(TokenType::RS_PROCEDURE);
     require(TokenType::IDENTIFIER);
     require(TokenType::L_PAREN);
-    if (token() == TokenType::R_PAREN)
-    {
-        advance();
-    }
-    else 
-    {
+    if (token() != TokenType::R_PAREN)
         parameter_list(); 
-    }
+    require(TokenType::R_PAREN);
 }
 
 void Parser::proc_body()
@@ -234,7 +229,6 @@ void Parser::var_declaration()
 {
     std::cout << "var decl" << '\n';
     type_mark();
-
     char* id = require(TokenType::IDENTIFIER).val.string_value;
     std::cout << "Identifier: " << id << '\n';
 
@@ -288,6 +282,7 @@ void Parser::statement()
 //  start with an identifier
 void Parser::identifier_statement()
 {
+    std::cout << "identifier stmnt" << '\n';
     // Advance to next token; returning the current token
     //  and retrieving the identifier value
     const char* identifier = advance().val.string_value;
@@ -318,7 +313,8 @@ void Parser::proc_call(const char* identifier)
     std::cout << "proc call" << '\n';
     // already have identifier
     require(TokenType::L_PAREN);
-    argument_list();
+    if (token() != TokenType::R_PAREN)
+        argument_list();
     require(TokenType::R_PAREN);
 }
 
@@ -332,7 +328,21 @@ void Parser::if_statement()
     require(TokenType::R_PAREN);
     require(TokenType::RS_THEN);
 
-    //TODO
+    // TODO: Check condition
+    //TODO handle else
+    while (true)
+    {
+        // TODO: Make sure at least one statement exists
+        statement();
+        require(TokenType::SEMICOLON);
+        if (token() == TokenType::RS_END) break;
+        // TODO control execution properly
+        if (token() == TokenType::RS_ELSE) 
+        {
+            advance();
+            continue;
+        }
+    }
     
     require(TokenType::RS_END);
     require(TokenType::RS_IF);
@@ -348,12 +358,14 @@ void Parser::loop_statement()
     require(TokenType::SEMICOLON);
     expression();
     require(TokenType::R_PAREN);
+    // TODO: Check conditions
     while (true)
     {
-        // TODO
-        break;
+        statement();
+        require(TokenType::SEMICOLON);
+        if (token() == TokenType::RS_END) break;
     }
-    require(TokenType::RS_END);
+    require(TokenType::RS_END); // Just to be sure 
     require(TokenType::RS_FOR);
 }
 
@@ -452,6 +464,7 @@ void Parser::relation_pr()
         | (token() == TokenType::EQUALS)
         | (token() == TokenType::NOTEQUAL))
     {
+        advance();
         term();
         relation_pr();
     }
@@ -503,8 +516,8 @@ void Parser::factor()
             || token() == TokenType::RS_FALSE 
             || token() == TokenType::NUMBER)
     {
-        // TODO: just return the value?
         advance();
+        // TODO: just return the value?
     }
     else 
     {
