@@ -381,12 +381,14 @@ struct {
     type: TokenType
 }
 
+................................................................................
 
 Q: Should lower/upper bounds be numbers or integers only?
+bounds are ints (from doc)
 
+Better Q: Should there even be integer/float literals or just "number" literals
+probably should keep both; would save work later
 
-
-Q: Should there even be integer/float literals or just "number" literals
 
 
 ================================================================================
@@ -405,9 +407,54 @@ All 'correct' programs (other than the fixed one) now parse.
 As for incorrect programs...
 
 test1, 2 cause an infinite loop 
-(token() should automatically goto end or something when getting FILE_END)
+(token() should automatically goto end or something if it gets FILE_END)
 
 test3 does parse without infinite loops, but doesn't really resync properly.
-About 20 errors, when there is really ust one.
+About 20 errors, when there is really just one.
 
+================================================================================
+2/8 (TUES)
+
+presentation - 3/8 
+        Assembly / IR
+
+Send him an email about ycombinator LLVM students guide
+
+
+
+TODO: identifiers in symbol table
+
+Combine +/- to adding_op class
+Combine *// to mult_op class
+Combine </>/<=/== to relation_op class
+etc.
+
+
+TODO
+Remove TokenTypeStrings
+Keep strings of tokens for debugging instead of printing token types
+
+
+Only ever two scopes 
+    - local and global 
+    - proc decl / global decl 
+    - proc inside a proc is not a nested scope; 
+        only innermost proc decls and global decls matter
+
+
+TODO
+Array indices are of type int. Floats and ints should be separated by the lexer.
+Maybe have a class NUMBER? sort of like adding_op
+
+
+Token will point to the symbol table for that token
+
+
+Can only see declarations marked global or in the same scope (and only global variables defined before)
+
+Error for redeclaration (define same identifier twice)
+
+Don't keep string in token type for identifier
+
+Flesh out symbol table in lexer (identifiers)
 
