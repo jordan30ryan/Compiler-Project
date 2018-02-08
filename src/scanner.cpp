@@ -1,7 +1,4 @@
 #include "scanner.h"
-#include <iostream>
-#include <ctype.h>
-#include <string.h>
 
 Scanner::Scanner(ErrHandler* handler) : err_handler(handler) {}
 
@@ -321,7 +318,7 @@ Token Scanner::getToken()
                     {
                         std::ostringstream stream;
                         stream << "Char not valid in a string: " << ch;
-                        err_handler->reportError(stream, line_number);
+                        err_handler->reportError(stream.str(), line_number);
                     }
                     else 
                     {
@@ -340,9 +337,9 @@ Token Scanner::getToken()
             input_file.get(ch);
             if (!isValidChar(ch))
             {
-                std::string err = "Not a valid char literal: ";
-                err += ch;
-                err_handler->reportError(err, line_number);
+                std::ostringstream stream;
+                stream << "Not a valid char literal: " << ch;
+                err_handler->reportError(stream.str(), line_number);
             }
             token.val.char_value = ch;
             ch = input_file.get();
@@ -381,9 +378,9 @@ Token Scanner::getToken()
     
     if (token.type == TokenType::UNKNOWN)
     {
-        std::string err = "Unknown token: ";
-        err += ch;
-        err_handler->reportError(err, line_number);
+        std::ostringstream stream;
+        stream << "Unknown token: " << ch;
+        err_handler->reportError(stream.str(), line_number);
     }
 
     return token;

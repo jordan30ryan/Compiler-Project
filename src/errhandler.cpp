@@ -1,5 +1,4 @@
 #include "errhandler.h"
-#include <iostream>
 
 void ErrHandler::reportError(std::string message)
 {

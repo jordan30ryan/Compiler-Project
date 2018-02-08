@@ -1,8 +1,9 @@
 #include "scanner.h"
 #include "parser.h"
-#include <vector>
 
+#include <vector>
 #include <iostream>
+
 /*
 Return codes
 1 - No filename given

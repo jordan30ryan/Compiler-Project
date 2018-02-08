@@ -3,8 +3,6 @@
 // DEBUG
 
 
-#include <iostream>
-#include <sstream>
 const char* TokenTypeStrings[] = 
 {
 "PERIOD", "SEMICOLON", "L_PAREN", "R_PAREN", "COMMA", "L_BRACKET", "R_BRACKET", "COLON", "AND", "OR", "PLUS", "MINUS", "LT", "GT", "LT_EQ", "GT_EQ", "ASSIGNMENT", "EQUALS", "NOTEQUAL", "MULTIPLICATION", "DIVISION", "FILE_END", "STRING", "CHAR", "NUMBER", "BOOL", "IDENTIFIER", "UNKNOWN",

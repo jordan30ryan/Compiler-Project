@@ -1,5 +1,9 @@
 #pragma once
 #include "scanner.h"
+#include "token.h" 
+
+#include <iostream>
+#include <sstream>
 
 class Parser
 {
