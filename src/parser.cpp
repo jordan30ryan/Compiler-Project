@@ -504,22 +504,10 @@ void Parser::factor()
     else if (token() == TokenType::MINUS)
     {
         advance();
-
-        // Name or number
-        if (token() == TokenType::INTEGER) 
-        {
-            advance(); // Consume the number TODO
-        }
-        if (token() != TokenType::FLOAT)
-        {
-            advance(); // Consume the number TODO
-        }
-        else 
-        {
-            name();
-        }
+        // TODO do seomething with the minus
     }
-    else if (token() == TokenType::STRING 
+
+    if (token() == TokenType::STRING 
             || token() == TokenType::CHAR 
             || token() == TokenType::RS_TRUE 
             || token() == TokenType::RS_FALSE 
@@ -529,9 +517,13 @@ void Parser::factor()
         advance();
         // TODO: just return the value?
     }
-    else 
+    else if (token() == TokenType::IDENTIFIER)
     {
         name();
+    }
+    else 
+    {
+        err_handler->reportError("No valid token for factor");
     }
 }
 
