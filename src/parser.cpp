@@ -9,38 +9,6 @@ const char* TokenTypeStrings[] =
 "RS_IN", "RS_OUT", "RS_INOUT", "RS_PROGRAM", "RS_IS", "RS_BEGIN", "RS_END", "RS_GLOBAL", "RS_PROCEDURE", "RS_STRING", "RS_CHAR", "RS_INTEGER", "RS_FLOAT", "RS_BOOL", "RS_IF", "RS_THEN", "RS_ELSE", "RS_FOR", "RS_RETURN", "RS_TRUE", "RS_FALSE", "RS_NOT"
 };
 
-// Gets a vector of tokens from the scanner
-void scanner_debug(Scanner* scanner) 
-{
-    Token token;
-    while ((token = scanner->getToken()).type != TokenType::FILE_END)
-    {
-        std::cout << token.line << '\t';
-        std::cout << TokenTypeStrings[token.type] << '\t';
-        if (token.type == TokenType::IDENTIFIER || token.type == TokenType::STRING)
-        {
-            std::cout << '"' << token.val.string_value << '"';
-        }
-        if (token.type == TokenType::CHAR)
-        {
-            std::cout << '\'' << token.val.char_value << '\'';
-        }
-        if (token.type == TokenType::INTEGER)
-        {
-            std::cout << token.val.double_value;
-        }
-        if (token.type == TokenType::FLOAT)
-        {
-            std::cout << token.val.double_value;
-        }
-        std::cout << std::endl;
-    }
-}
-
-// END DEBUG
-
-
-
 Parser::Parser(Scanner* scan, ErrHandler* handler) 
     : scanner(scan), err_handler(handler) { }
 
@@ -490,14 +458,17 @@ void Parser::term_pr()
     }
 }
 
-void Parser::factor()
+Value Parser::factor()
 {
     std::cout << "factor" << '\n';
+    Value retval;
 
     // Token is either (expression), name, number, string, char, true, false
     if (token() == TokenType::L_PAREN)
     {
         advance();
+        // TODO: expression should return a value
+        //retval = expression();
         expression();
         require(TokenType::R_PAREN);
     }
@@ -508,15 +479,18 @@ void Parser::factor()
         // Name or number
         if (token() == TokenType::INTEGER) 
         {
-            advance(); // Consume the number TODO
+            retval = advance().val; 
+            retval.int_value *= -1;
         }
         if (token() != TokenType::FLOAT)
         {
-            advance(); // Consume the number TODO
+            retval = advance().val; 
+            retval.float_value *= -1;
         }
         else 
         {
-            name();
+            retval = name();
+            // TODO: Multiply by -1
         }
     }
     else if (token() == TokenType::STRING 
@@ -526,16 +500,19 @@ void Parser::factor()
             || token() == TokenType::INTEGER
             || token() == TokenType::FLOAT)
     {
-        advance();
-        // TODO: just return the value?
+        // Literal values
+        // Consume the token and get the value
+        retval = advance().val;
+        // TODO: type checking how do
     }
     else 
     {
-        name();
+        retval = name();
     }
+    return retval;
 }
 
-void Parser::name()
+Value Parser::name()
 {
     std::cout << "name" << '\n';
     require(TokenType::IDENTIFIER);
@@ -545,6 +522,7 @@ void Parser::name()
         expression();
         require(TokenType::R_BRACKET);
     }
+    Value val;
+    return val;
 }
-
 

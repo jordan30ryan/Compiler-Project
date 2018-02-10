@@ -60,8 +60,8 @@ private:
     void relation_pr(); // Needed for eliminating left recursion
     void term();
     void term_pr();
-    void factor();
-    void name();
+    Value factor();
+    Value name();
     //void number();
     //void string_literal();
     //void char_literal();

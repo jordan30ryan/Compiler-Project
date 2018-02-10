@@ -216,7 +216,7 @@ Token Scanner::getToken()
                 if (ch == '.')
                 {
                     token.type = TokenType::FLOAT;
-                    token.val.double_value = token.val.int_value;
+                    token.val.float_value = token.val.int_value;
                     is_fractional_part = true;
                     continue;
                 }
@@ -230,7 +230,7 @@ Token Scanner::getToken()
                 // Is there a better way to do this?
                 if (is_fractional_part)
                 {
-                    token.val.double_value += fract_mult * (ch - '0');
+                    token.val.float_value += fract_mult * (ch - '0');
                     fract_mult *= 0.1;
                 }
                 else 

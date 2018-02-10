@@ -16,16 +16,18 @@ enum CharClass
     SYMBOL=0, LETTER, DIGIT, WHITESPACE
 };
 
+struct Value
+{
+    char string_value[MAX_STRING_LEN];
+    char char_value;
+    int int_value;
+    double float_value;
+};
+
 struct Token
 {
     TokenType type;
-    union
-    {
-        char string_value[MAX_STRING_LEN];
-        char char_value;
-        int int_value;
-        double double_value;
-    } val;
+    Value val;
     int line;
 };
 
