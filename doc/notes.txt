@@ -442,9 +442,9 @@ Only ever two scopes
         only innermost proc decls and global decls matter
 
 
-TODO
 Array indices are of type int. Floats and ints should be separated by the lexer.
 Maybe have a class NUMBER? sort of like adding_op
+-done
 
 
 Token will point to the symbol table for that token

@@ -163,6 +163,9 @@ Token Scanner::getToken()
     // Stores next char read from file
     char ch;
 
+    // For counting loops (as to avoid cross init in cases)
+    int k;
+
     consumeWhitespaceAndComments();
 
     token.line = line_number;
@@ -185,7 +188,6 @@ Token Scanner::getToken()
         break;
     case CharClass::LETTER:
         // Identifiers/Reserved words must all start with a letter
-        int k;
         for (k = 0; k < MAX_STRING_LEN && isValidInIdentifier(ch); k++)
         {
             token.val.string_value[k] = toupper(ch);
@@ -200,11 +202,9 @@ Token Scanner::getToken()
         token.type = getWordTokenType(token.val.string_value);
         break;
     case CharClass::DIGIT:
-        // TODO: Do I need to differentiate between int/float?
         // Extra scope level needed becuase of variables defined in this case
         {
-            //token.type = TokenType::INTEGER;
-            token.type = TokenType::NUMBER;
+            token.type = TokenType::INTEGER;
 
             token.val.int_value = (int)(ch - '0');
 
@@ -215,7 +215,7 @@ Token Scanner::getToken()
             {
                 if (ch == '.')
                 {
-                    //token.type = TokenType::FLOAT;
+                    token.type = TokenType::FLOAT;
                     token.val.double_value = token.val.int_value;
                     is_fractional_part = true;
                     continue;
@@ -238,8 +238,6 @@ Token Scanner::getToken()
                     token.val.int_value = 10 * token.val.int_value + (int)(ch - '0');
                 }
             }
-            // TODO: Probably don't need to differentiate; but just to be sure
-            token.val.double_value = token.val.int_value;
         }
         break;
     case CharClass::SYMBOL:
@@ -306,31 +304,28 @@ Token Scanner::getToken()
 
             break;
         case '"':
-            // Need the extra scope level because k is defined in the case
-            {
-                // String token
-                token.type = TokenType::STRING;
+            // String token
+            token.type = TokenType::STRING;
 
-                int k = 0;
-                while (input_file.get(ch) && ch != '"')
+            k = 0;
+            while (input_file.get(ch) && ch != '"')
+            {
+                if (!isValidInString(ch))
                 {
-                    if (!isValidInString(ch))
-                    {
-                        std::ostringstream stream;
-                        stream << "Char not valid in a string: " << ch;
-                        err_handler->reportError(stream.str(), line_number);
-                    }
-                    else 
-                    {
-                        token.val.string_value[k++] = ch;
-                    }
+                    std::ostringstream stream;
+                    stream << "Char not valid in a string: " << ch;
+                    err_handler->reportError(stream.str(), line_number);
                 }
-                if (ch != '"') 
+                else 
                 {
-                    err_handler->reportError("Reached EOF and string quotes were never closed.", line_number);
+                    token.val.string_value[k++] = ch;
                 }
-                token.val.string_value[k] = 0;
             }
+            if (ch != '"') 
+            {
+                err_handler->reportError("Reached EOF and string quotes were never closed.", line_number);
+            }
+            token.val.string_value[k] = 0;
             break;
         case '\'':
             token.type = TokenType::CHAR;

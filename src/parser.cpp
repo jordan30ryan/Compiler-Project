@@ -5,7 +5,7 @@
 
 const char* TokenTypeStrings[] = 
 {
-"PERIOD", "SEMICOLON", "L_PAREN", "R_PAREN", "COMMA", "L_BRACKET", "R_BRACKET", "COLON", "AND", "OR", "PLUS", "MINUS", "LT", "GT", "LT_EQ", "GT_EQ", "ASSIGNMENT", "EQUALS", "NOTEQUAL", "MULTIPLICATION", "DIVISION", "FILE_END", "STRING", "CHAR", "NUMBER", "BOOL", "IDENTIFIER", "UNKNOWN",
+"PERIOD", "SEMICOLON", "L_PAREN", "R_PAREN", "COMMA", "L_BRACKET", "R_BRACKET", "COLON", "AND", "OR", "PLUS", "MINUS", "LT", "GT", "LT_EQ", "GT_EQ", "ASSIGNMENT", "EQUALS", "NOTEQUAL", "MULTIPLICATION", "DIVISION", "FILE_END", "STRING", "CHAR", "INTEGER", "FLOAT", "BOOL", "IDENTIFIER", "UNKNOWN",
 "RS_IN", "RS_OUT", "RS_INOUT", "RS_PROGRAM", "RS_IS", "RS_BEGIN", "RS_END", "RS_GLOBAL", "RS_PROCEDURE", "RS_STRING", "RS_CHAR", "RS_INTEGER", "RS_FLOAT", "RS_BOOL", "RS_IF", "RS_THEN", "RS_ELSE", "RS_FOR", "RS_RETURN", "RS_TRUE", "RS_FALSE", "RS_NOT"
 };
 
@@ -25,16 +25,14 @@ void scanner_debug(Scanner* scanner)
         {
             std::cout << '\'' << token.val.char_value << '\'';
         }
-        if (token.type == TokenType::NUMBER)
+        if (token.type == TokenType::INTEGER)
         {
             std::cout << token.val.double_value;
         }
-/*
         if (token.type == TokenType::FLOAT)
         {
             std::cout << token.val.double_value;
         }
-*/
         std::cout << std::endl;
     }
 }
@@ -251,13 +249,13 @@ void Parser::type_mark()
 void Parser::lower_bound()
 {
     std::cout << "lower_bound" << '\n';
-    require(TokenType::NUMBER);
+    require(TokenType::INTEGER);
 }
 
 void Parser::upper_bound()
 {
     std::cout << "upper_bound" << '\n';
-    require(TokenType::NUMBER);
+    require(TokenType::INTEGER);
 }
 
 void Parser::statement()
@@ -506,16 +504,27 @@ void Parser::factor()
     else if (token() == TokenType::MINUS)
     {
         advance();
+
         // Name or number
-        if (token() != TokenType::NUMBER)
+        if (token() == TokenType::INTEGER) 
+        {
+            advance(); // Consume the number TODO
+        }
+        if (token() != TokenType::FLOAT)
+        {
+            advance(); // Consume the number TODO
+        }
+        else 
+        {
             name();
-        else advance(); // Consume the number TODO
+        }
     }
     else if (token() == TokenType::STRING 
             || token() == TokenType::CHAR 
             || token() == TokenType::RS_TRUE 
             || token() == TokenType::RS_FALSE 
-            || token() == TokenType::NUMBER)
+            || token() == TokenType::INTEGER
+            || token() == TokenType::FLOAT)
     {
         advance();
         // TODO: just return the value?
