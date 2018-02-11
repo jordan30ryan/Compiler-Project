@@ -180,6 +180,9 @@ Token Scanner::getToken()
         return token;
     }
 
+    // Initial ch value 
+    token.val.char_value = ch;
+
     // Main switch to get token type (and value if necessary)
     switch (ascii_mapping[ch])
     {

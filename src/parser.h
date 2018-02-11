@@ -62,10 +62,5 @@ private:
     void term_pr();
     void factor();
     void name();
-    //void number();
-    //void string_literal();
-    //void char_literal();
-
-
 };
 
