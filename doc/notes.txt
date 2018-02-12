@@ -458,3 +458,15 @@ Don't keep string in token type for identifier
 
 Flesh out symbol table in lexer (identifiers)
 
+
+================================================================================
+2/10 (SAT)
+
+ISSUES:
+
+according to spec, lower/upper_bound can't be negative; just a number
+vecOps.src has a negative lower_bound
+
+Something is wrong with error handling; it's printing things weirdly
+
+
