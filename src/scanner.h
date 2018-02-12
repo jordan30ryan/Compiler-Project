@@ -3,11 +3,11 @@
 #include "errhandler.h"
 
 #include <fstream>
-#include <vector>
+#include <unordered_map>
 #include <iostream>
 #include <sstream>
 #include <ctype.h>
-#include <string.h>
+#include <string>
 
 class Scanner
 {
@@ -38,9 +38,9 @@ private:
     ErrHandler* err_handler;
 
     CharClass ascii_mapping[128] = {CharClass::SYMBOL};
-    std::vector<ReservedWordRecord> reserved_words_map;
+    std::unordered_map<std::string, TokenType> reserved_words_map;
 
-    TokenType getWordTokenType(char* str);
+    TokenType getWordTokenType(std::string str);
 
     bool isValidInIdentifier(char ch);
     bool isValidInString(char ch);

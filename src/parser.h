@@ -41,7 +41,7 @@ private:
     void lower_bound();
     void upper_bound();
 
-    void statement();
+    bool statement();
     void identifier_statement();
     void proc_call(const char*);
     void assignment_statement(const char*);
@@ -59,7 +59,7 @@ private:
     void relation();
     void relation_pr(); // Needed for eliminating left recursion
     void term();
-    void term_pr();
+    Value term_pr();
     Value factor();
     Value name();
 };

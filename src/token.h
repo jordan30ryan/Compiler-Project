@@ -31,11 +31,3 @@ struct Token
     int line;
 };
 
-struct ReservedWordRecord
-{
-    ReservedWordRecord(TokenType type, const char* value) : type(type), value(value) {}
-    TokenType type;
-    const char* value;
-};
-
-

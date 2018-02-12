@@ -260,10 +260,12 @@ void Parser::upper_bound()
     require(TokenType::INTEGER);
 }
 
-void Parser::statement()
+bool Parser::statement()
 {
     std::cout << "stmnt" << '\n';
 
+    // TODO: Make return value more throrough; maybe check the inner stmnts
+    
     if (token() == TokenType::IDENTIFIER)
         identifier_statement();
     else if (token() == TokenType::RS_IF)
@@ -272,7 +274,9 @@ void Parser::statement()
         loop_statement();
     else if (token() == TokenType::RS_RETURN)
         return_statement();
-    else ; // TODO: ERR
+    else return false; // TODO: ERR
+
+    return true;
 }
 
 // Groups assignment and proc call statements, as both
@@ -330,10 +334,16 @@ void Parser::if_statement()
 
     // TODO: Check condition
     //TODO handle else
+    bool first_stmnt = true;
     while (true)
     {
-        // TODO: Make sure at least one statement exists
-        statement();
+        // Make sure there is at least one valid statement
+        bool valid = statement();
+        if (!valid && first_stmnt)
+        {
+            err_handler->reportError("No statement in IF body");
+        }
+        first_stmnt = false;
         require(TokenType::SEMICOLON);
         if (token() == TokenType::RS_END) break;
         // TODO control execution properly
@@ -479,17 +489,26 @@ void Parser::term()
     term_pr();
 }
 
-void Parser::term_pr()
+Value Parser::term_pr()
 {
     std::cout << "term pr" << '\n';
 
-    if ((token() == TokenType::MULTIPLICATION)
-        | (token() == TokenType::DIVISION))
+    // TODO: assign to this
+    Value value;
+
+    if (token() == TokenType::MULTIPLICATION)
     {
         advance();
         factor();
         term_pr();
     }
+    else if (token() == TokenType::DIVISION)
+    {
+        advance();
+        factor();
+        term_pr();
+    }
+    return value;
 }
 
 Value Parser::factor()

@@ -10,28 +10,28 @@ bool Scanner::init(const char* filename)
     line_number = 1;
 
     // Init reserved words table
-    reserved_words_map.emplace_back(TokenType::RS_IN, "IN");
-    reserved_words_map.emplace_back(TokenType::RS_OUT, "OUT");
-    reserved_words_map.emplace_back(TokenType::RS_INOUT, "INOUT");
-    reserved_words_map.emplace_back(TokenType::RS_PROGRAM, "PROGRAM");
-    reserved_words_map.emplace_back(TokenType::RS_IS, "IS");
-    reserved_words_map.emplace_back(TokenType::RS_BEGIN, "BEGIN");
-    reserved_words_map.emplace_back(TokenType::RS_END, "END");
-    reserved_words_map.emplace_back(TokenType::RS_GLOBAL, "GLOBAL");
-    reserved_words_map.emplace_back(TokenType::RS_PROCEDURE, "PROCEDURE");
-    reserved_words_map.emplace_back(TokenType::RS_STRING, "STRING");
-    reserved_words_map.emplace_back(TokenType::RS_CHAR, "CHAR");
-    reserved_words_map.emplace_back(TokenType::RS_INTEGER, "INTEGER");
-    reserved_words_map.emplace_back(TokenType::RS_FLOAT, "FLOAT");
-    reserved_words_map.emplace_back(TokenType::RS_BOOL, "BOOL");
-    reserved_words_map.emplace_back(TokenType::RS_IF, "IF");
-    reserved_words_map.emplace_back(TokenType::RS_THEN, "THEN");
-    reserved_words_map.emplace_back(TokenType::RS_ELSE, "ELSE");
-    reserved_words_map.emplace_back(TokenType::RS_FOR, "FOR");
-    reserved_words_map.emplace_back(TokenType::RS_RETURN, "RETURN");
-    reserved_words_map.emplace_back(TokenType::RS_TRUE, "TRUE");
-    reserved_words_map.emplace_back(TokenType::RS_FALSE, "FALSE");
-    reserved_words_map.emplace_back(TokenType::RS_NOT, "NOT");
+    reserved_words_map["IN"] = TokenType::RS_IN;
+    reserved_words_map["OUT"] = TokenType::RS_OUT;
+    reserved_words_map["INOUT"] = TokenType::RS_INOUT;
+    reserved_words_map["PROGRAM"] = TokenType::RS_PROGRAM;
+    reserved_words_map["IS"] = TokenType::RS_IS;
+    reserved_words_map["BEGIN"] = TokenType::RS_BEGIN;
+    reserved_words_map["END"] = TokenType::RS_END;
+    reserved_words_map["GLOBAL"] = TokenType::RS_GLOBAL;
+    reserved_words_map["PROCEDURE"] = TokenType::RS_PROCEDURE;
+    reserved_words_map["STRING"] = TokenType::RS_STRING;
+    reserved_words_map["CHAR"] = TokenType::RS_CHAR;
+    reserved_words_map["INTEGER"] = TokenType::RS_INTEGER;
+    reserved_words_map["FLOAT"] = TokenType::RS_FLOAT;
+    reserved_words_map["BOOL"] = TokenType::RS_BOOL;
+    reserved_words_map["IF"] = TokenType::RS_IF;
+    reserved_words_map["THEN"] = TokenType::RS_THEN;
+    reserved_words_map["ELSE"] = TokenType::RS_ELSE;
+    reserved_words_map["FOR"] = TokenType::RS_FOR;
+    reserved_words_map["RETURN"] = TokenType::RS_RETURN;
+    reserved_words_map["TRUE"] = TokenType::RS_TRUE;
+    reserved_words_map["FALSE"] = TokenType::RS_FALSE;
+    reserved_words_map["NOT"] = TokenType::RS_NOT;
 
     // Init ascii character class mapping
     for (char k = '0'; k <= '9'; k++)
@@ -80,17 +80,19 @@ bool Scanner::isValidShared(char ch)
 
 // Return the proper TokenType if str is a reserved word.
 // Otherwise, str is interpreted as an identifier.
-TokenType Scanner::getWordTokenType(char* str)
+TokenType Scanner::getWordTokenType(std::string str)
 {
-    // TODO: Optimize. Use hashing?
-    for (unsigned int k = 0; k < reserved_words_map.size(); k++)
+    TokenType type;
+    try
     {
-        if (!strcmp(reserved_words_map[k].value, str))
-        {
-            return reserved_words_map[k].type;
-        }
+        type = reserved_words_map.at(str);
     }
-    return TokenType::IDENTIFIER;
+    catch (const std::out_of_range& oor) 
+    {
+        // str not in the map; just an identifier
+        return TokenType::IDENTIFIER;
+    }
+    return type;
 }
 
 // Consume all leading whitespace and comments first

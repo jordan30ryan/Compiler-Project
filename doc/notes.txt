@@ -470,3 +470,10 @@ vecOps.src has a negative lower_bound
 Something is wrong with error handling; it's printing things weirdly
 
 
+================================================================================
+2/11 (SUN)
+
+Value might be weird to be returning (in parser).
+
+Maybe we should be returning a register? Once generating LLVM, it'll be resgister values, and the operations will not actually be happening in our code.
+
