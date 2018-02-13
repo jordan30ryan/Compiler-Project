@@ -519,3 +519,11 @@ TODO: Implement symbol table
 
 Type conversion handling: promote all to float until it needs to be an int
 
+
+Declarations, scope, symbols
+
+Global var (Defined in outermost scope)
+Local var
+Global proc (Defined in outermost scope)
+Local proc
+

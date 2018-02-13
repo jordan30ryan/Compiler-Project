@@ -38,8 +38,6 @@ int main(int argc, char** argv)
         std::cout << err_handler->errors << " error(s) reported during scanner/parser phase.\n";
     }    
 
-    //TODO Type checking and other tasks
-    
     return 0;
 }
 

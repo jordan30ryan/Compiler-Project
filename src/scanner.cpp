@@ -10,28 +10,28 @@ bool Scanner::init(const char* filename)
     line_number = 1;
 
     // Init reserved words table
-    reserved_words_map["IN"] = TokenType::RS_IN;
-    reserved_words_map["OUT"] = TokenType::RS_OUT;
-    reserved_words_map["INOUT"] = TokenType::RS_INOUT;
-    reserved_words_map["PROGRAM"] = TokenType::RS_PROGRAM;
-    reserved_words_map["IS"] = TokenType::RS_IS;
-    reserved_words_map["BEGIN"] = TokenType::RS_BEGIN;
-    reserved_words_map["END"] = TokenType::RS_END;
-    reserved_words_map["GLOBAL"] = TokenType::RS_GLOBAL;
-    reserved_words_map["PROCEDURE"] = TokenType::RS_PROCEDURE;
-    reserved_words_map["STRING"] = TokenType::RS_STRING;
-    reserved_words_map["CHAR"] = TokenType::RS_CHAR;
-    reserved_words_map["INTEGER"] = TokenType::RS_INTEGER;
-    reserved_words_map["FLOAT"] = TokenType::RS_FLOAT;
-    reserved_words_map["BOOL"] = TokenType::RS_BOOL;
-    reserved_words_map["IF"] = TokenType::RS_IF;
-    reserved_words_map["THEN"] = TokenType::RS_THEN;
-    reserved_words_map["ELSE"] = TokenType::RS_ELSE;
-    reserved_words_map["FOR"] = TokenType::RS_FOR;
-    reserved_words_map["RETURN"] = TokenType::RS_RETURN;
-    reserved_words_map["TRUE"] = TokenType::RS_TRUE;
-    reserved_words_map["FALSE"] = TokenType::RS_FALSE;
-    reserved_words_map["NOT"] = TokenType::RS_NOT;
+    global_symbols["IN"] = SymTableEntry(TokenType::RS_IN);
+    global_symbols["OUT"] = SymTableEntry(TokenType::RS_OUT);
+    global_symbols["INOUT"] = SymTableEntry(TokenType::RS_INOUT);
+    global_symbols["PROGRAM"] = SymTableEntry(TokenType::RS_PROGRAM);
+    global_symbols["IS"] = SymTableEntry(TokenType::RS_IS);
+    global_symbols["BEGIN"] = SymTableEntry(TokenType::RS_BEGIN);
+    global_symbols["END"] = SymTableEntry(TokenType::RS_END);
+    global_symbols["GLOBAL"] = SymTableEntry(TokenType::RS_GLOBAL);
+    global_symbols["PROCEDURE"] = SymTableEntry(TokenType::RS_PROCEDURE);
+    global_symbols["STRING"] = SymTableEntry(TokenType::RS_STRING);
+    global_symbols["CHAR"] = SymTableEntry(TokenType::RS_CHAR);
+    global_symbols["INTEGER"] = SymTableEntry(TokenType::RS_INTEGER);
+    global_symbols["FLOAT"] = SymTableEntry(TokenType::RS_FLOAT);
+    global_symbols["BOOL"] = SymTableEntry(TokenType::RS_BOOL);
+    global_symbols["IF"] = SymTableEntry(TokenType::RS_IF);
+    global_symbols["THEN"] = SymTableEntry(TokenType::RS_THEN);
+    global_symbols["ELSE"] = SymTableEntry(TokenType::RS_ELSE);
+    global_symbols["FOR"] = SymTableEntry(TokenType::RS_FOR);
+    global_symbols["RETURN"] = SymTableEntry(TokenType::RS_RETURN);
+    global_symbols["TRUE"] = SymTableEntry(TokenType::RS_TRUE);
+    global_symbols["FALSE"] = SymTableEntry(TokenType::RS_FALSE);
+    global_symbols["NOT"] = SymTableEntry(TokenType::RS_NOT);
 
     // Init ascii character class mapping
     for (char k = '0'; k <= '9'; k++)
@@ -193,18 +193,22 @@ Token Scanner::getToken()
         break;
     case CharClass::LETTER:
         // Identifiers/Reserved words must all start with a letter
-        for (k = 0; k < MAX_STRING_LEN && isValidInIdentifier(ch); k++)
+        while (isValidInIdentifier(ch))
         {
-            token.val.string_value[k] = toupper(ch);
+            // append char to str
+            token.val.string_value.push_back((char)toupper(ch));
             input_file.get(ch);
         }
         // Put back most recently read char (it wasn't valid in an identifier)
         input_file.unget();
-        // Null terminate the string
-        token.val.string_value[k] = 0;
 
         // Check whether this is a reserved word or identifier
         token.type = getWordTokenType(token.val.string_value);
+        if (token.type == TokenType::IDENTIFIER)
+        {
+            // Add to sym table
+            symbol_table[token.val.string_value];
+        }
         break;
     case CharClass::DIGIT:
         // Extra scope level needed becuase of variables defined in this case

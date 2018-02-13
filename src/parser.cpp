@@ -65,7 +65,7 @@ void Parser::program_header()
     require(TokenType::RS_PROGRAM);
 
     require(TokenType::IDENTIFIER);
-    char* program_name = curr_token.val.string_value;
+    std::string program_name = curr_token.val.string_value;
     std::cout << "Prog. name is " << program_name << '\n';
 
     require(TokenType::RS_IS);
@@ -189,7 +189,7 @@ void Parser::var_declaration(bool is_global)
 {
     std::cout << "var decl" << '\n';
     type_mark();
-    char* id = require(TokenType::IDENTIFIER).val.string_value;
+    std::string id = require(TokenType::IDENTIFIER).val.string_value;
     std::cout << "Identifier: " << id << '\n';
 
     if (token() == TokenType::L_BRACKET)
@@ -253,7 +253,7 @@ void Parser::identifier_statement()
     std::cout << "identifier stmnt" << '\n';
     // Advance to next token; returning the current token
     //  and retrieving the identifier value
-    const char* identifier = advance().val.string_value;
+    std::string identifier = advance().val.string_value;
     
     if (token() == TokenType::L_PAREN)
     {
@@ -265,7 +265,7 @@ void Parser::identifier_statement()
     }
 }
 
-void Parser::assignment_statement(const char* identifier)
+void Parser::assignment_statement(std::string identifier)
 {
     std::cout << "assignment stmnt" << '\n';
     // already have identifier; need to check for indexing first
@@ -279,7 +279,7 @@ void Parser::assignment_statement(const char* identifier)
     expression();
 }
 
-void Parser::proc_call(const char* identifier)
+void Parser::proc_call(std::string identifier)
 {
     std::cout << "proc call" << '\n';
     // already have identifier

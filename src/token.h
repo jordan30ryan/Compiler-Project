@@ -1,8 +1,6 @@
 #pragma once
-#include <map>
-
-#define MAX_STRING_LEN 256
-
+#include <unordered_map>
+#include <string>
 
 // Reserved words begin with RS_
 // Note: <number> in the spec is expanded to INTEGER and FLOAT here.
@@ -15,7 +13,7 @@ enum TokenType
 
 struct Value
 {
-    char string_value[MAX_STRING_LEN];
+    std::string string_value;
     char char_value;
     int int_value;
     double float_value;
@@ -27,4 +25,23 @@ struct Token
     Value val;
     int line;
 };
+
+enum SymbolType
+{
+    S_UNDEFINED, S_STRING, S_CHAR, S_INTEGER, S_FLOAT, S_BOOL, S_PROCEDURE
+};
+
+struct SymTableEntry
+{
+    SymTableEntry(TokenType t) : type(t) {}
+    SymbolType sym_type;
+    // Default to identifier
+    TokenType type = TokenType::IDENTIFIER;
+    Value val;
+    // Only exists for TokenType RS_PROCEDURE
+//    std::unordered_map<std::string, SymTableEntry> local_symbols;
+};
+
+// TODO: Should this go here?
+std::unordered_map<std::string, SymTableEntry> global_symbols;
 

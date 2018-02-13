@@ -43,8 +43,8 @@ private:
 
     bool statement();
     void identifier_statement();
-    void proc_call(const char*);
-    void assignment_statement(const char*);
+    void proc_call(std::string);
+    void assignment_statement(std::string);
     void if_statement();
     void loop_statement();
     void return_statement();
