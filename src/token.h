@@ -5,6 +5,8 @@
 
 
 // Reserved words begin with RS_
+// Note: <number> in the spec is expanded to INTEGER and FLOAT here.
+//  This should simplify typechecking and hopefully won't introduce any issues
 enum TokenType 
 {
     PERIOD, SEMICOLON, L_PAREN, R_PAREN, COMMA, L_BRACKET, R_BRACKET, COLON, AND, OR, PLUS, MINUS, LT, GT, LT_EQ, GT_EQ, ASSIGNMENT, EQUALS, NOTEQUAL, MULTIPLICATION, DIVISION, FILE_END, STRING, CHAR, INTEGER, FLOAT, BOOL, IDENTIFIER, UNKNOWN,
