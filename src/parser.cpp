@@ -247,7 +247,7 @@ void Parser::type_mark()
 void Parser::lower_bound()
 {
     std::cout << "lower_bound" << '\n';
-    // TODO: minus should be allowed? Needs to be added in spec.
+    // Minus allowed in spec now
     if (token() == TokenType::MINUS) advance();
     require(TokenType::INTEGER);
 }
@@ -255,7 +255,7 @@ void Parser::lower_bound()
 void Parser::upper_bound()
 {
     std::cout << "upper_bound" << '\n';
-    // TODO: minus should be allowed? Needs to be added in spec.
+    // Minus allowed in spec now
     if (token() == TokenType::MINUS) advance();
     require(TokenType::INTEGER);
 }
