@@ -30,13 +30,13 @@ private:
 
     void declaration();
 
-    void proc_declaration();
+    void proc_declaration(bool is_global);
     void proc_header();
     void proc_body();
     void parameter_list();
     void parameter();
 
-    void var_declaration();
+    void var_declaration(bool is_global);
     void type_mark();
     void lower_bound();
     void upper_bound();

@@ -9,6 +9,11 @@
 #include <ctype.h>
 #include <string>
 
+enum CharClass 
+{
+    SYMBOL=0, LETTER, DIGIT, WHITESPACE
+};
+
 class Scanner
 {
 public:

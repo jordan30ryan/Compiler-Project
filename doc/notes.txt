@@ -466,6 +466,7 @@ ISSUES:
 
 according to spec, lower/upper_bound can't be negative; just a number
 vecOps.src has a negative lower_bound
+-Fixed in spec
 
 Something is wrong with error handling; it's printing things weirdly
 
@@ -476,4 +477,45 @@ Something is wrong with error handling; it's printing things weirdly
 Value might be weird to be returning (in parser).
 
 Maybe we should be returning a register? Once generating LLVM, it'll be resgister values, and the operations will not actually be happening in our code.
+
+================================================================================
+2/13 (MON)
+
+Type checking
+
+Declaration - fill symbol table
+Symbol table entry:
+    Identifer/Reserved word
+    Global var/local var/proc
+    Type of variable
+    chain of pointers to other symbol tables for proc
+        Lets us verify types of arguments match 
+    Returning up from recursion - return a type?
+    
+LHS is valid LHS symbol (valid target) and its type matches RHS
+"If" condition resolves to bool (or int -> bool)
+Same for "for" conditions
+
+Floats should convert to bool
+
+What needs to be returned from parser functions?
+    Type of return value (IDENTIFIER, INT, FLOAT, CHAR, STR, etc.)
+    Value being returned (Once we're generating LLVM this 
+
+
+
+
+Error handling:
+    Illegal symbol - throw away and continue parsing
+    
+
+In var decl:
+    if symbol.defined && ((symbol.global && tryingToDeclareGlobal) || (symbol.local && !tryingToDeclareGlobal))
+        report err
+
+
+TODO: Implement symbol table
+
+
+Type conversion handling: promote all to float until it needs to be an int
 
