@@ -1,8 +1,10 @@
+#include "token.h"
 #include "scanner.h"
 #include "parser.h"
 
 #include <vector>
 #include <iostream>
+
 
 /*
 Return codes
@@ -12,7 +14,6 @@ Return codes
 */
 int main(int argc, char** argv)
 {
-
     ErrHandler* err_handler = new ErrHandler();
 
     if (argc < 2) 

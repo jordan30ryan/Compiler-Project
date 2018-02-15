@@ -1,7 +1,7 @@
 #include "scanner.h"
 
-// TODO: This needs to go somewhere else
-std::unordered_map<std::string, SymTableEntry> global_symbols;
+// Declare the global symbol table
+std::unordered_map<std::string, SymTableEntry*> global_symbols;
 
 Scanner::Scanner(ErrHandler* handler) : err_handler(handler) {}
 
@@ -13,28 +13,28 @@ bool Scanner::init(const char* filename)
     line_number = 1;
 
     // Init reserved words table
-    global_symbols.insert({"IN", SymTableEntry(TokenType::RS_IN)});
-    global_symbols.insert({"OUT", SymTableEntry(TokenType::RS_OUT)});
-    global_symbols.insert({"INOUT", SymTableEntry(TokenType::RS_INOUT)});
-    global_symbols.insert({"PROGRAM", SymTableEntry(TokenType::RS_PROGRAM)});
-    global_symbols.insert({"IS", SymTableEntry(TokenType::RS_IS)});
-    global_symbols.insert({"BEGIN", SymTableEntry(TokenType::RS_BEGIN)});
-    global_symbols.insert({"END", SymTableEntry(TokenType::RS_END)});
-    global_symbols.insert({"GLOBAL", SymTableEntry(TokenType::RS_GLOBAL)});
-    global_symbols.insert({"PROCEDURE", SymTableEntry(TokenType::RS_PROCEDURE)});
-    global_symbols.insert({"STRING", SymTableEntry(TokenType::RS_STRING)});
-    global_symbols.insert({"CHAR", SymTableEntry(TokenType::RS_CHAR)});
-    global_symbols.insert({"INTEGER", SymTableEntry(TokenType::RS_INTEGER)});
-    global_symbols.insert({"FLOAT", SymTableEntry(TokenType::RS_FLOAT)});
-    global_symbols.insert({"BOOL", SymTableEntry(TokenType::RS_BOOL)});
-    global_symbols.insert({"IF", SymTableEntry(TokenType::RS_IF)});
-    global_symbols.insert({"THEN", SymTableEntry(TokenType::RS_THEN)});
-    global_symbols.insert({"ELSE", SymTableEntry(TokenType::RS_ELSE)});
-    global_symbols.insert({"FOR", SymTableEntry(TokenType::RS_FOR)});
-    global_symbols.insert({"RETURN", SymTableEntry(TokenType::RS_RETURN)});
-    global_symbols.insert({"TRUE", SymTableEntry(TokenType::RS_TRUE)});
-    global_symbols.insert({"FALSE", SymTableEntry(TokenType::RS_FALSE)});
-    global_symbols.insert({"NOT", SymTableEntry(TokenType::RS_NOT)});
+    global_symbols.insert({"IN", new SymTableEntry(TokenType::RS_IN)});
+    global_symbols.insert({"OUT", new SymTableEntry(TokenType::RS_OUT)});
+    global_symbols.insert({"INOUT", new SymTableEntry(TokenType::RS_INOUT)});
+    global_symbols.insert({"PROGRAM", new SymTableEntry(TokenType::RS_PROGRAM)});
+    global_symbols.insert({"IS", new SymTableEntry(TokenType::RS_IS)});
+    global_symbols.insert({"BEGIN", new SymTableEntry(TokenType::RS_BEGIN)});
+    global_symbols.insert({"END", new SymTableEntry(TokenType::RS_END)});
+    global_symbols.insert({"GLOBAL", new SymTableEntry(TokenType::RS_GLOBAL)});
+    global_symbols.insert({"PROCEDURE", new SymTableEntry(TokenType::RS_PROCEDURE)});
+    global_symbols.insert({"STRING", new SymTableEntry(TokenType::RS_STRING)});
+    global_symbols.insert({"CHAR", new SymTableEntry(TokenType::RS_CHAR)});
+    global_symbols.insert({"INTEGER", new SymTableEntry(TokenType::RS_INTEGER)});
+    global_symbols.insert({"FLOAT", new SymTableEntry(TokenType::RS_FLOAT)});
+    global_symbols.insert({"BOOL", new SymTableEntry(TokenType::RS_BOOL)});
+    global_symbols.insert({"IF", new SymTableEntry(TokenType::RS_IF)});
+    global_symbols.insert({"THEN", new SymTableEntry(TokenType::RS_THEN)});
+    global_symbols.insert({"ELSE", new SymTableEntry(TokenType::RS_ELSE)});
+    global_symbols.insert({"FOR", new SymTableEntry(TokenType::RS_FOR)});
+    global_symbols.insert({"RETURN", new SymTableEntry(TokenType::RS_RETURN)});
+    global_symbols.insert({"TRUE", new SymTableEntry(TokenType::RS_TRUE)});
+    global_symbols.insert({"FALSE", new SymTableEntry(TokenType::RS_FALSE)});
+    global_symbols.insert({"NOT", new SymTableEntry(TokenType::RS_NOT)});
 
     // Init ascii character class mapping
     for (char k = '0'; k <= '9'; k++)
@@ -85,17 +85,16 @@ bool Scanner::isValidShared(char ch)
 // Otherwise, str is interpreted as an identifier.
 TokenType Scanner::getWordTokenType(std::string str)
 {
-    TokenType type;
     try
     {
-        type = global_symbols.at(str).type;
+        SymTableEntry *entry = global_symbols.at(str);
+        return entry->type;
     }
     catch (const std::out_of_range& oor) 
     {
         // str not in the map; just an identifier
         return TokenType::IDENTIFIER;
     }
-    return type;
 }
 
 // Consume all leading whitespace and comments first
@@ -210,7 +209,7 @@ Token Scanner::getToken()
         if (token.type == TokenType::IDENTIFIER)
         {
             // Add to sym table
-            global_symbols[token.val.string_value];
+            global_symbols[token.val.string_value] = new SymTableEntry();
         }
         break;
     case CharClass::DIGIT:

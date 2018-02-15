@@ -188,9 +188,12 @@ void Parser::parameter()
 void Parser::var_declaration(bool is_global)
 {
     std::cout << "var decl" << '\n';
-    type_mark();
+    // This is the only place in grammar type mark occurs
+    TokenType typemark = token();
+    advance();
     std::string id = require(TokenType::IDENTIFIER).val.string_value;
-    std::cout << "Identifier: " << id << '\n';
+    //curr_scope[id].SymbolType = 
+    //std::cout << "Identifier: " << id << '\n';
 
     if (token() == TokenType::L_BRACKET)
     {
@@ -202,13 +205,6 @@ void Parser::var_declaration(bool is_global)
         require(TokenType::R_BRACKET);
     }
     // TODO: Check if this idenfitier is declared already, if so report err
-}
-
-void Parser::type_mark()
-{
-    std::cout << "type_mark" << '\n';
-    TokenType typemark = token();
-    advance();
 }
 
 void Parser::lower_bound()
