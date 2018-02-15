@@ -1,3 +1,17 @@
+=== BUILD ===
+
+make
+
+for g++:
+make g
+
+for clang++:
+make c
+
+=== USAGE ===
+
+./bin/compiler <file_name>
+
 === FILES ===
 
 
@@ -26,36 +40,6 @@ ASSIGNMENT  - :=    - Assigns the right side expression to the left variable
 RS_[...]    - [...] - The reserved word [...]. 
 
 
-
-=== TODO ===
-
-
-
-Is TokenType::BOOL unneeded?
-It would represent boolean literals (similar to how INTEGER/FLOAT represent literal numbers)
-But the only boolean literals, TRUE/FALSE, would be easier to store as reserved words.
-
-Performnace of ifstream::unget(); alternate methods?
-
-Might be interesting to make getToken() (in the parser) also check for type
-i.e. pass in the TokenType we expect to getToken() and getToken checks for that token type and handles errors.
-
-
-Question on 
-<variable_declaration>
-specifies the lower/upper bound syntax as 
-[ "[" <lower_bound> ":" <uppper_bound> "]" ]
-so vars would be defined as something like 
-INTEGER test[3:4];
-but this is wrong; in a test program there's something defined as
-INTEGER test[3];
-
-
-=== DONE ===
-
-Handle comments 
-
-Test everything (Scanner)
 
 
 

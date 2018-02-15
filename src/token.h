@@ -33,15 +33,16 @@ enum SymbolType
 
 struct SymTableEntry
 {
+    // For RS tokens
     SymTableEntry(TokenType t) : type(t) {}
-    SymbolType sym_type;
-    // Default to identifier
-    TokenType type = TokenType::IDENTIFIER;
-    Value val;
-    // Only exists for TokenType RS_PROCEDURE
-//    std::unordered_map<std::string, SymTableEntry> local_symbols;
-};
+    // For Identifiers
+    SymTableEntry() : type(IDENTIFIER) {}
 
-// TODO: Should this go here?
-std::unordered_map<std::string, SymTableEntry> global_symbols;
+    TokenType type; 
+
+    // if type==IDENTIFIER, stores identifier type (i.e. Variable type or Procedure)
+    SymbolType sym_type = S_UNDEFINED;
+    // If type==IDENTIFER && sym_type==S_PROCEDURE, stores the proc local symbol table
+    std::unordered_map<std::string, SymTableEntry> local_symbols;
+};
 
