@@ -479,7 +479,7 @@ Value might be weird to be returning (in parser).
 Maybe we should be returning a register? Once generating LLVM, it'll be resgister values, and the operations will not actually be happening in our code.
 
 ================================================================================
-2/13 (MON)
+2/13 (TUES)
 
 Type checking
 
@@ -555,4 +555,14 @@ Scanner finds an IDENTIFIER - should it add to global_symbols?
         We'd have not only the identifier value but everything we know about the identifier could be populated by the parser
         The parser would then add that to the appropriate scope (because the parser knows which scope it's currently in)
 
+What 
+
+The symbol table is now implemented. There are two symbol tables, but actually also an infinite number of them. There is a global symbol table (defined in token.h but declared for real in scanner.cpp). There is also a local symbol table, init the same way, but this one is a pointer. The pointer can be changed depdneing on the context. If we are inside the program outermost scope, the pointer points to the global table. If we're inside a proc, the local table points to an inner scope that is attached to the SymTableEntry for the proc that we're in. 
+
+What still needs implemented?
+There is a need for Value to identify WHAT type of value it's storing. Right now it only contains a char,int,float,string, but it can't be identified which one is actually in use. Token provides some assistance in this, as it also contains token type. Value is also the struct used in return values for the various parts of the parser. When factor() returns a value, we need to be able to check that value  somehow so we know which member to be using. Should the parser be passing / returning around Tokens? There is more info in Token than needed for that, and there is a different semantic meaning. Something Token-like as a Value wrapper would probably be helpful or even required.
+
+
+
+Quick thought: Value could contain a pointer to a std::string, and then it could be made a union (save mem)
 
