@@ -36,6 +36,7 @@ int main(int argc, char** argv)
     if (err_handler->errors)
     {
         std::cout << err_handler->errors << " error(s) reported during scanner/parser phase.\n";
+        return 3;
     }    
 
     return 0;

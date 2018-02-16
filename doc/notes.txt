@@ -527,3 +527,32 @@ Local var
 Global proc (Defined in outermost scope)
 Local proc
 
+
+================================================================================
+2/15 (THURS)
+
+Weirdness with g++ on ucfs (so out of date it doesn't support c++11), 
+    clang++ works but need -stdlib=libc++
+Added clang to makefile (make c)
+Outside of ucfs, stdlib argument breaks includes. 
+make [g] - use g++
+make c - use clang with no stdlib arg
+make c2 - use clang with stdlib arg (for compiling on ucfs)
+
+
+
+
+Symbol table
+
+global_symbols - Stored in scanner - maybe should put in main? pass in same way as errhandler?
+
+Scanner finds an IDENTIFIER - should it add to global_symbols?
+    No, because it may not be a global variable; scanner doesn't know.
+    Should the scanner return the symbol somehow? In what form would it be returning the symbol?
+    Scanner finds IDENTIFIER, then returns the token. Maybe the token should have a pointer to a symtable entry?
+        This way, the sym table entries would be independent of the symbol table they're actually in 
+            Would make it difficult to add the initial reserved words to the global table if the table entries were all pointers.
+        We'd have not only the identifier value but everything we know about the identifier could be populated by the parser
+        The parser would then add that to the appropriate scope (because the parser knows which scope it's currently in)
+
+

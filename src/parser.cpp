@@ -207,7 +207,10 @@ void Parser::var_declaration(bool is_global)
 void Parser::type_mark()
 {
     std::cout << "type_mark" << '\n';
+
     TokenType typemark = token();
+    std::cout << TokenTypeStrings[typemark] << '\n';
+
     advance();
 }
 
