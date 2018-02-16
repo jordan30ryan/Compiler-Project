@@ -33,32 +33,31 @@ struct SymTableEntry
     SymbolType sym_type = S_UNDEFINED;
     // If type==IDENTIFER && sym_type==S_PROCEDURE, 
     //  stores the proc local symbol table
-    SymTable *local_symbols;
-    //  stores symbols of scope above this 
-    SymTable *parent_symbols;
+    SymTable* local_symbols;
 };
 
 // TODO: Value should indicate what type of value it's storing? 
-//  return values in the parser are unidentifiable. Do we use int? float?
-//  cast everything to a float?
 struct Value
 {
+    //std::string* string_value;
     std::string string_value;
     char char_value;
     int int_value;
     double float_value;
+    SymTableEntry* symbol;
 };
 
+// Represents a single token from the source file
 struct Token
 {
     TokenType type;
     Value val;
     int line;
-    SymTableEntry* identifier_entry;
 };
 
+// Both are declared in scanner.cpp
 // The global scope symbol table
 extern SymTable global_symbols;
-// The local scope s.t. (varies depending on context)
+// The local scope symbol table (varies depending on context)
 extern SymTable *curr_symbols;
 

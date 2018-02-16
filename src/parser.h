@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <stack>
 
 class Parser
 {

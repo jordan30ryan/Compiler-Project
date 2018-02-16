@@ -1,16 +1,14 @@
 === BUILD ===
 
-make
+to use g++:
+make [g]
 
-for g++:
-make g
-
-for clang++:
+to use clang++:
 make c
 
 === USAGE ===
 
-./bin/compiler <file_name>
+./bin/compiler <src_file_name>
 
 === FILES ===
 

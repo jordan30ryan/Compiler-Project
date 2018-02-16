@@ -29,9 +29,7 @@ public:
     */
     bool init(const char* filename);
 
-    /*
-        returns - The next token in input_file
-    */
+    // returns - The next token in input_file
     Token getToken();
     ~Scanner();
 private:
@@ -41,7 +39,6 @@ private:
     ErrHandler* err_handler;
 
     CharClass ascii_mapping[128] = {CharClass::SYMBOL};
-    //std::unordered_map<std::string, TokenType> reserved_words_map;
 
     TokenType getWordTokenType(std::string str);
 

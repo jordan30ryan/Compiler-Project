@@ -1,6 +1,0 @@
-program FLOATS is
-begin
-    float a := 3_.1_41_5;
-    integer b := 1_000;
-    putFloat(a);
-end program.

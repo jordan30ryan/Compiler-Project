@@ -1,0 +1,22 @@
+program PROCS is
+    procedure s1()
+        procedure s2()
+            procedure s3()
+            begin
+                s1();
+                s2();
+                s3();
+            end procedure;
+        begin
+            s1();
+            s2();
+            s3();
+        end procedure;
+    begin
+        s1();
+        s2();
+        s3();
+    end procedure;
+begin
+    s1();
+end program.

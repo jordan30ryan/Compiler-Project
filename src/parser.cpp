@@ -1,5 +1,9 @@
 #include "parser.h"
 
+// Stack of symbol tables, becuase each proc can have multiple proc definitions
+std::stack<SymTable*> scope_stack;
+
+// To assist in error printing
 const char* TokenTypeStrings[] = 
 {
 ".", ";", "(", ")", ",", "[", "]", ":", "&", "|", "+", "-", "<", ">", "<=", ">=", ":=", "==", "!=", "*", "/", "FILE_END", "STRING", "CHAR", "INTEGER", "FLOAT", "BOOL", "IDENTIFIER", "UNKNOWN",
@@ -119,13 +123,27 @@ void Parser::proc_declaration(bool is_global)
     std::cout << "proc decl" << '\n';
     proc_header();
     proc_body();
+
+    //std::cout << "Current sym pointer: " << curr_symbols << '\n';
+    curr_symbols = scope_stack.top();
+    scope_stack.pop();
+    //std::cout << "Current sym pointer: " << curr_symbols << '\n';
 }
 
 void Parser::proc_header()
 {
     std::cout << "proc header" << '\n';
     require(TokenType::RS_PROCEDURE);
-    require(TokenType::IDENTIFIER);
+
+    // Setup symbol table so the proc sym table is now being used
+    std::string id = require(TokenType::IDENTIFIER).val.string_value;
+    (*curr_symbols)[id]->local_symbols = new SymTable();
+    // TODO: Add this proc itself to the symtable, as is necessary for recursion
+    scope_stack.push(curr_symbols);
+    //std::cout << "Current sym pointer: " << curr_symbols << '\n';
+    curr_symbols = (*curr_symbols)[id]->local_symbols; 
+    //std::cout << "Current sym pointer: " << curr_symbols << '\n';
+
     require(TokenType::L_PAREN);
     if (token() != TokenType::R_PAREN)
         parameter_list(); 
@@ -305,6 +323,13 @@ void Parser::proc_call(std::string identifier)
 {
     std::cout << "proc call" << '\n';
     // already have identifier
+    if (curr_symbols->count(identifier) == 0 
+        || (*curr_symbols)[identifier]->sym_type != S_PROCEDURE)
+    {
+        std::ostringstream stream;
+        stream << "Procedure " << identifier << " not defined\n";
+        err_handler->reportError(stream.str(), curr_token.line);
+    }
     require(TokenType::L_PAREN);
     if (token() != TokenType::R_PAREN)
         argument_list();
@@ -536,15 +561,19 @@ Value Parser::factor()
 
 Value Parser::name()
 {
+    Value val;
     std::cout << "name" << '\n';
-    require(TokenType::IDENTIFIER);
+    // Require there is an identifier here and get its name
+    std::string id = require(TokenType::IDENTIFIER).val.string_value;
+    // Look up entry by id in current symbol table
+    val.symbol = (*curr_symbols)[id];
     if (token() == TokenType::L_BRACKET)
     {
+        // TODO deal with indexing 
         advance();
         expression();
         require(TokenType::R_BRACKET);
     }
-    Value val;
     return val;
 }
 
