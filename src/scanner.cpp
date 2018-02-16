@@ -1,7 +1,11 @@
 #include "scanner.h"
 
 // Declare the global symbol table
-std::unordered_map<std::string, SymTableEntry*> global_symbols;
+SymTable global_symbols;
+// Declare the local symbol table
+// NOTE: This is shared with the parser (extern defined in token.h)
+// It will always be pointing to the right table because the parser is using it.
+SymTable* curr_symbols = &global_symbols;
 
 Scanner::Scanner(ErrHandler* handler) : err_handler(handler) {}
 
@@ -206,10 +210,11 @@ Token Scanner::getToken()
 
         // Check whether this is a reserved word or identifier
         token.type = getWordTokenType(token.val.string_value);
-        if (token.type == TokenType::IDENTIFIER)
+        // Add this identifier to sym table if it's not already there
+        if (curr_symbols->count(token.val.string_value) == 0)
         {
-            // Add to sym table
-            global_symbols[token.val.string_value] = new SymTableEntry();
+            // Add to sym table (type will be IDENTIFIER)
+            (*curr_symbols)[token.val.string_value] = new SymTableEntry();
         }
         break;
     case CharClass::DIGIT:

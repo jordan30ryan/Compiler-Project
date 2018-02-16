@@ -2,6 +2,9 @@
 #include <unordered_map>
 #include <string>
 
+struct SymTableEntry;
+typedef std::unordered_map<std::string, SymTableEntry*> SymTable;
+
 // Reserved words begin with RS_
 // Note: <number> in the spec is expanded to INTEGER and FLOAT here.
 //  This should simplify typechecking and hopefully won't introduce any issues
@@ -30,9 +33,14 @@ struct SymTableEntry
     SymbolType sym_type = S_UNDEFINED;
     // If type==IDENTIFER && sym_type==S_PROCEDURE, 
     //  stores the proc local symbol table
-    std::unordered_map<std::string, SymTableEntry*> local_symbols;
+    SymTable *local_symbols;
+    //  stores symbols of scope above this 
+    SymTable *parent_symbols;
 };
 
+// TODO: Value should indicate what type of value it's storing? 
+//  return values in the parser are unidentifiable. Do we use int? float?
+//  cast everything to a float?
 struct Value
 {
     std::string string_value;
@@ -50,5 +58,7 @@ struct Token
 };
 
 // The global scope symbol table
-extern std::unordered_map<std::string, SymTableEntry*> global_symbols;
+extern SymTable global_symbols;
+// The local scope s.t. (varies depending on context)
+extern SymTable *curr_symbols;
 

@@ -191,9 +191,34 @@ void Parser::var_declaration(bool is_global)
     // This is the only place in grammar type mark occurs
     TokenType typemark = token();
     advance();
+
     std::string id = require(TokenType::IDENTIFIER).val.string_value;
-    //curr_scope[id].SymbolType = 
-    //std::cout << "Identifier: " << id << '\n';
+    SymTableEntry* entry = (*curr_symbols)[id];
+    if (entry->sym_type != S_UNDEFINED)
+    {
+        // TODO Err; variable defined twice.
+    }
+    switch (typemark)
+    {
+    case RS_STRING:
+        entry->sym_type = S_STRING;
+        break;
+    case RS_CHAR:
+        entry->sym_type = S_CHAR;
+        break;
+    case RS_INTEGER:
+        entry->sym_type = S_INTEGER;
+        break;
+    case RS_FLOAT:
+        entry->sym_type = S_FLOAT;
+        break;
+    case RS_BOOL:
+        entry->sym_type = S_BOOL;
+        break;
+    default:
+        // TODO Error: bad typemark
+        break;
+    }
 
     if (token() == TokenType::L_BRACKET)
     {
@@ -204,7 +229,6 @@ void Parser::var_declaration(bool is_global)
         upper_bound();
         require(TokenType::R_BRACKET);
     }
-    // TODO: Check if this idenfitier is declared already, if so report err
 }
 
 void Parser::lower_bound()
@@ -264,6 +288,8 @@ void Parser::identifier_statement()
 void Parser::assignment_statement(std::string identifier)
 {
     std::cout << "assignment stmnt" << '\n';
+    std::cout << "iden:" << identifier 
+                << "\tType: " << (*curr_symbols)[identifier]->sym_type << '\n';
     // already have identifier; need to check for indexing first
     if (token() == TokenType::L_BRACKET)
     {
@@ -360,18 +386,6 @@ void Parser::argument_list()
             continue;
         }
         else return;
-    }
-}
-
-void Parser::destination()
-{
-    std::cout << "destination" << '\n';
-    require(TokenType::IDENTIFIER);
-    if (token() == TokenType::L_BRACKET)
-    {
-        advance();
-        expression();
-        require(TokenType::R_BRACKET);
     }
 }
 
@@ -491,10 +505,17 @@ Value Parser::factor()
     else if (token() == TokenType::MINUS)
     {
         advance();
-        // TODO do seomething with the minus
+        // TODO: Value needs to indicate WHICH value it's storing.
+        if (token() == TokenType::INTEGER)
+            retval.int_value = -1 * advance().val.int_value;
+        else if (token() == TokenType::FLOAT) 
+            retval.float_value = -1.0 * advance().val.float_value;
+        else if (token() == TokenType::IDENTIFIER) 
+            ;// TODO What do
+        else
+            ;// TODO: Error; can't have a minus in front of this
     }
-
-    if (token() == TokenType::STRING 
+    else if (token() == TokenType::STRING 
             || token() == TokenType::CHAR 
             || token() == TokenType::RS_TRUE 
             || token() == TokenType::RS_FALSE 
@@ -504,7 +525,7 @@ Value Parser::factor()
         // Literal values
         // Consume the token and get the value
         retval = advance().val;
-        // TODO: type checking how do
+        // TODO: type checking 
     }
     else if (token() == TokenType::IDENTIFIER)
     {
