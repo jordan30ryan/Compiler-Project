@@ -40,6 +40,18 @@ bool Scanner::init(const char* filename)
     global_symbols.insert({"FALSE", new SymTableEntry(TokenType::RS_FALSE)});
     global_symbols.insert({"NOT", new SymTableEntry(TokenType::RS_NOT)});
 
+    // TODO: Make builtin functions usable 
+    global_symbols.insert({"GETBOOL", new SymTableEntry(S_PROCEDURE)});
+    global_symbols.insert({"GETINTEGER", new SymTableEntry(S_PROCEDURE)});
+    global_symbols.insert({"GETFLOAT", new SymTableEntry(S_PROCEDURE)});
+    global_symbols.insert({"GETSTRING", new SymTableEntry(S_PROCEDURE)});
+    global_symbols.insert({"GETCHAR", new SymTableEntry(S_PROCEDURE)});
+    global_symbols.insert({"PUTBOOL", new SymTableEntry(S_PROCEDURE)});
+    global_symbols.insert({"PUTINTEGER", new SymTableEntry(S_PROCEDURE)});
+    global_symbols.insert({"PUTFLOAT", new SymTableEntry(S_PROCEDURE)});
+    global_symbols.insert({"PUTSTRING", new SymTableEntry(S_PROCEDURE)});
+    global_symbols.insert({"PUTCHAR", new SymTableEntry(S_PROCEDURE)});
+
     // Init ascii character class mapping
     for (char k = '0'; k <= '9'; k++)
     {

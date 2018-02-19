@@ -21,10 +21,12 @@ enum SymbolType
 
 struct SymTableEntry
 {
-    // For RS tokens
+    // For reserved words 
     SymTableEntry(TokenType t) : type(t) {}
-    // For Identifiers
+    // For identifiers
     SymTableEntry() : type(IDENTIFIER) {}
+    // For identifers where the type is known
+    SymTableEntry(SymbolType st) : type(IDENTIFIER), sym_type(st) {}
 
     TokenType type; 
 

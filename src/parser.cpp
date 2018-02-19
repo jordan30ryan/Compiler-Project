@@ -137,12 +137,12 @@ void Parser::proc_header()
 
     // Setup symbol table so the proc sym table is now being used
     std::string id = require(TokenType::IDENTIFIER).val.string_value;
+    (*curr_symbols)[id]->sym_type = S_PROCEDURE;
     (*curr_symbols)[id]->local_symbols = new SymTable();
-    // TODO: Add this proc itself to the symtable, as is necessary for recursion
     scope_stack.push(curr_symbols);
-    //std::cout << "Current sym pointer: " << curr_symbols << '\n';
     curr_symbols = (*curr_symbols)[id]->local_symbols; 
-    //std::cout << "Current sym pointer: " << curr_symbols << '\n';
+    // This is now the proc's scope's symbol table; add itself for recursion
+    curr_symbols->insert({id, new SymTableEntry(S_PROCEDURE)});
 
     require(TokenType::L_PAREN);
     if (token() != TokenType::R_PAREN)
@@ -219,6 +219,7 @@ void Parser::var_declaration(bool is_global)
         err_handler->reportError(stream.str(), curr_token.line);
     }
     // TODO: Check if it was defined globally
+
     // TODO: Better way to do this?
     switch (typemark)
     {
@@ -244,8 +245,8 @@ void Parser::var_declaration(bool is_global)
         break;
     }
     entry->is_global = is_global;
-    if (is_global) global_symbols.insert(id, entry);
-    else curr_symbols->insert(id, entry);
+    if (is_global) global_symbols.insert({id, entry});
+    else curr_symbols->insert({id, entry});
 
     if (token() == TokenType::L_BRACKET)
     {
@@ -332,8 +333,11 @@ void Parser::proc_call(std::string identifier)
 {
     std::cout << "proc call" << '\n';
     // already have identifier
-    if (curr_symbols->count(identifier) == 0 
-        || (*curr_symbols)[identifier]->sym_type != S_PROCEDURE)
+    // Check current symbols and global symbols for the proc
+    if (    (curr_symbols->count(identifier) == 0 
+                || (*curr_symbols)[identifier]->sym_type != S_PROCEDURE)
+        &&  (global_symbols.count(identifier) == 0
+                || global_symbols[identifier]->sym_type != S_PROCEDURE))
     {
         std::ostringstream stream;
         stream << "Procedure " << identifier << " not defined\n";
