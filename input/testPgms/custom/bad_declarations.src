@@ -3,19 +3,14 @@ program test_program is
     begin
         putString(str);
     end procedure;
-
-    string str;
-    string str2;
-    char ch;
-    char ch2;
-    char ch3;
 begin
+    string str;
     str := " _This is a string, This:is;still.a'string0123456789";
-    str2 := " This is an invalid string @@@";
+    string str2 := " This is an invalid string @@@";
     print_string(str);
-    ch := 'a';
-    ch2 := ' ';
-    ch3 := '"';
+    char ch := 'a';
+    char ch2 := ' ';
+    char ch3 := '"';
     putChar(ch);
     putChar(ch2);
     putChar(ch3);
