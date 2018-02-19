@@ -214,8 +214,12 @@ void Parser::var_declaration(bool is_global)
     SymTableEntry* entry = (*curr_symbols)[id];
     if (entry->sym_type != S_UNDEFINED)
     {
-        // TODO Err; variable defined twice.
+        std::ostringstream stream;
+        stream << "Variable " << id << " was already defined in this scope";
+        err_handler->reportError(stream.str(), curr_token.line);
     }
+    // TODO: Check if it was defined globally
+    // TODO: Better way to do this?
     switch (typemark)
     {
     case RS_STRING:
@@ -234,9 +238,14 @@ void Parser::var_declaration(bool is_global)
         entry->sym_type = S_BOOL;
         break;
     default:
-        // TODO Error: bad typemark
+        std::ostringstream stream;
+        stream << "Unknown typemark: " << TokenTypeStrings[typemark];
+        err_handler->reportError(stream.str(), curr_token.line);
         break;
     }
+    entry->is_global = is_global;
+    if (is_global) global_symbols.insert(id, entry);
+    else curr_symbols->insert(id, entry);
 
     if (token() == TokenType::L_BRACKET)
     {

@@ -31,6 +31,7 @@ struct SymTableEntry
     // if type==IDENTIFIER, 
     //  stores identifier type (i.e. Variable type or Procedure)
     SymbolType sym_type = S_UNDEFINED;
+    bool is_global;
     // If type==IDENTIFER && sym_type==S_PROCEDURE, 
     //  stores the proc local symbol table
     SymTable* local_symbols;
