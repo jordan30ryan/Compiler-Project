@@ -124,10 +124,8 @@ void Parser::proc_declaration(bool is_global)
     proc_header();
     proc_body();
 
-    //std::cout << "Current sym pointer: " << curr_symbols << '\n';
     curr_symbols = scope_stack.top();
     scope_stack.pop();
-    //std::cout << "Current sym pointer: " << curr_symbols << '\n';
 }
 
 void Parser::proc_header()
@@ -135,13 +133,15 @@ void Parser::proc_header()
     std::cout << "proc header" << '\n';
     require(TokenType::RS_PROCEDURE);
 
-    // Setup symbol table so the proc sym table is now being used
+    // TODO: Chec if proc was already declared
+    // Setup symbol table so the procedure's sym table is now being used
     std::string id = require(TokenType::IDENTIFIER).val.string_value;
     (*curr_symbols)[id]->sym_type = S_PROCEDURE;
     (*curr_symbols)[id]->local_symbols = new SymTable();
     scope_stack.push(curr_symbols);
     curr_symbols = (*curr_symbols)[id]->local_symbols; 
-    // This is now the proc's scope's symbol table; add itself for recursion
+    // curr_symbols is now the proc's scope's symbol table; 
+    //  add itself to support recursion
     curr_symbols->insert({id, new SymTableEntry(S_PROCEDURE)});
 
     require(TokenType::L_PAREN);
@@ -214,13 +214,22 @@ void Parser::var_declaration(bool is_global)
     SymTableEntry* entry = (*curr_symbols)[id];
     if (entry->sym_type != S_UNDEFINED)
     {
+        // If it's not UNDEFINED (the defualt value), 
+        //  this variable is being redefined (in the same scope)
         std::ostringstream stream;
         stream << "Variable " << id << " was already defined in this scope";
         err_handler->reportError(stream.str(), curr_token.line);
     }
-    // TODO: Check if it was defined globally
+    if (global_symbols[id]->sym_type != S_UNDEFINED)
+    {
+        // If it's not UNDEFINED (the defualt value), 
+        //  this variable is being redefined (already in global scope)
+        std::ostringstream stream;
+        stream << "Variable " << id << " was already defined in the global scope";
+        err_handler->reportError(stream.str(), curr_token.line);
+    }
 
-    // TODO: Better way to do this?
+    // TODO: Better way to do this? lol
     switch (typemark)
     {
     case RS_STRING:

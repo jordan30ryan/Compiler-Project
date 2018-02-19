@@ -32,6 +32,7 @@ struct SymTableEntry
 
     // if type==IDENTIFIER, 
     //  stores identifier type (i.e. Variable type or Procedure)
+    // (Defaults to UNDEFINED)
     SymbolType sym_type = S_UNDEFINED;
     bool is_global;
     // If type==IDENTIFER && sym_type==S_PROCEDURE, 
