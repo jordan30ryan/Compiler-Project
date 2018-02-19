@@ -4,8 +4,9 @@
 SymTable global_symbols;
 // Declare the local symbol table
 // NOTE: This is shared with the parser (extern defined in token.h)
-// It will always be pointing to the right table because the parser is using it.
-SymTable* curr_symbols = &global_symbols;
+// The parser will be modifying this so it is guranteed to point to the 
+//  correct scope based on parser context
+SymTable* curr_symbols = new SymTable();
 
 Scanner::Scanner(ErrHandler* handler) : err_handler(handler) {}
 
@@ -182,9 +183,6 @@ Token Scanner::getToken()
 
     // Stores next char read from file
     char ch;
-
-    // For counting loops (as to avoid cross init in cases)
-    int k;
 
     consumeWhitespaceAndComments();
 

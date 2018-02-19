@@ -245,8 +245,13 @@ void Parser::var_declaration(bool is_global)
         break;
     }
     entry->is_global = is_global;
-    if (is_global) global_symbols.insert({id, entry});
-    else curr_symbols->insert({id, entry});
+    // Only insert into global symbols if prefixed with RS_GLOBAL (is_global == true)
+    //  AND we're in the outermost scope (stack is empty)
+    //  (per the spec, only outermost scope vars can be global)
+    if (is_global && scope_stack.size() == 0) global_symbols.insert({id, entry});
+
+    // It's arleady in curr_symbols; it's added by the scanner.
+    // Also, entry is a pointer so modifying it here modifies it in the table.
 
     if (token() == TokenType::L_BRACKET)
     {
@@ -333,11 +338,20 @@ void Parser::proc_call(std::string identifier)
 {
     std::cout << "proc call" << '\n';
     // already have identifier
+
     // Check current symbols and global symbols for the proc
-    if (    (curr_symbols->count(identifier) == 0 
-                || (*curr_symbols)[identifier]->sym_type != S_PROCEDURE)
-        &&  (global_symbols.count(identifier) == 0
-                || global_symbols[identifier]->sym_type != S_PROCEDURE))
+    if (curr_symbols->count(identifier) != 0 
+            && (*curr_symbols)[identifier]->sym_type == S_PROCEDURE)
+    {
+        // Proc in curr_symbols
+        
+    }
+    else if (global_symbols.count(identifier) != 0
+            && global_symbols[identifier]->sym_type == S_PROCEDURE)
+    {
+        // Proc in global_symbols
+    }
+    else
     {
         std::ostringstream stream;
         stream << "Procedure " << identifier << " not defined\n";
@@ -531,7 +545,7 @@ Value Parser::factor()
     std::cout << "factor" << '\n';
     Value retval;
 
-    // Token is either (expression), name, number, string, char, true, false
+    // Token is either (expression), [-] name, [-] number, string, char, true, false
     if (token() == TokenType::L_PAREN)
     {
         advance();

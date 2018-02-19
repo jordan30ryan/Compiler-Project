@@ -566,3 +566,13 @@ There is a need for Value to identify WHAT type of value it's storing. Right now
 
 Quick thought: Value could contain a pointer to a std::string, and then it could be made a union (save mem)
 
+================================================================================
+2/19 (MON)
+
+Stack smashing - accessing outside bounds of array
+std::string operator [] was being used as assignment without allocating bounds.
+(c-string allocated to 256 or so bytes was being used before; syntax wasn't changed)
+compiler accepted it because op. [] can be used for assignment but only when that
+    index has already been allocated/assigned to.
+
+
