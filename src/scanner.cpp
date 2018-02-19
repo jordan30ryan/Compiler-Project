@@ -335,7 +335,7 @@ Token Scanner::getToken()
             // String token
             token.type = TokenType::STRING;
 
-            k = 0;
+            //k = 0;
             while (input_file.get(ch) && ch != '"')
             {
                 if (!isValidInString(ch))
@@ -346,14 +346,15 @@ Token Scanner::getToken()
                 }
                 else 
                 {
-                    token.val.string_value[k++] = ch;
+                    //token.val.string_value[k++] = ch;
+                    token.val.string_value.push_back(ch);
                 }
             }
             if (ch != '"') 
             {
                 err_handler->reportError("Reached EOF and string quotes were never closed.", line_number);
             }
-            token.val.string_value[k] = 0;
+            //token.val.string_value[k] = 0;
             break;
         case '\'':
             token.type = TokenType::CHAR;
