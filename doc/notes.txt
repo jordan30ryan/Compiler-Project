@@ -576,3 +576,18 @@ compiler accepted it because op. [] can be used for assignment but only when tha
     index has already been allocated/assigned to.
 
 
+================================================================================
+2/20 (TUES)
+
+hastarf distance
+(a^N+b^n) ^ (1/n)
+
+relational operators should work on int to float
+
+
+Program identifier - global scope
+Doesn't matter though
+
+TODO: Argument list in proc symbol table
+Need to keep track of in|out|inout for this
+
