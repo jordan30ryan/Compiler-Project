@@ -221,7 +221,8 @@ void Parser::var_declaration(bool is_global)
         stream << "Variable " << id << " was already defined in this scope";
         err_handler->reportError(stream.str(), curr_token.line);
     }
-    if (global_symbols[id]->sym_type != S_UNDEFINED)
+    // If global symbol table has an entry for id
+    if (global_symbols.count(id) > 0)
     {
         // If it's not UNDEFINED (the defualt value), 
         //  this variable is being redefined (already in global scope)
@@ -455,17 +456,23 @@ Value Parser::expression()
 {
     std::cout << "expr" << '\n';
 
-    // TODO: what value to return?
     // arith_op is required and defined as:
-    //  [NOT] relation, arith_op_pr
+    //  relation, arith_op_pr
     // expression_pr is completely optional; defined as:
-    //      anything with & or |, arith_op, expression_pr
+    //  either & or |, arith_op, expression_pr
 
+
+    if (token() == TokenType::RS_NOT)
+    {
+        advance();
+    }
 
     // Because arith_op is required to result in something, take its value
     //  and give it to expression_pr. expression_pr will return that value,
-    //  either modified with its operation (& or |) and another arith_op,
-    //  OR, will just return the unmodified value. 
+    //  either modified with its operation (& or |) and another arith_op, 
+    //  (and optionally another expression_pr, and so on...)
+    //  OR, expression_pr(val) will just return val unmodified 
+    //  if there is no operator & or | as the first token.
     Value val = arith_op(); 
     return expression_pr(val);
 }
@@ -476,17 +483,18 @@ Value Parser::expression_pr(Value lhs)
     std::cout << "expr prime" << '\n';
 
 
-
     // TODO: Might need to separate & and | code for code generation stage
     // TODO: Or not? Maybe check each one and get the LLVM operation name,
     //  then do type checking without duplication after, using 'operation'
     //  generically?
+    // TODO: Differentiate between bitwise and logical operators here.
     if (token() == TokenType::AND
         || token() == TokenType::OR)
     {
         advance();
         Value rhs = arith_op();
-        if (lhs.type != rhs.type)
+        // TODO: fix type checking based on what types & and | take.
+        //if (lhs.type != rhs.type)
         {
 
         }
@@ -501,10 +509,6 @@ Value Parser::expression_pr(Value lhs)
 Value Parser::arith_op()
 {
     std::cout << "arith op" << '\n';
-    if (token() == TokenType::RS_NOT)
-    {
-        advance();
-    }
 
     Value val = relation();
     return arith_op_pr(val);
@@ -517,8 +521,20 @@ Value Parser::arith_op_pr(Value lhs)
     if (token() == TokenType::PLUS || token() == TokenType::MINUS)
     {
         advance();
-        Value val = relation(); 
-        return arith_op_pr(val);
+        Value rhs = relation(); 
+        if (lhs.type == S_FLOAT && rhs.type == S_INTEGER)
+        {
+            // TODO: Convert rhs to float first
+        }
+        else if (rhs.type == S_FLOAT && lhs.type == S_INTEGER)
+        {
+            // TODO: Convert lhs to float first
+        }
+        else 
+        {
+            // TODO: Error: +/- not defined for these types
+        }
+        return arith_op_pr(rhs);
     }
     else return lhs;
 }

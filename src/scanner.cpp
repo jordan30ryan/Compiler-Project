@@ -14,6 +14,7 @@ Scanner::Scanner(ErrHandler* handler) : err_handler(handler) {}
 
 bool Scanner::init(const char* filename)
 {
+    // TODO: make sure file isn't a dir
     input_file.open(filename, std::ifstream::in);
     if (!input_file.is_open() || input_file.bad()) return false;
     
@@ -370,7 +371,7 @@ Token Scanner::getToken()
             {
                 err_handler->reportError("Reached EOF and string quotes were never closed.", line_number);
             }
-            //token.val.string_value[k] = 0;
+            token.val.type = S_STRING;
             break;
         case '\'':
             token.type = TokenType::CHAR;
@@ -387,6 +388,7 @@ Token Scanner::getToken()
             {
                 err_handler->reportError("Single quote containing more than one char", line_number);
             }
+            token.val.type = S_CHAR;
             break;
         case '=':
             if (input_file.peek() == '=')
