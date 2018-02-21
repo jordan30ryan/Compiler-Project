@@ -14,6 +14,7 @@ enum TokenType
     RS_IN, RS_OUT, RS_INOUT, RS_PROGRAM, RS_IS, RS_BEGIN, RS_END, RS_GLOBAL, RS_PROCEDURE, RS_STRING, RS_CHAR, RS_INTEGER, RS_FLOAT, RS_BOOL, RS_IF, RS_THEN, RS_ELSE, RS_FOR, RS_RETURN, RS_TRUE, RS_FALSE, RS_NOT
 };
 
+// Types that identifiers and values (literals) can be
 enum SymbolType
 {
     S_UNDEFINED, S_STRING, S_CHAR, S_INTEGER, S_FLOAT, S_BOOL, S_PROCEDURE
@@ -32,18 +33,21 @@ struct SymTableEntry
 
     // if type==IDENTIFIER, 
     //  stores identifier type (i.e. Variable type or Procedure)
-    // (Defaults to UNDEFINED)
     SymbolType sym_type = S_UNDEFINED;
-    bool is_global;
+
+    //bool is_global;
     // If type==IDENTIFER && sym_type==S_PROCEDURE, 
     //  stores the proc local symbol table
     SymTable* local_symbols;
 };
 
-// TODO: Value should indicate what type of value it's storing? 
+// TODO: Code generation stage - value should just store llvm registers.
+//  Value is passed around in every stage below expression(), 
+//  which would mean it's dealing with literals and symbols, which are regs.
 struct Value
 {
-    //std::string* string_value;
+    SymbolType type;
+
     std::string string_value;
     char char_value;
     int int_value;

@@ -1,12 +1,14 @@
 #include "scanner.h"
 
+// NOTE: these are shared with the parser (extern defined in token.h)
+
 // Declare the global symbol table
 SymTable global_symbols;
 // Declare the local symbol table
-// NOTE: This is shared with the parser (extern defined in token.h)
 // The parser will be modifying this so it is guranteed to point to the 
 //  correct scope based on parser context
 SymTable* curr_symbols = new SymTable();
+
 
 Scanner::Scanner(ErrHandler* handler) : err_handler(handler) {}
 
@@ -83,19 +85,12 @@ bool Scanner::isValidInIdentifier(char ch)
 
 bool Scanner::isValidInString(char ch)
 {
-    return isValidShared(ch) || ch == ',' || ch == '\'';
+    return isValidInIdentifier(ch) || ch == ' ' || ch == ';' || ch == ':' || ch == '.' ||ch == ',' || ch == '\'';
 }
 
 bool Scanner::isValidChar(char ch)
 {
-    return isValidShared(ch) || ch == '"';
-}
-
-// Simplifies checking for valid string or char literal characters by 
-//  checking for the chars shared by each type
-bool Scanner::isValidShared(char ch)
-{
-    return isValidInIdentifier(ch) || ch == ' ' || ch == ';' || ch == ':' || ch == '.';
+    return isValidInIdentifier(ch) || ch == ' ' || ch == ';' || ch == ':' || ch == '.' || ch == '"';
 }
 
 // Return the proper TokenType if str is a reserved word.
@@ -220,6 +215,19 @@ Token Scanner::getToken()
 
         // Check whether this is a reserved word or identifier
         token.type = getWordTokenType(token.val.string_value);
+
+        // Handle bools, since they used reserved words as literals.
+        if (token.type == RS_TRUE)
+        {
+            token.val.int_value = 1;
+            token.val.type = S_BOOL;
+        }
+        else if (token.type == RS_FALSE)
+        {
+            token.val.int_value = 0;
+            token.val.type = S_BOOL;
+        }
+        
         // Add this identifier to sym table if it's not already there
         if (curr_symbols->count(token.val.string_value) == 0)
         {
@@ -263,6 +271,16 @@ Token Scanner::getToken()
                 {
                     token.val.int_value = 10 * token.val.int_value + (int)(ch - '0');
                 }
+            }
+
+            // Set token's value's type
+            if (token.type == INTEGER)
+            {
+                token.val.type = S_INTEGER;
+            }
+            else if (token.type == FLOAT)
+            {
+                token.val.type = S_FLOAT;
             }
         }
         break;

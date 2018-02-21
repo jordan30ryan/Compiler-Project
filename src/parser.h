@@ -53,14 +53,14 @@ private:
     void argument_list();
     void destination();
 
-    void expression();
-    void expression_pr(); // Needed for eliminating left recursion
-    void arith_op();
-    void arith_op_pr(); // Needed for eliminating left recursion
-    void relation();
-    void relation_pr(); // Needed for eliminating left recursion
-    void term();
-    Value term_pr();
+    Value expression();
+    Value expression_pr(Value lhs); // needed for eliminating left recursion
+    Value arith_op();
+    Value arith_op_pr(Value lhs); // needed for eliminating left recursion
+    Value relation();
+    Value relation_pr(Value lhs); // needed for eliminating left recursion
+    Value term();
+    Value term_pr(Value lhs);
     Value factor();
     Value name();
 };

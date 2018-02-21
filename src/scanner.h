@@ -45,7 +45,6 @@ private:
     bool isValidInIdentifier(char ch);
     bool isValidInString(char ch);
     bool isValidChar(char ch);
-    bool isValidShared(char ch);
 
     void consumeWhitespaceAndComments();
 };

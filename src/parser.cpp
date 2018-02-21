@@ -3,12 +3,13 @@
 // Stack of symbol tables, becuase each proc can have multiple proc definitions
 std::stack<SymTable*> scope_stack;
 
-// To assist in error printing
+// To assist in error printing 
 const char* TokenTypeStrings[] = 
 {
 ".", ";", "(", ")", ",", "[", "]", ":", "&", "|", "+", "-", "<", ">", "<=", ">=", ":=", "==", "!=", "*", "/", "FILE_END", "STRING", "CHAR", "INTEGER", "FLOAT", "BOOL", "IDENTIFIER", "UNKNOWN",
 "RS_IN", "RS_OUT", "RS_INOUT", "RS_PROGRAM", "RS_IS", "RS_BEGIN", "RS_END", "RS_GLOBAL", "RS_PROCEDURE", "RS_STRING", "RS_CHAR", "RS_INTEGER", "RS_FLOAT", "RS_BOOL", "RS_IF", "RS_THEN", "RS_ELSE", "RS_FOR", "RS_RETURN", "RS_TRUE", "RS_FALSE", "RS_NOT"
 };
+
 
 Parser::Parser(Scanner* scan, ErrHandler* handler) 
     : scanner(scan), err_handler(handler) { }
@@ -253,7 +254,7 @@ void Parser::var_declaration(bool is_global)
         err_handler->reportError(stream.str(), curr_token.line);
         break;
     }
-    entry->is_global = is_global;
+    //entry->is_global = is_global;
     // Only insert into global symbols if prefixed with RS_GLOBAL (is_global == true)
     //  AND we're in the outermost scope (stack is empty)
     //  (per the spec, only outermost scope vars can be global)
@@ -450,28 +451,54 @@ void Parser::argument_list()
     }
 }
 
-void Parser::expression()
+Value Parser::expression()
 {
     std::cout << "expr" << '\n';
 
-    arith_op(); 
-    expression_pr();
+    // TODO: what value to return?
+    // arith_op is required and defined as:
+    //  [NOT] relation, arith_op_pr
+    // expression_pr is completely optional; defined as:
+    //      anything with & or |, arith_op, expression_pr
+
+
+    // Because arith_op is required to result in something, take its value
+    //  and give it to expression_pr. expression_pr will return that value,
+    //  either modified with its operation (& or |) and another arith_op,
+    //  OR, will just return the unmodified value. 
+    Value val = arith_op(); 
+    return expression_pr(val);
 }
 
-void Parser::expression_pr()
+// lhs - left hand side of this operation. 
+Value Parser::expression_pr(Value lhs)
 {
     std::cout << "expr prime" << '\n';
 
+
+
     // TODO: Might need to separate & and | code for code generation stage
-    if (token() == TokenType::AND || token() == TokenType::OR)
+    // TODO: Or not? Maybe check each one and get the LLVM operation name,
+    //  then do type checking without duplication after, using 'operation'
+    //  generically?
+    if (token() == TokenType::AND
+        || token() == TokenType::OR)
     {
         advance();
-        arith_op();
-        expression_pr();
+        Value rhs = arith_op();
+        if (lhs.type != rhs.type)
+        {
+
+        }
+        // TODO Generate code for lhs & or | with the result of arith_op
+        // The result of that operation, gets passed into expression_pr
+        return expression_pr(rhs);
     }
+    // No operation performed; return lhs unmodified.
+    else return lhs;
 }
 
-void Parser::arith_op()
+Value Parser::arith_op()
 {
     std::cout << "arith op" << '\n';
     if (token() == TokenType::RS_NOT)
@@ -479,32 +506,35 @@ void Parser::arith_op()
         advance();
     }
 
-    relation();
-    arith_op_pr();
+    Value val = relation();
+    return arith_op_pr(val);
 }
 
-void Parser::arith_op_pr()
+Value Parser::arith_op_pr(Value lhs)
 {
     std::cout << "arith op pr" << '\n';
+    // TODO: Same idea as expression_pr (and same for all other _pr fxns)
     if (token() == TokenType::PLUS || token() == TokenType::MINUS)
     {
         advance();
-        relation(); 
-        arith_op_pr();
+        Value val = relation(); 
+        return arith_op_pr(val);
     }
+    else return lhs;
 }
 
-void Parser::relation()
+Value Parser::relation()
 {
     std::cout << "relation" << '\n';
 
-    term();
-    relation_pr();
+    Value val = term();
+    return relation_pr(val);
 }
 
-void Parser::relation_pr()
+Value Parser::relation_pr(Value lhs)
 {
     std::cout << "relation pr" << '\n';
+    // TODO: Same idea as expression_pr (and same for all other _pr fxns)
     if ((token() == TokenType::LT)
         | (token() == TokenType::GT)
         | (token() == TokenType::LT_EQ)
@@ -513,40 +543,38 @@ void Parser::relation_pr()
         | (token() == TokenType::NOTEQUAL))
     {
         advance();
-        term();
-        relation_pr();
+        Value val = term();
+        return relation_pr(val);
     }
-    else return;
+    else return lhs;
 }
 
-void Parser::term()
+Value Parser::term()
 {
     std::cout << "term" << '\n';
 
-    factor();
-    term_pr();
+    Value val = factor();
+    return term_pr(val);
 }
 
-Value Parser::term_pr()
+Value Parser::term_pr(Value lhs)
 {
     std::cout << "term pr" << '\n';
-
-    // TODO: assign to this
-    Value value;
+    // TODO: Same idea as expression_pr (and same for all other _pr fxns)
 
     if (token() == TokenType::MULTIPLICATION)
     {
         advance();
-        factor();
-        term_pr();
+        Value val = factor();
+        return term_pr(val);
     }
     else if (token() == TokenType::DIVISION)
     {
         advance();
-        factor();
-        term_pr();
+        Value val = factor();
+        return term_pr(val);
     }
-    return value;
+    else return lhs;
 }
 
 Value Parser::factor()
@@ -554,7 +582,8 @@ Value Parser::factor()
     std::cout << "factor" << '\n';
     Value retval;
 
-    // Token is either (expression), [-] name, [-] number, string, char, true, false
+    // Token is one of:
+    //  (expression), [-] name, [-] float|integer, string, char, bool 
     if (token() == TokenType::L_PAREN)
     {
         advance();
@@ -572,26 +601,38 @@ Value Parser::factor()
         else if (token() == TokenType::FLOAT) 
             retval.float_value = -1.0 * advance().val.float_value;
         else if (token() == TokenType::IDENTIFIER) 
-            ;// TODO What do
+        {
+            // TODO Generate instructions here to mult. id. by -1?
+            retval = name();
+        }
         else
-            ;// TODO: Error; can't have a minus in front of this
+        {
+            
+        }
     }
-    else if (token() == TokenType::STRING 
-            || token() == TokenType::CHAR 
-            || token() == TokenType::RS_TRUE 
-            || token() == TokenType::RS_FALSE 
-            || token() == TokenType::INTEGER
-            || token() == TokenType::FLOAT)
+    else if (token() == TokenType::IDENTIFIER)
+    {
+        retval = name();
+    }
+    else if (curr_token.val.type == S_STRING 
+            || curr_token.val.type == S_CHAR 
+            || curr_token.val.type == S_INTEGER
+            || curr_token.val.type == S_FLOAT
+            || curr_token.val.type == S_BOOL)
     {
         // Literal values
         // Consume the token and get the value
         retval = advance().val;
         // TODO: type checking 
     }
-    else if (token() == TokenType::IDENTIFIER)
+    else
     {
-        retval = name();
+        std::ostringstream stream;
+        stream << "Invalid token type in factor: " << TokenTypeStrings[token()];
+        // Consume token and get line number 
+        err_handler->reportError(stream.str(), advance().line);
     }
+    
     return retval;
 }
 
@@ -603,6 +644,7 @@ Value Parser::name()
     std::string id = require(TokenType::IDENTIFIER).val.string_value;
     // Look up entry by id in current symbol table
     val.symbol = (*curr_symbols)[id];
+
     if (token() == TokenType::L_BRACKET)
     {
         // TODO deal with indexing 

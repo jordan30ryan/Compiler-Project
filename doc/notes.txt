@@ -579,8 +579,6 @@ compiler accepted it because op. [] can be used for assignment but only when tha
 ================================================================================
 2/20 (TUES)
 
-hastarf distance
-(a^N+b^n) ^ (1/n)
 
 relational operators should work on int to float
 
@@ -591,3 +589,15 @@ Doesn't matter though
 TODO: Argument list in proc symbol table
 Need to keep track of in|out|inout for this
 
+
+
+Figured out a method for type checking.
+
+All _pr methods (used to elminate left recursion) have lhs passed into them, which is used for the left side of the operation (all operations occur inside of these _pr methods), so its type can then be checked against rhs (the next value received after the operator).
+
+A few issues:
+
+&, | and NOT
+Defined as both bitwise and logical operators. 
+    Bitwise - valid only for integers
+    Logical - valid on bool, int, float?
