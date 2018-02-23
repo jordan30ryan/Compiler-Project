@@ -1,9 +1,6 @@
 #pragma once
-#include <unordered_map>
-#include <string>
 
-struct SymTableEntry;
-typedef std::unordered_map<std::string, SymTableEntry*> SymTable;
+#include <string>
 
 // Reserved words begin with RS_
 // Note: <number> in the spec is expanded to INTEGER and FLOAT here.
@@ -20,25 +17,9 @@ enum SymbolType
     S_UNDEFINED, S_STRING, S_CHAR, S_INTEGER, S_FLOAT, S_BOOL, S_PROCEDURE
 };
 
-struct SymTableEntry
+enum CharClass 
 {
-    // For reserved words 
-    SymTableEntry(TokenType t) : type(t) {}
-    // For identifiers
-    SymTableEntry() : type(IDENTIFIER) {}
-    // For identifers where the type is known
-    SymTableEntry(SymbolType st) : type(IDENTIFIER), sym_type(st) {}
-
-    TokenType type; 
-
-    // if type==IDENTIFIER, 
-    //  stores identifier type (i.e. Variable type or Procedure)
-    SymbolType sym_type = S_UNDEFINED;
-
-    //bool is_global;
-    // If type==IDENTIFER && sym_type==S_PROCEDURE, 
-    //  stores the proc local symbol table
-    SymTable* local_symbols;
+    SYMBOL=0, LETTER, DIGIT, WHITESPACE
 };
 
 // TODO: Code generation stage - value should just store llvm registers.
@@ -46,13 +27,13 @@ struct SymTableEntry
 //  which would mean it's dealing with literals and symbols, which are regs.
 struct Value
 {
-    SymbolType type;
+    SymbolType sym_type;
 
     std::string string_value;
     char char_value;
     int int_value;
     double float_value;
-    SymTableEntry* symbol;
+    //SymTableEntry* symbol;
 };
 
 // Represents a single token from the source file
@@ -62,10 +43,4 @@ struct Token
     Value val;
     int line;
 };
-
-// Both are declared in scanner.cpp
-// The global scope symbol table
-extern SymTable global_symbols;
-// The local scope symbol table (varies depending on context)
-extern SymTable *curr_symbols;
 

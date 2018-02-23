@@ -1,16 +1,7 @@
 #include "scanner.h"
 
-// NOTE: these are shared with the parser (extern defined in token.h)
-
-// Declare the global symbol table
-SymTable global_symbols;
-// Declare the local symbol table
-// The parser will be modifying this so it is guranteed to point to the 
-//  correct scope based on parser context
-SymTable* curr_symbols = new SymTable();
-
-
-Scanner::Scanner(ErrHandler* handler) : err_handler(handler) {}
+Scanner::Scanner(ErrHandler* handler, SymbolTableManager* manager) 
+    : err_handler(handler), symtable_manager(manager) {}
 
 bool Scanner::init(const char* filename)
 {
@@ -21,40 +12,41 @@ bool Scanner::init(const char* filename)
     line_number = 1;
 
     // Init reserved words table
-    global_symbols.insert({"IN", new SymTableEntry(TokenType::RS_IN)});
-    global_symbols.insert({"OUT", new SymTableEntry(TokenType::RS_OUT)});
-    global_symbols.insert({"INOUT", new SymTableEntry(TokenType::RS_INOUT)});
-    global_symbols.insert({"PROGRAM", new SymTableEntry(TokenType::RS_PROGRAM)});
-    global_symbols.insert({"IS", new SymTableEntry(TokenType::RS_IS)});
-    global_symbols.insert({"BEGIN", new SymTableEntry(TokenType::RS_BEGIN)});
-    global_symbols.insert({"END", new SymTableEntry(TokenType::RS_END)});
-    global_symbols.insert({"GLOBAL", new SymTableEntry(TokenType::RS_GLOBAL)});
-    global_symbols.insert({"PROCEDURE", new SymTableEntry(TokenType::RS_PROCEDURE)});
-    global_symbols.insert({"STRING", new SymTableEntry(TokenType::RS_STRING)});
-    global_symbols.insert({"CHAR", new SymTableEntry(TokenType::RS_CHAR)});
-    global_symbols.insert({"INTEGER", new SymTableEntry(TokenType::RS_INTEGER)});
-    global_symbols.insert({"FLOAT", new SymTableEntry(TokenType::RS_FLOAT)});
-    global_symbols.insert({"BOOL", new SymTableEntry(TokenType::RS_BOOL)});
-    global_symbols.insert({"IF", new SymTableEntry(TokenType::RS_IF)});
-    global_symbols.insert({"THEN", new SymTableEntry(TokenType::RS_THEN)});
-    global_symbols.insert({"ELSE", new SymTableEntry(TokenType::RS_ELSE)});
-    global_symbols.insert({"FOR", new SymTableEntry(TokenType::RS_FOR)});
-    global_symbols.insert({"RETURN", new SymTableEntry(TokenType::RS_RETURN)});
-    global_symbols.insert({"TRUE", new SymTableEntry(TokenType::RS_TRUE)});
-    global_symbols.insert({"FALSE", new SymTableEntry(TokenType::RS_FALSE)});
-    global_symbols.insert({"NOT", new SymTableEntry(TokenType::RS_NOT)});
+    symtable_manager->add_symbol("IN", TokenType::RS_IN, true);
+    symtable_manager->add_symbol("OUT", TokenType::RS_OUT, true);
+    symtable_manager->add_symbol("INOUT", TokenType::RS_INOUT, true);
+    symtable_manager->add_symbol("PROGRAM", TokenType::RS_PROGRAM, true);
+    symtable_manager->add_symbol("IS", TokenType::RS_IS, true);
+    symtable_manager->add_symbol("BEGIN", TokenType::RS_BEGIN, true);
+    symtable_manager->add_symbol("END", TokenType::RS_END, true);
+    symtable_manager->add_symbol("GLOBAL", TokenType::RS_GLOBAL, true);
+    symtable_manager->add_symbol("PROCEDURE", TokenType::RS_PROCEDURE, true);
+    symtable_manager->add_symbol("STRING", TokenType::RS_STRING, true);
+    symtable_manager->add_symbol("CHAR", TokenType::RS_CHAR, true);
+    symtable_manager->add_symbol("INTEGER", TokenType::RS_INTEGER, true);
+    symtable_manager->add_symbol("FLOAT", TokenType::RS_FLOAT, true);
+    symtable_manager->add_symbol("BOOL", TokenType::RS_BOOL, true);
+    symtable_manager->add_symbol("IF", TokenType::RS_IF, true);
+    symtable_manager->add_symbol("THEN", TokenType::RS_THEN, true);
+    symtable_manager->add_symbol("ELSE", TokenType::RS_ELSE, true);
+    symtable_manager->add_symbol("FOR", TokenType::RS_FOR, true);
+    symtable_manager->add_symbol("RETURN", TokenType::RS_RETURN, true);
+    symtable_manager->add_symbol("TRUE", TokenType::RS_TRUE, true);
+    symtable_manager->add_symbol("FALSE", TokenType::RS_FALSE, true);
+    symtable_manager->add_symbol("NOT", TokenType::RS_NOT, true);
 
     // TODO: Make builtin functions usable 
-    global_symbols.insert({"GETBOOL", new SymTableEntry(S_PROCEDURE)});
-    global_symbols.insert({"GETINTEGER", new SymTableEntry(S_PROCEDURE)});
-    global_symbols.insert({"GETFLOAT", new SymTableEntry(S_PROCEDURE)});
-    global_symbols.insert({"GETSTRING", new SymTableEntry(S_PROCEDURE)});
-    global_symbols.insert({"GETCHAR", new SymTableEntry(S_PROCEDURE)});
-    global_symbols.insert({"PUTBOOL", new SymTableEntry(S_PROCEDURE)});
-    global_symbols.insert({"PUTINTEGER", new SymTableEntry(S_PROCEDURE)});
-    global_symbols.insert({"PUTFLOAT", new SymTableEntry(S_PROCEDURE)});
-    global_symbols.insert({"PUTSTRING", new SymTableEntry(S_PROCEDURE)});
-    global_symbols.insert({"PUTCHAR", new SymTableEntry(S_PROCEDURE)});
+    symtable_manager->add_symbol("GETBOOL", S_PROCEDURE, true);
+    symtable_manager->add_symbol("GETINTEGER", S_PROCEDURE, true);
+    symtable_manager->add_symbol("GETFLOAT", S_PROCEDURE, true);
+    symtable_manager->add_symbol("GETSTRING", S_PROCEDURE, true);
+    symtable_manager->add_symbol("GETCHAR", S_PROCEDURE, true);
+    symtable_manager->add_symbol("PUTBOOL", S_PROCEDURE, true);
+    symtable_manager->add_symbol("PUTINTEGER", S_PROCEDURE, true);
+    symtable_manager->add_symbol("PUTFLOAT", S_PROCEDURE, true);
+    symtable_manager->add_symbol("PUTSTRING", S_PROCEDURE, true);
+    symtable_manager->add_symbol("PUTCHAR", S_PROCEDURE, true);
+
 
     // Init ascii character class mapping
     for (char k = '0'; k <= '9'; k++)
@@ -98,16 +90,12 @@ bool Scanner::isValidChar(char ch)
 // Otherwise, str is interpreted as an identifier.
 TokenType Scanner::getWordTokenType(std::string str)
 {
-    try
+    SymTableEntry* entry = symtable_manager->resolve_symbol(str);
+    if (entry == NULL)
     {
-        SymTableEntry *entry = global_symbols.at(str);
-        return entry->type;
-    }
-    catch (const std::out_of_range& oor) 
-    {
-        // str not in the map; just an identifier
         return TokenType::IDENTIFIER;
     }
+    else return entry->type;
 }
 
 // Consume all leading whitespace and comments first
@@ -221,19 +209,19 @@ Token Scanner::getToken()
         if (token.type == RS_TRUE)
         {
             token.val.int_value = 1;
-            token.val.type = S_BOOL;
+            token.val.sym_type = S_BOOL;
         }
         else if (token.type == RS_FALSE)
         {
             token.val.int_value = 0;
-            token.val.type = S_BOOL;
+            token.val.sym_type = S_BOOL;
         }
         
         // Add this identifier to sym table if it's not already there
-        if (curr_symbols->count(token.val.string_value) == 0)
+        if (symtable_manager->resolve_symbol(token.val.string_value) == NULL)
         {
             // Add to sym table (type will be IDENTIFIER)
-            (*curr_symbols)[token.val.string_value] = new SymTableEntry();
+            symtable_manager->add_symbol(token.val.string_value, IDENTIFIER, false);
         }
         break;
     case CharClass::DIGIT:
@@ -277,11 +265,11 @@ Token Scanner::getToken()
             // Set token's value's type
             if (token.type == INTEGER)
             {
-                token.val.type = S_INTEGER;
+                token.val.sym_type = S_INTEGER;
             }
             else if (token.type == FLOAT)
             {
-                token.val.type = S_FLOAT;
+                token.val.sym_type = S_FLOAT;
             }
         }
         break;
@@ -371,7 +359,7 @@ Token Scanner::getToken()
             {
                 err_handler->reportError("Reached EOF and string quotes were never closed.", line_number);
             }
-            token.val.type = S_STRING;
+            token.val.sym_type = S_STRING;
             break;
         case '\'':
             token.type = TokenType::CHAR;
@@ -388,7 +376,7 @@ Token Scanner::getToken()
             {
                 err_handler->reportError("Single quote containing more than one char", line_number);
             }
-            token.val.type = S_CHAR;
+            token.val.sym_type = S_CHAR;
             break;
         case '=':
             if (input_file.peek() == '=')

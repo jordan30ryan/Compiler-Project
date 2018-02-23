@@ -601,3 +601,13 @@ A few issues:
 Defined as both bitwise and logical operators. 
     Bitwise - valid only for integers
     Logical - valid on bool, int, float?
+
+
+================================================================================
+2/23
+
+Symbol table custom class?
+    Need lookup method
+    Need to manage both local and global symbol tables
+    Would make it easier, instead of needing to declare everything in token.
+

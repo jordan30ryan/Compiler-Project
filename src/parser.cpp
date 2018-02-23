@@ -1,8 +1,5 @@
 #include "parser.h"
 
-// Stack of symbol tables, becuase each proc can have multiple proc definitions
-std::stack<SymTable*> scope_stack;
-
 // To assist in error printing 
 const char* TokenTypeStrings[] = 
 {
@@ -10,9 +7,8 @@ const char* TokenTypeStrings[] =
 "RS_IN", "RS_OUT", "RS_INOUT", "RS_PROGRAM", "RS_IS", "RS_BEGIN", "RS_END", "RS_GLOBAL", "RS_PROCEDURE", "RS_STRING", "RS_CHAR", "RS_INTEGER", "RS_FLOAT", "RS_BOOL", "RS_IF", "RS_THEN", "RS_ELSE", "RS_FOR", "RS_RETURN", "RS_TRUE", "RS_FALSE", "RS_NOT"
 };
 
-
-Parser::Parser(Scanner* scan, ErrHandler* handler) 
-    : scanner(scan), err_handler(handler) { }
+Parser::Parser(ErrHandler* handler, SymbolTableManager* manager, Scanner* scan)
+    : err_handler(handler), symtable_manager(manager), scanner(scan) { }
 
 TokenType Parser::token()
 {
@@ -35,15 +31,16 @@ Token Parser::advance()
 }
 
 // Require that the current token is of type t
-Token Parser::require(TokenType t)
+Token Parser::require(TokenType expected_type)
 {
     TokenType type = token();
     advance();
-    if (t != type) 
+    if (expected_type != type) 
     {
         // Report err
         std::ostringstream stream;
-        stream << "Bad Token: " << TokenTypeStrings[type] << "\tExpected: " << TokenTypeStrings[t];
+        stream << "Bad Token: " << TokenTypeStrings[type] 
+            << "\tExpected: " << TokenTypeStrings[expected_type];
         err_handler->reportError(stream.str(), curr_token.line);
     }
     return curr_token;
@@ -125,8 +122,8 @@ void Parser::proc_declaration(bool is_global)
     proc_header();
     proc_body();
 
-    curr_symbols = scope_stack.top();
-    scope_stack.pop();
+    // Reset to scope above this proc decl
+    symtable_manager->reset_scope();
 }
 
 void Parser::proc_header()
@@ -134,16 +131,10 @@ void Parser::proc_header()
     std::cout << "proc header" << '\n';
     require(TokenType::RS_PROCEDURE);
 
-    // TODO: Chec if proc was already declared
     // Setup symbol table so the procedure's sym table is now being used
-    std::string id = require(TokenType::IDENTIFIER).val.string_value;
-    (*curr_symbols)[id]->sym_type = S_PROCEDURE;
-    (*curr_symbols)[id]->local_symbols = new SymTable();
-    scope_stack.push(curr_symbols);
-    curr_symbols = (*curr_symbols)[id]->local_symbols; 
-    // curr_symbols is now the proc's scope's symbol table; 
-    //  add itself to support recursion
-    curr_symbols->insert({id, new SymTableEntry(S_PROCEDURE)});
+    std::string proc_id = require(TokenType::IDENTIFIER).val.string_value;
+    // Sets the current scope to this procedure's scope
+    symtable_manager->set_proc_scope(proc_id);
 
     require(TokenType::L_PAREN);
     if (token() != TokenType::R_PAREN)
@@ -212,22 +203,14 @@ void Parser::var_declaration(bool is_global)
     advance();
 
     std::string id = require(TokenType::IDENTIFIER).val.string_value;
-    SymTableEntry* entry = (*curr_symbols)[id];
-    if (entry->sym_type != S_UNDEFINED)
+    SymTableEntry* entry = symtable_manager->resolve_symbol(id);
+    if (entry == NULL || entry->sym_type != S_UNDEFINED)
     {
-        // If it's not UNDEFINED (the defualt value), 
+        // If it's not been added yet or is not UNDEFINED (the defualt value), 
         //  this variable is being redefined (in the same scope)
+        //  or something has gone wrong.
         std::ostringstream stream;
-        stream << "Variable " << id << " was already defined in this scope";
-        err_handler->reportError(stream.str(), curr_token.line);
-    }
-    // If global symbol table has an entry for id
-    if (global_symbols.count(id) > 0)
-    {
-        // If it's not UNDEFINED (the defualt value), 
-        //  this variable is being redefined (already in global scope)
-        std::ostringstream stream;
-        stream << "Variable " << id << " was already defined in the global scope";
+        stream << "Variable " << id << " may have already been defined the local or global scope";
         err_handler->reportError(stream.str(), curr_token.line);
     }
 
@@ -255,11 +238,13 @@ void Parser::var_declaration(bool is_global)
         err_handler->reportError(stream.str(), curr_token.line);
         break;
     }
-    //entry->is_global = is_global;
+
     // Only insert into global symbols if prefixed with RS_GLOBAL (is_global == true)
     //  AND we're in the outermost scope (stack is empty)
     //  (per the spec, only outermost scope vars can be global)
-    if (is_global && scope_stack.size() == 0) global_symbols.insert({id, entry});
+
+    // TODO Refactor
+    //if (is_global && scope_stack.size() == 0) global_symbols.insert({id, entry});
 
     // It's arleady in curr_symbols; it's added by the scanner.
     // Also, entry is a pointer so modifying it here modifies it in the table.
@@ -332,8 +317,9 @@ void Parser::identifier_statement()
 void Parser::assignment_statement(std::string identifier)
 {
     std::cout << "assignment stmnt" << '\n';
-    std::cout << "iden:" << identifier 
-                << "\tType: " << (*curr_symbols)[identifier]->sym_type << '\n';
+//    std::cout << "iden:" << identifier 
+//                << "\tType: " << (*curr_symbols)[identifier]->sym_type << '\n';
+
     // already have identifier; need to check for indexing first
     if (token() == TokenType::L_BRACKET)
     {
@@ -341,8 +327,14 @@ void Parser::assignment_statement(std::string identifier)
         expression();
         require(TokenType::R_BRACKET);
     }
+    SymTableEntry* entry = symtable_manager->resolve_symbol(identifier); 
+    // TODO: something with indexing
     require(TokenType::ASSIGNMENT);
-    expression();
+    Value rhs = expression();
+    if (entry->sym_type != rhs.sym_type)
+    {
+
+    }
 }
 
 void Parser::proc_call(std::string identifier)
@@ -350,17 +342,11 @@ void Parser::proc_call(std::string identifier)
     std::cout << "proc call" << '\n';
     // already have identifier
 
-    // Check current symbols and global symbols for the proc
-    if (curr_symbols->count(identifier) != 0 
-            && (*curr_symbols)[identifier]->sym_type == S_PROCEDURE)
+    // Check symtable for the proc
+    SymTableEntry* entry = symtable_manager->resolve_symbol(identifier); 
+    if (entry != NULL && entry->sym_type == S_PROCEDURE)
     {
-        // Proc in curr_symbols
-        
-    }
-    else if (global_symbols.count(identifier) != 0
-            && global_symbols[identifier]->sym_type == S_PROCEDURE)
-    {
-        // Proc in global_symbols
+        // TODO: call the proc defined by entry in the symtable
     }
     else
     {
@@ -368,6 +354,7 @@ void Parser::proc_call(std::string identifier)
         stream << "Procedure " << identifier << " not defined\n";
         err_handler->reportError(stream.str(), curr_token.line);
     }
+
     require(TokenType::L_PAREN);
     if (token() != TokenType::R_PAREN)
         argument_list();
@@ -384,8 +371,7 @@ void Parser::if_statement()
     require(TokenType::R_PAREN);
     require(TokenType::RS_THEN);
 
-    // TODO: Check condition
-    //TODO handle else
+    //TODO handle else (code generation stage)
     bool first_stmnt = true;
     while (true)
     {
@@ -414,20 +400,21 @@ void Parser::loop_statement()
 {
     std::cout << "loop" << '\n';
     require(TokenType::RS_FOR);
+
     require(TokenType::L_PAREN);
     require(TokenType::IDENTIFIER);
     assignment_statement(curr_token.val.string_value); 
     require(TokenType::SEMICOLON);
-    expression();
+    Value condition = expression();
     require(TokenType::R_PAREN);
-    // TODO: Check conditions
+
     while (true)
     {
         statement();
         require(TokenType::SEMICOLON);
         if (token() == TokenType::RS_END) break;
     }
-    require(TokenType::RS_END); // Just to be sure 
+    require(TokenType::RS_END); // Just to be sure, also advance the token
     require(TokenType::RS_FOR);
 }
 
@@ -460,7 +447,6 @@ Value Parser::expression()
     //  relation, arith_op_pr
     // expression_pr is completely optional; defined as:
     //  either & or |, arith_op, expression_pr
-
 
     if (token() == TokenType::RS_NOT)
     {
@@ -522,11 +508,11 @@ Value Parser::arith_op_pr(Value lhs)
     {
         advance();
         Value rhs = relation(); 
-        if (lhs.type == S_FLOAT && rhs.type == S_INTEGER)
+        if (lhs.sym_type == S_FLOAT && rhs.sym_type == S_INTEGER)
         {
             // TODO: Convert rhs to float first
         }
-        else if (rhs.type == S_FLOAT && lhs.type == S_INTEGER)
+        else if (rhs.sym_type == S_FLOAT && lhs.sym_type == S_INTEGER)
         {
             // TODO: Convert lhs to float first
         }
@@ -630,11 +616,11 @@ Value Parser::factor()
     {
         retval = name();
     }
-    else if (curr_token.val.type == S_STRING 
-            || curr_token.val.type == S_CHAR 
-            || curr_token.val.type == S_INTEGER
-            || curr_token.val.type == S_FLOAT
-            || curr_token.val.type == S_BOOL)
+    else if (curr_token.val.sym_type == S_STRING 
+            || curr_token.val.sym_type == S_CHAR 
+            || curr_token.val.sym_type == S_INTEGER
+            || curr_token.val.sym_type == S_FLOAT
+            || curr_token.val.sym_type == S_BOOL)
     {
         // Literal values
         // Consume the token and get the value
@@ -656,10 +642,9 @@ Value Parser::name()
 {
     Value val;
     std::cout << "name" << '\n';
-    // Require there is an identifier here and get its name
+
     std::string id = require(TokenType::IDENTIFIER).val.string_value;
-    // Look up entry by id in current symbol table
-    val.symbol = (*curr_symbols)[id];
+    SymTableEntry* entry = symtable_manager->resolve_symbol(id);
 
     if (token() == TokenType::L_BRACKET)
     {
@@ -670,4 +655,5 @@ Value Parser::name()
     }
     return val;
 }
+
 

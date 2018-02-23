@@ -1,19 +1,21 @@
 #pragma once
-#include "scanner.h"
 #include "token.h" 
+#include "errhandler.h"
+#include "symboltable.h"
+#include "scanner.h"
 
 #include <iostream>
 #include <sstream>
-#include <stack>
 
 class Parser
 {
 public:
-    Parser(Scanner* scan, ErrHandler* handler);
+    Parser(ErrHandler* handler, SymbolTableManager* manager, Scanner* scan);
     void parse();
 private:
-    Scanner* scanner;
     ErrHandler* err_handler;
+    SymbolTableManager* symtable_manager;
+    Scanner* scanner;
 
     // Get a token from scanner and store in curr_token if !curr_token_valid
     TokenType token();

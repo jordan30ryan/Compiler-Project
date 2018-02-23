@@ -22,8 +22,9 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    // Init scanner
-    Scanner* scanner = new Scanner(err_handler);
+    SymbolTableManager* sym_manager = new SymbolTableManager(err_handler);
+
+    Scanner* scanner = new Scanner(err_handler, sym_manager);
     if (!scanner->init(argv[1]))
     {
         err_handler->reportError("Scanner initialization failed. Ensure the input file is valid.");
@@ -31,7 +32,7 @@ int main(int argc, char** argv)
     }
 
     // Parse the tokens
-    Parser parser(scanner, err_handler);
+    Parser parser(err_handler, sym_manager, scanner);
     parser.parse();
 
     if (err_handler->errors)

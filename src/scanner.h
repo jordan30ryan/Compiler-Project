@@ -1,22 +1,18 @@
 #pragma once
 #include "token.h"
 #include "errhandler.h"
+#include "symboltable.h"
 
 #include <fstream>
 #include <sstream>
 #include <ctype.h>
 #include <string>
 
-enum CharClass 
-{
-    SYMBOL=0, LETTER, DIGIT, WHITESPACE
-};
-
 class Scanner
 {
 public:
 
-    Scanner(ErrHandler* handler);
+    Scanner(ErrHandler* handler, SymbolTableManager* manager);
 
     /*
         Sets up the scanner to read from a file.
@@ -29,14 +25,15 @@ public:
     */
     bool init(const char* filename);
 
-    // returns - The next token in input_file
-    Token getToken();
+    Token getToken(); // returns the next token in input_file
+
     ~Scanner();
 private:
+    ErrHandler* err_handler;
+    SymbolTableManager* symtable_manager;
+
     std::ifstream input_file;
     int line_number;
-
-    ErrHandler* err_handler;
 
     CharClass ascii_mapping[128] = {CharClass::SYMBOL};
 
