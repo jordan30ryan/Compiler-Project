@@ -12,40 +12,40 @@ bool Scanner::init(const char* filename)
     line_number = 1;
 
     // Init reserved words table
-    symtable_manager->add_symbol("IN", TokenType::RS_IN, true);
-    symtable_manager->add_symbol("OUT", TokenType::RS_OUT, true);
-    symtable_manager->add_symbol("INOUT", TokenType::RS_INOUT, true);
-    symtable_manager->add_symbol("PROGRAM", TokenType::RS_PROGRAM, true);
-    symtable_manager->add_symbol("IS", TokenType::RS_IS, true);
-    symtable_manager->add_symbol("BEGIN", TokenType::RS_BEGIN, true);
-    symtable_manager->add_symbol("END", TokenType::RS_END, true);
-    symtable_manager->add_symbol("GLOBAL", TokenType::RS_GLOBAL, true);
-    symtable_manager->add_symbol("PROCEDURE", TokenType::RS_PROCEDURE, true);
-    symtable_manager->add_symbol("STRING", TokenType::RS_STRING, true);
-    symtable_manager->add_symbol("CHAR", TokenType::RS_CHAR, true);
-    symtable_manager->add_symbol("INTEGER", TokenType::RS_INTEGER, true);
-    symtable_manager->add_symbol("FLOAT", TokenType::RS_FLOAT, true);
-    symtable_manager->add_symbol("BOOL", TokenType::RS_BOOL, true);
-    symtable_manager->add_symbol("IF", TokenType::RS_IF, true);
-    symtable_manager->add_symbol("THEN", TokenType::RS_THEN, true);
-    symtable_manager->add_symbol("ELSE", TokenType::RS_ELSE, true);
-    symtable_manager->add_symbol("FOR", TokenType::RS_FOR, true);
-    symtable_manager->add_symbol("RETURN", TokenType::RS_RETURN, true);
-    symtable_manager->add_symbol("TRUE", TokenType::RS_TRUE, true);
-    symtable_manager->add_symbol("FALSE", TokenType::RS_FALSE, true);
-    symtable_manager->add_symbol("NOT", TokenType::RS_NOT, true);
+    symtable_manager->add_symbol(true, "IN", TokenType::RS_IN);
+    symtable_manager->add_symbol(true, "OUT", TokenType::RS_OUT);
+    symtable_manager->add_symbol(true, "INOUT", TokenType::RS_INOUT);
+    symtable_manager->add_symbol(true, "PROGRAM", TokenType::RS_PROGRAM);
+    symtable_manager->add_symbol(true, "IS", TokenType::RS_IS);
+    symtable_manager->add_symbol(true, "BEGIN", TokenType::RS_BEGIN);
+    symtable_manager->add_symbol(true, "END", TokenType::RS_END);
+    symtable_manager->add_symbol(true, "GLOBAL", TokenType::RS_GLOBAL);
+    symtable_manager->add_symbol(true, "PROCEDURE", TokenType::RS_PROCEDURE);
+    symtable_manager->add_symbol(true, "STRING", TokenType::RS_STRING);
+    symtable_manager->add_symbol(true, "CHAR", TokenType::RS_CHAR);
+    symtable_manager->add_symbol(true, "INTEGER", TokenType::RS_INTEGER);
+    symtable_manager->add_symbol(true, "FLOAT", TokenType::RS_FLOAT);
+    symtable_manager->add_symbol(true, "BOOL", TokenType::RS_BOOL);
+    symtable_manager->add_symbol(true, "IF", TokenType::RS_IF);
+    symtable_manager->add_symbol(true, "THEN", TokenType::RS_THEN);
+    symtable_manager->add_symbol(true, "ELSE", TokenType::RS_ELSE);
+    symtable_manager->add_symbol(true, "FOR", TokenType::RS_FOR);
+    symtable_manager->add_symbol(true, "RETURN", TokenType::RS_RETURN);
+    symtable_manager->add_symbol(true, "TRUE", TokenType::RS_TRUE);
+    symtable_manager->add_symbol(true, "FALSE", TokenType::RS_FALSE);
+    symtable_manager->add_symbol(true, "NOT", TokenType::RS_NOT);
 
     // TODO: Make builtin functions usable 
-    symtable_manager->add_symbol("GETBOOL", S_PROCEDURE, true);
-    symtable_manager->add_symbol("GETINTEGER", S_PROCEDURE, true);
-    symtable_manager->add_symbol("GETFLOAT", S_PROCEDURE, true);
-    symtable_manager->add_symbol("GETSTRING", S_PROCEDURE, true);
-    symtable_manager->add_symbol("GETCHAR", S_PROCEDURE, true);
-    symtable_manager->add_symbol("PUTBOOL", S_PROCEDURE, true);
-    symtable_manager->add_symbol("PUTINTEGER", S_PROCEDURE, true);
-    symtable_manager->add_symbol("PUTFLOAT", S_PROCEDURE, true);
-    symtable_manager->add_symbol("PUTSTRING", S_PROCEDURE, true);
-    symtable_manager->add_symbol("PUTCHAR", S_PROCEDURE, true);
+    symtable_manager->add_symbol(true, "GETBOOL", IDENTIFIER, S_PROCEDURE);
+    symtable_manager->add_symbol(true, "GETINTEGER", IDENTIFIER, S_PROCEDURE);
+    symtable_manager->add_symbol(true, "GETFLOAT", IDENTIFIER, S_PROCEDURE);
+    symtable_manager->add_symbol(true, "GETSTRING", IDENTIFIER, S_PROCEDURE);
+    symtable_manager->add_symbol(true, "GETCHAR", IDENTIFIER, S_PROCEDURE);
+    symtable_manager->add_symbol(true, "PUTBOOL", IDENTIFIER, S_PROCEDURE);
+    symtable_manager->add_symbol(true, "PUTINTEGER", IDENTIFIER, S_PROCEDURE);
+    symtable_manager->add_symbol(true, "PUTFLOAT", IDENTIFIER, S_PROCEDURE);
+    symtable_manager->add_symbol(true, "PUTSTRING", IDENTIFIER, S_PROCEDURE);
+    symtable_manager->add_symbol(true, "PUTCHAR", IDENTIFIER, S_PROCEDURE);
 
 
     // Init ascii character class mapping
@@ -90,7 +90,8 @@ bool Scanner::isValidChar(char ch)
 // Otherwise, str is interpreted as an identifier.
 TokenType Scanner::getWordTokenType(std::string str)
 {
-    SymTableEntry* entry = symtable_manager->resolve_symbol(str);
+    // Don't check so no error is reported if this symbol doesn't exist yet.
+    SymTableEntry* entry = symtable_manager->resolve_symbol(str, false);
     if (entry == NULL)
     {
         return TokenType::IDENTIFIER;
@@ -217,12 +218,15 @@ Token Scanner::getToken()
             token.val.sym_type = S_BOOL;
         }
         
-        // Add this identifier to sym table if it's not already there
-        if (symtable_manager->resolve_symbol(token.val.string_value) == NULL)
+        if (token.type == IDENTIFIER 
+            && symtable_manager->resolve_symbol(token.val.string_value, false)
+                    == NULL)
         {
+            // Add this identifier to sym table 
             // Add to sym table (type will be IDENTIFIER)
-            symtable_manager->add_symbol(token.val.string_value, IDENTIFIER, false);
+            symtable_manager->add_symbol(false, token.val.string_value, IDENTIFIER);
         }
+
         break;
     case CharClass::DIGIT:
         // Extra scope level needed becuase of variables defined in this case

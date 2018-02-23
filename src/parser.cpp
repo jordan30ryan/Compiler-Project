@@ -204,13 +204,10 @@ void Parser::var_declaration(bool is_global)
 
     std::string id = require(TokenType::IDENTIFIER).val.string_value;
     SymTableEntry* entry = symtable_manager->resolve_symbol(id);
-    if (entry == NULL || entry->sym_type != S_UNDEFINED)
+    if (entry != NULL && entry->sym_type != S_UNDEFINED)
     {
-        // If it's not been added yet or is not UNDEFINED (the defualt value), 
-        //  this variable is being redefined (in the same scope)
-        //  or something has gone wrong.
         std::ostringstream stream;
-        stream << "Variable " << id << " may have already been defined the local or global scope";
+        stream << "Variable " << id << " may have already been defined the local or global scope.";
         err_handler->reportError(stream.str(), curr_token.line);
     }
 
@@ -240,14 +237,7 @@ void Parser::var_declaration(bool is_global)
     }
 
     // Only insert into global symbols if prefixed with RS_GLOBAL (is_global == true)
-    //  AND we're in the outermost scope (stack is empty)
-    //  (per the spec, only outermost scope vars can be global)
-
-    // TODO Refactor
-    //if (is_global && scope_stack.size() == 0) global_symbols.insert({id, entry});
-
-    // It's arleady in curr_symbols; it's added by the scanner.
-    // Also, entry is a pointer so modifying it here modifies it in the table.
+    if (is_global) symtable_manager->promote_to_global(id);
 
     if (token() == TokenType::L_BRACKET)
     {

@@ -27,7 +27,7 @@ struct SymTableEntry
     // For reserved words 
     SymTableEntry(TokenType t) : type(t) {}
     // For identifers where the type is known
-    SymTableEntry(SymbolType st) : type(IDENTIFIER), sym_type(st) {}
+    SymTableEntry(TokenType t, SymbolType st) : type(t), sym_type(st) {}
 };
 
 class SymbolTableManager
@@ -38,10 +38,13 @@ public:
 
     // Get a given identifier's associated symtable entry
     //  - can be global or current scope
+    // If check is true - function expects the variable to exist and 
+    //  reports an error if it does not.
     // WARNING RETURNS NULL AND REPORTS TO ERR_HANDLER IF NOT FOUND.
-    SymTableEntry* resolve_symbol(std::string id); 
-    void add_symbol(std::string id, TokenType type, bool is_global);
-    void add_symbol(std::string id, SymbolType type, bool is_global);
+    SymTableEntry* resolve_symbol(std::string id, bool check=true); 
+    void add_symbol(bool is_global, std::string id, TokenType type=UNKNOWN, SymbolType stype=S_UNDEFINED);
+    // Promote a locally defined symbol to the global scope
+    void promote_to_global(std::string id);
     // Sets the current_scope to the scope of the named procedure
     //  (for procedure definitions)
     void set_proc_scope(std::string id);
