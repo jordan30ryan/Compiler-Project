@@ -24,6 +24,45 @@ SymTableEntry* SymbolTableManager::resolve_symbol(std::string id, bool check)
     return entry;
 }
 
+void SymbolTableManager::init_tables()
+{
+    // Init reserved words table
+    add_symbol(true, "IN", TokenType::RS_IN);
+    add_symbol(true, "OUT", TokenType::RS_OUT);
+    add_symbol(true, "INOUT", TokenType::RS_INOUT);
+    add_symbol(true, "PROGRAM", TokenType::RS_PROGRAM);
+    add_symbol(true, "IS", TokenType::RS_IS);
+    add_symbol(true, "BEGIN", TokenType::RS_BEGIN);
+    add_symbol(true, "END", TokenType::RS_END);
+    add_symbol(true, "GLOBAL", TokenType::RS_GLOBAL);
+    add_symbol(true, "PROCEDURE", TokenType::RS_PROCEDURE);
+    add_symbol(true, "STRING", TokenType::RS_STRING);
+    add_symbol(true, "CHAR", TokenType::RS_CHAR);
+    add_symbol(true, "INTEGER", TokenType::RS_INTEGER);
+    add_symbol(true, "FLOAT", TokenType::RS_FLOAT);
+    add_symbol(true, "BOOL", TokenType::RS_BOOL);
+    add_symbol(true, "IF", TokenType::RS_IF);
+    add_symbol(true, "THEN", TokenType::RS_THEN);
+    add_symbol(true, "ELSE", TokenType::RS_ELSE);
+    add_symbol(true, "FOR", TokenType::RS_FOR);
+    add_symbol(true, "RETURN", TokenType::RS_RETURN);
+    add_symbol(true, "TRUE", TokenType::RS_TRUE);
+    add_symbol(true, "FALSE", TokenType::RS_FALSE);
+    add_symbol(true, "NOT", TokenType::RS_NOT);
+
+    // TODO: Make builtin functions usable 
+    add_builtin_proc(true, "GETBOOL", IDENTIFIER, S_PROCEDURE, S_BOOL, RS_OUT);
+    add_builtin_proc(true, "GETINTEGER", IDENTIFIER, S_PROCEDURE, S_INTEGER, RS_OUT);
+    add_builtin_proc(true, "GETFLOAT", IDENTIFIER, S_PROCEDURE, S_FLOAT, RS_OUT);
+    add_builtin_proc(true, "GETSTRING", IDENTIFIER, S_PROCEDURE, S_STRING, RS_OUT);
+    add_builtin_proc(true, "GETCHAR", IDENTIFIER, S_PROCEDURE, S_CHAR, RS_OUT);
+    add_builtin_proc(true, "PUTBOOL", IDENTIFIER, S_PROCEDURE, S_BOOL, RS_IN);
+    add_builtin_proc(true, "PUTINTEGER", IDENTIFIER, S_PROCEDURE, S_INTEGER, RS_IN);
+    add_builtin_proc(true, "PUTFLOAT", IDENTIFIER, S_PROCEDURE, S_FLOAT, RS_IN);
+    add_builtin_proc(true, "PUTSTRING", IDENTIFIER, S_PROCEDURE, S_STRING, RS_IN);
+    add_builtin_proc(true, "PUTCHAR", IDENTIFIER, S_PROCEDURE, S_CHAR, RS_IN);
+}
+
 void SymbolTableManager::add_symbol(bool is_global, std::string id,
                                     TokenType type, SymbolType stype)
 {
@@ -53,7 +92,28 @@ void SymbolTableManager::add_symbol(bool is_global, std::string id,
     }
 }
 
-void SymbolTableManager::promote_to_global(std::string id)
+void SymbolTableManager::add_builtin_proc(bool is_global, std::string id,
+                                            TokenType type, SymbolType stype, 
+                                            SymbolType param_sym_type, 
+                                            TokenType param_type)
+{
+    // Add proc first
+    add_symbol(is_global, id, type, stype);
+    // Get proc
+    SymTableEntry* proc_entry = resolve_symbol(id);
+
+    // Setup proc's parameter
+    SymTableEntry* param_entry = new SymTableEntry(IDENTIFIER, param_sym_type);
+    param_entry->param_type = param_type; // IN|OUT|INOUT
+
+    // Add parameter to proc's parameters
+    proc_entry->parameters.push_back(param_entry);
+    proc_entry->local_symbols = new SymTable();
+    // Add parameter to proc's scope, named val.
+    (*(proc_entry->local_symbols))["val"] = param_entry;
+}
+
+void SymbolTableManager::promote_to_global(std::string id, SymTableEntry* entry)
 {
     if (scope_stack.size() != 0)
     {
@@ -61,7 +121,6 @@ void SymbolTableManager::promote_to_global(std::string id)
     }
     else
     {
-        SymTableEntry* entry = resolve_symbol(id);
         if (entry == NULL)
         {
             err_handler->reportError("Variable cannot be promoted to global scope before definition.");
@@ -77,22 +136,34 @@ void SymbolTableManager::promote_to_global(std::string id)
 
 void SymbolTableManager::set_proc_scope(std::string id)
 {
+    SymTableEntry* proc_entry = (*curr_symbols)[id];
+
     // TODO: Check if proc was already declared
-    (*curr_symbols)[id]->sym_type = S_PROCEDURE;
-    (*curr_symbols)[id]->local_symbols = new SymTable();
+    proc_entry->sym_type = S_PROCEDURE;
+    proc_entry->local_symbols = new SymTable();
 
-    scope_stack.push(curr_symbols);
+    scope_stack.push({curr_symbols, curr_proc});
+    curr_symbols = proc_entry->local_symbols; 
+    curr_proc = proc_entry;
+    // curr_symbols is now this procedure's scope's symbol table.
+    //  everything defined now in curr_symbols 
+    //  will be defined in this procedure's scope.
+    // curr_proc is now the SymTableEntry of this proc.
 
-    curr_symbols = (*curr_symbols)[id]->local_symbols; 
-    // curr_symbols is now the proc's scope's symbol table; 
-    //  add itself to support recursion
-    curr_symbols->insert({id, new SymTableEntry(IDENTIFIER, S_PROCEDURE)});
+    // Add this proc to its own symbol table to support recursion
+    curr_symbols->insert({id, proc_entry});
 }
 
+void SymbolTableManager::add_param_to_proc(SymTableEntry* param_entry)
+{
+    curr_proc->parameters.push_back(param_entry);
+}
 
 void SymbolTableManager::reset_scope()
 {
-    curr_symbols = scope_stack.top();
+    std::pair<SymTable*, SymTableEntry*> context = scope_stack.top();
+    curr_symbols = context.first;
+    curr_proc = context.second;
     scope_stack.pop();
 }
 

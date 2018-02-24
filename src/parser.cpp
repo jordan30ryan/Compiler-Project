@@ -46,7 +46,6 @@ Token Parser::require(TokenType expected_type)
     return curr_token;
 }
 
-
 void Parser::parse() 
 {
     program();
@@ -187,18 +186,23 @@ void Parser::parameter()
 {
     std::cout << "param" << '\n';
 
-    var_declaration(false);
+    // curr_token is the typemark
 
-    TokenType param_type = token(); // IN|OUT|INOUT
-    std::cout << "Param type: " << TokenTypeStrings[param_type] << '\n';
+    SymTableEntry* entry = var_declaration(false);
+
+    // TODO: Ensure this is one of IN|OUT|INOUT
+    entry->param_type = token(); // IN|OUT|INOUT
     advance();
+
+    symtable_manager->add_param_to_proc(entry);
 }
 
 
-void Parser::var_declaration(bool is_global)
+SymTableEntry* Parser::var_declaration(bool is_global)
 {
     std::cout << "var decl" << '\n';
-    // This is the only place in grammar type mark occurs
+    // This is the only place in grammar type mark occurs 
+    //  so it doesn't need its own function
     TokenType typemark = token();
     advance();
 
@@ -237,41 +241,44 @@ void Parser::var_declaration(bool is_global)
     }
 
     // Only insert into global symbols if prefixed with RS_GLOBAL (is_global == true)
-    if (is_global) symtable_manager->promote_to_global(id);
+    if (is_global) symtable_manager->promote_to_global(id, entry);
 
+    // Indexing
     if (token() == TokenType::L_BRACKET)
     {
         advance();
 
-        lower_bound();
+        Value lower = lower_bound();
         require(TokenType::COLON);
-        upper_bound();
+        Value upper = upper_bound();
+
         require(TokenType::R_BRACKET);
+        // TODO: setup the variable as an array
     }
+
+    return entry;
 }
 
-void Parser::lower_bound()
+Value Parser::lower_bound()
 {
     std::cout << "lower_bound" << '\n';
     // Minus allowed in spec now
     if (token() == TokenType::MINUS) advance();
-    require(TokenType::INTEGER);
+    return require(TokenType::INTEGER).val;
 }
 
-void Parser::upper_bound()
+Value Parser::upper_bound()
 {
     std::cout << "upper_bound" << '\n';
     // Minus allowed in spec now
     if (token() == TokenType::MINUS) advance();
-    require(TokenType::INTEGER);
+    return require(TokenType::INTEGER).val;
 }
 
 bool Parser::statement()
 {
     std::cout << "stmnt" << '\n';
 
-    // TODO: Make return value more throrough; maybe check the inner stmnts
-    
     if (token() == TokenType::IDENTIFIER)
         identifier_statement();
     else if (token() == TokenType::RS_IF)
@@ -333,8 +340,8 @@ void Parser::proc_call(std::string identifier)
     // already have identifier
 
     // Check symtable for the proc
-    SymTableEntry* entry = symtable_manager->resolve_symbol(identifier); 
-    if (entry != NULL && entry->sym_type == S_PROCEDURE)
+    SymTableEntry* proc_entry = symtable_manager->resolve_symbol(identifier); 
+    if (proc_entry != NULL && proc_entry->sym_type == S_PROCEDURE)
     {
         // TODO: call the proc defined by entry in the symtable
     }
@@ -347,8 +354,28 @@ void Parser::proc_call(std::string identifier)
 
     require(TokenType::L_PAREN);
     if (token() != TokenType::R_PAREN)
-        argument_list();
+        argument_list(proc_entry);
     require(TokenType::R_PAREN);
+}
+
+void Parser::argument_list(SymTableEntry* proc_entry)
+{
+    std::cout << "arg list" << '\n';
+    for (auto param : proc_entry->parameters)
+    {
+        Value val = expression();
+        if (val.sym_type != param->sym_type)
+        {
+            // TODO: Error - parameters in call don't match    
+        }
+
+        if (token() == TokenType::COMMA) 
+        {
+            advance();
+            continue;
+        }
+        else return;
+    }
 }
 
 void Parser::if_statement()
@@ -367,14 +394,13 @@ void Parser::if_statement()
     {
         // Make sure there is at least one valid statement
         bool valid = statement();
-        if (!valid && first_stmnt)
+        if (first_stmnt && !valid)
         {
             err_handler->reportError("No statement in IF body");
         }
         first_stmnt = false;
         require(TokenType::SEMICOLON);
         if (token() == TokenType::RS_END) break;
-        // TODO control execution properly
         if (token() == TokenType::RS_ELSE) 
         {
             advance();
@@ -412,21 +438,6 @@ void Parser::return_statement()
 {
     std::cout << "return" << '\n';
     require(TokenType::RS_RETURN);
-}
-
-void Parser::argument_list()
-{
-    std::cout << "arg list" << '\n';
-    while (true)
-    {
-        expression();
-        if (token() == TokenType::COMMA) 
-        {
-            advance();
-            continue;
-        }
-        else return;
-    }
 }
 
 Value Parser::expression()
@@ -645,5 +656,4 @@ Value Parser::name()
     }
     return val;
 }
-
 

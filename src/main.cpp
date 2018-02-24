@@ -6,6 +6,26 @@
 #include <iostream>
 
 
+void compile(char* filename, ErrHandler* err_handler)
+{
+    SymbolTableManager* sym_manager = new SymbolTableManager(err_handler);
+
+    Scanner* scanner = new Scanner(err_handler, sym_manager);
+    if (!scanner->init(filename))
+    {
+        err_handler->reportError("Scanner initialization failed. Ensure the input file is valid.");
+        return;
+    }
+
+    // Parse the tokens
+    Parser* parser = new Parser(err_handler, sym_manager, scanner);
+    parser->parse();
+
+    delete sym_manager;
+    delete scanner;
+    delete parser;
+}
+
 /*
 Return codes
 1 - No filename given
@@ -22,18 +42,10 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    SymbolTableManager* sym_manager = new SymbolTableManager(err_handler);
-
-    Scanner* scanner = new Scanner(err_handler, sym_manager);
-    if (!scanner->init(argv[1]))
+    for (int k = 1; k < argc; k++)
     {
-        err_handler->reportError("Scanner initialization failed. Ensure the input file is valid.");
-        return 2;
+        compile(argv[k], err_handler);
     }
-
-    // Parse the tokens
-    Parser parser(err_handler, sym_manager, scanner);
-    parser.parse();
 
     if (err_handler->errors)
     {

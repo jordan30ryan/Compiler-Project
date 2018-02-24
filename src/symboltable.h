@@ -5,6 +5,7 @@
 #include <sstream>
 #include <unordered_map>
 #include <stack>
+#include <vector>
 
 struct SymTableEntry;
 typedef std::unordered_map<std::string, SymTableEntry*> SymTable;
@@ -19,10 +20,16 @@ struct SymTableEntry
     //  stores identifier type (i.e. Variable type or Procedure)
     SymbolType sym_type = S_UNDEFINED;
 
-    //bool is_global;
-    // If type==IDENTIFER && sym_type==S_PROCEDURE, 
+    // If this is a procedure, this
     //  stores the proc local symbol table
     SymTable* local_symbols;
+
+    // If this is a procedure, stores a list of params: type, id, in|out|inout
+    std::vector<SymTableEntry*> parameters;
+
+    // For a parameter
+    // One of in | out | inout
+    TokenType param_type;
 
     // For reserved words 
     SymTableEntry(TokenType t) : type(t) {}
@@ -33,7 +40,6 @@ struct SymTableEntry
 class SymbolTableManager
 {
 public:
-
     SymbolTableManager(ErrHandler* err_handler);
 
     // Get a given identifier's associated symtable entry
@@ -42,18 +48,37 @@ public:
     //  reports an error if it does not.
     // WARNING RETURNS NULL AND REPORTS TO ERR_HANDLER IF NOT FOUND.
     SymTableEntry* resolve_symbol(std::string id, bool check=true); 
-    void add_symbol(bool is_global, std::string id, TokenType type=UNKNOWN, SymbolType stype=S_UNDEFINED);
+
+    // Setup the global table with reserved words and builtin procedures
+    void init_tables();
+
+    // Add a symbol to the current symbol table
+    void add_symbol(bool is_global, std::string id, 
+                    TokenType type=UNKNOWN, SymbolType stype=S_UNDEFINED);
+
+    // Add a builtin proc to the global table with a single parameter
+    // Helper function for init_tables().
+    void add_builtin_proc(bool is_global, std::string id, TokenType type, 
+                            SymbolType stype, SymbolType param_sym_type, 
+                            TokenType param_type);
+
     // Promote a locally defined symbol to the global scope
-    void promote_to_global(std::string id);
+    void promote_to_global(std::string id, SymTableEntry* entry);
+
     // Sets the current_scope to the scope of the named procedure
     //  (for procedure definitions)
     void set_proc_scope(std::string id);
+
+    // Add a parameter to the current proc. If the current scope is a proc,
+    //  report an error.
+    //void add_param_to_proc(SymbolType typemark, std::string id, TokenType param_type);
+    void add_param_to_proc(SymTableEntry* param_entry);
+
     // Reset curr_symbols to one scope up (pop from the stack)
     void reset_scope();
 
 private:
-    // Stack of symbol tables, becuase each proc can have multiple proc definitions
-    std::stack<SymTable*> scope_stack;
+    ErrHandler* err_handler;
 
     // The global scope symbol table
     SymTable global_symbols;
@@ -62,5 +87,12 @@ private:
     //  correct scope based on parser context
     SymTable* curr_symbols = new SymTable();
 
-    ErrHandler* err_handler;
+    // The current procedure, if the current scope is a procedure's scope.
+    // If current scope is the outer scope, this is null.
+    SymTableEntry* curr_proc = NULL;
+
+    // Stack of symbol tables, becuase each proc can have multiple proc definitions
+    // The second element of the pair is the entry for the proc's scope itself.
+    // (essentially, this tracks curr_symbols and curr_proc for inner scopes)
+    std::stack<std::pair<SymTable*, SymTableEntry*>> scope_stack;
 };

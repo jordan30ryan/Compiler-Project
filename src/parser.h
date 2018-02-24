@@ -39,21 +39,22 @@ private:
     void parameter_list();
     void parameter();
 
-    void var_declaration(bool is_global);
+    SymTableEntry* var_declaration(bool is_global);
     void type_mark();
-    void lower_bound();
-    void upper_bound();
+    Value lower_bound();
+    Value upper_bound();
 
     bool statement();
     void identifier_statement();
-    void proc_call(std::string);
     void assignment_statement(std::string);
+    void proc_call(std::string);
+    void argument_list(SymTableEntry* proc_entry);
+
     void if_statement();
     void loop_statement();
     void return_statement();
 
-    void argument_list();
-    void destination();
+    //void destination();
 
     Value expression();
     Value expression_pr(Value lhs); // needed for eliminating left recursion
