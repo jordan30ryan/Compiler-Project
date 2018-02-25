@@ -367,6 +367,9 @@ void Parser::argument_list(SymTableEntry* proc_entry)
         if (val.sym_type != param->sym_type)
         {
             // TODO: Error - parameters in call don't match    
+            std::ostringstream stream;
+            stream << "Procedure paramaters don't match declared parameters." << val.sym_type << ' ' << param->sym_type << '\n';
+            err_handler->reportError(stream.str());
         }
 
         if (token() == TokenType::COMMA) 
@@ -382,10 +385,11 @@ void Parser::if_statement()
 {
     std::cout << "if" << '\n';
     require(TokenType::RS_IF);
+
     require(TokenType::L_PAREN);
-    // TODO expression should return something
-    expression();
+    Value condition = expression();
     require(TokenType::R_PAREN);
+
     require(TokenType::RS_THEN);
 
     //TODO handle else (code generation stage)
@@ -646,6 +650,7 @@ Value Parser::name()
 
     std::string id = require(TokenType::IDENTIFIER).val.string_value;
     SymTableEntry* entry = symtable_manager->resolve_symbol(id);
+    val.sym_type = entry->sym_type;
 
     if (token() == TokenType::L_BRACKET)
     {
