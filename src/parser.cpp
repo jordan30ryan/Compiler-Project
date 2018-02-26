@@ -209,7 +209,12 @@ void Parser::parameter()
 
     SymTableEntry* entry = var_declaration(false);
 
-    // TODO: Ensure this is one of IN|OUT|INOUT
+    if (token() != TokenType::RS_IN
+        && token() != TokenType::RS_OUT
+        && token() != TokenType::RS_INOUT)
+    {
+        err_handler->reportError("Parameter passing type must be one of: IN or OUT or INOUT", curr_token.line);
+    }
     entry->param_type = token(); // IN|OUT|INOUT
     advance();
 
@@ -306,7 +311,7 @@ bool Parser::statement()
         loop_statement();
     else if (token() == TokenType::RS_RETURN)
         return_statement();
-    else return false; // TODO: ERR
+    else return false;
 
     return true;
 }
@@ -349,7 +354,7 @@ void Parser::assignment_statement(std::string identifier)
     Value rhs = expression();
     if (entry->sym_type != rhs.sym_type)
     {
-
+        //TODO
     }
 }
 
@@ -362,7 +367,7 @@ void Parser::proc_call(std::string identifier)
     SymTableEntry* proc_entry = symtable_manager->resolve_symbol(identifier); 
     if (proc_entry != NULL && proc_entry->sym_type == S_PROCEDURE)
     {
-        // TODO: call the proc defined by entry in the symtable
+        // TODO: call the proc defined by proc_entry in the symtable
     }
     else
     {
@@ -620,19 +625,22 @@ Value Parser::factor()
     if (token() == TokenType::L_PAREN)
     {
         advance();
-        // TODO: expression should return a value
-        //retval = expression();
-        expression();
+        retval = expression();
         require(TokenType::R_PAREN);
     }
     else if (token() == TokenType::MINUS)
     {
         advance();
-        // TODO: Value needs to indicate WHICH value it's storing.
         if (token() == TokenType::INTEGER)
-            retval.int_value = -1 * advance().val.int_value;
+        {
+            retval = advance().val;
+            retval.int_value = -1 * retval.int_value;
+        }
         else if (token() == TokenType::FLOAT) 
-            retval.float_value = -1.0 * advance().val.float_value;
+        {
+            retval = advance().val;
+            retval.float_value = -1.0 * retval.float_value;
+        }
         else if (token() == TokenType::IDENTIFIER) 
         {
             // TODO Generate instructions here to mult. id. by -1?
@@ -640,7 +648,10 @@ Value Parser::factor()
         }
         else
         {
-            
+            std::ostringstream stream;
+            stream << "Bad token following negative sign: " << TokenTypeStrings[token()];
+            err_handler->reportError(stream.str());
+            advance();
         }
     }
     else if (token() == TokenType::IDENTIFIER)

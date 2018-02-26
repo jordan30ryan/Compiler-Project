@@ -611,3 +611,10 @@ Symbol table custom class?
     Need to manage both local and global symbol tables
     Would make it easier, instead of needing to declare everything in token.
 
+================================================================================
+2/26 (MON)
+
+TODO: Get rid of tokentypestrings. Each token should store the original token string somewhere, or the column so it can just print the file's line and show where in the syntax the error occurs.
+
+
+
