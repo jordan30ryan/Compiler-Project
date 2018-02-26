@@ -1,0 +1,12 @@
+program params is
+    procedure P1(integer a in, float b in, string c in, char d in)
+    begin
+        putinteger(a);
+        putfloat(b);
+        putstring(c);
+        putchar(d);
+    end procedure;
+begin
+    P1(2.4, 1, "asdf", 'a');
+    P1('a', 'b', 'c', "d");
+end program

@@ -21,6 +21,7 @@ void compile(char* filename, ErrHandler* err_handler)
     Parser* parser = new Parser(err_handler, sym_manager, scanner);
     parser->parse();
 
+    // Delete instances
     delete sym_manager;
     delete scanner;
     delete parser;

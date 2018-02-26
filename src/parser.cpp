@@ -7,11 +7,22 @@ const char* TokenTypeStrings[] =
 "RS_IN", "RS_OUT", "RS_INOUT", "RS_PROGRAM", "RS_IS", "RS_BEGIN", "RS_END", "RS_GLOBAL", "RS_PROCEDURE", "RS_STRING", "RS_CHAR", "RS_INTEGER", "RS_FLOAT", "RS_BOOL", "RS_IF", "RS_THEN", "RS_ELSE", "RS_FOR", "RS_RETURN", "RS_TRUE", "RS_FALSE", "RS_NOT"
 };
 
+const char* SymbolTypeStrings[] = 
+{
+    "S_UNDEFINED", "S_STRING", "S_CHAR", "S_INTEGER", "S_FLOAT", "S_BOOL", "S_PROCEDURE"
+};
+
+
 Parser::Parser(ErrHandler* handler, SymbolTableManager* manager, Scanner* scan)
     : err_handler(handler), symtable_manager(manager), scanner(scan) { }
 
 TokenType Parser::token()
 {
+    if (curr_token.type == TokenType::FILE_END)
+    {
+        // Desynchronized - this will go on infinitely so terminate here
+        throw std::runtime_error("Repeated attempt to get FILE_END token. Terminating due to desynchronization.");
+    }
     if (!curr_token_valid)
     {
         curr_token_valid = true;
@@ -48,8 +59,16 @@ Token Parser::require(TokenType expected_type)
 
 void Parser::parse() 
 {
-    program();
-    require(TokenType::FILE_END);
+    try 
+    {
+        program();
+        require(TokenType::FILE_END);
+    }
+    catch (std::runtime_error& err)
+    {
+        err_handler->reportError(err.what());
+        return;
+    }
 }
 
 void Parser::program()
@@ -366,9 +385,16 @@ void Parser::argument_list(SymTableEntry* proc_entry)
         Value val = expression();
         if (val.sym_type != param->sym_type)
         {
-            // TODO: Error - parameters in call don't match    
+            // TODO: Some unmatched types can be converted:
+            //  Integer<->Float
+            //  Integer->Bool
+            //  Bool->Integer ????
+            //  Integer<->Char ????
             std::ostringstream stream;
-            stream << "Procedure paramaters don't match declared parameters." << val.sym_type << ' ' << param->sym_type << '\n';
+            stream 
+                << "Procedure call paramater type doesn't match expected type."
+                << "\n\tGot:\t\t" << SymbolTypeStrings[val.sym_type] 
+                << "\n\tExpected:\t" << SymbolTypeStrings[param->sym_type];
             err_handler->reportError(stream.str());
         }
 
