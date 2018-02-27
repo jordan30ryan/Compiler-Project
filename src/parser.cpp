@@ -465,7 +465,7 @@ void Parser::loop_statement()
         require(TokenType::SEMICOLON);
         if (token() == TokenType::RS_END) break;
     }
-    require(TokenType::RS_END); // Just to be sure, also advance the token
+    require(TokenType::RS_END); // Just to be sure, also to advance the token
     require(TokenType::RS_FOR);
 }
 
@@ -486,7 +486,14 @@ Value Parser::expression()
 
     if (token() == TokenType::RS_NOT)
     {
+        // not <arith_op>
         advance();
+        Value val = arith_op();
+
+        // TODO: invert val in generated code
+
+        // Return becuase (not <arith_op>) can't be followed by expr_pr
+        return val;
     }
 
     // Because arith_op is required to result in something, take its value
@@ -505,19 +512,14 @@ Value Parser::expression_pr(Value lhs)
     std::cout << "expr prime" << '\n';
 
 
-    // TODO: Might need to separate & and | code for code generation stage
-    // TODO: Or not? Maybe check each one and get the LLVM operation name,
-    //  then do type checking without duplication after, using 'operation'
-    //  generically?
-    // TODO: Differentiate between bitwise and logical operators here.
     if (token() == TokenType::AND
         || token() == TokenType::OR)
     {
         advance();
         Value rhs = arith_op();
-        // TODO: fix type checking based on what types & and | take.
-        //if (lhs.type != rhs.type)
+        if (lhs.sym_type != rhs.sym_type)
         {
+            
 
         }
         // TODO Generate code for lhs & or | with the result of arith_op

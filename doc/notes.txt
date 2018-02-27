@@ -617,4 +617,7 @@ Symbol table custom class?
 TODO: Get rid of tokentypestrings. Each token should store the original token string somewhere, or the column so it can just print the file's line and show where in the syntax the error occurs.
 
 
+================================================================================
+2/27
 
+Start working with code generation
