@@ -1,0 +1,15 @@
+program test_program is
+    integer a;
+    global integer b;
+    procedure foo()
+        integer a; // fine
+        integer b; // wrong (conflicts with global int b)
+        integer c;
+    begin
+        
+    end procedure;
+    integer a; // wrong (a defined twice in this scope)
+    integer c; // fine (other c is in an inner scope)
+begin
+end program.
+

@@ -1,0 +1,26 @@
+program MultipleProcs is
+
+global integer y;
+
+procedure Proc1(integer val inout)
+	procedure Proc2(integer val inout)
+		procedure Proc1(integer val inout)
+			begin
+				val := val + 1;
+		end procedure;
+		begin
+			val := val + 1;
+			Proc1(val);
+	end procedure;
+	begin
+		val := val + 1;
+		Proc2(val);
+end procedure;
+
+
+begin
+
+Proc1(y);
+putInteger(y);  // Result should be 3
+
+end program.

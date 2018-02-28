@@ -1,0 +1,21 @@
+program test_program is
+    procedure print_string(string str in)
+    begin
+        putString(str);
+    end procedure;
+begin
+    string str;
+    str := " _This is a string, This:is;still.a'string0123456789";
+    string str2 := " This is an invalid string @@@";
+    print_string(str);
+    char ch := 'a';
+    char ch2 := ' ';
+    char ch3 := '"';
+    putChar(ch);
+    putChar(ch2);
+    putChar(ch3);
+    putChar('_');
+    putChar(',');   // Invalid
+// Invalid token
+@
+end program.

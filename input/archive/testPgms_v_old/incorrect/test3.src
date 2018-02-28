@@ -1,6 +1,6 @@
 program test_program is
     string s;
-    int b[1:3];
+    int b[3];
 begin
     if (s := "abc")then
        b[0] == 0;

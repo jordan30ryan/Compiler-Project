@@ -21,8 +21,9 @@ private:
     TokenType token();
     // Consume the token; subsequent calls to getToken will return a new token.
     Token advance();
-    // Ensure current_token has type t; report err if not. 
-    Token require(TokenType t);
+    // Ensure current_token has type t, 
+    //  if not, report err (if error=true) or warning 
+    Token require(TokenType t, bool error=true);
 
     Token curr_token;
     bool curr_token_valid;

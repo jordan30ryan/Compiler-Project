@@ -1,0 +1,24 @@
+program bitwise is
+    integer a;
+    bool b;
+    integer c;
+    bool d;
+begin
+    a := 4;
+    b := true;
+    c := 5;
+    d := false;
+
+    putbool(not a); // false
+    putbool(not b); // false
+
+    putbool(a & b); // 4 & 1 == 0 OR true & true == true
+
+    putbool(not false); // true 
+    putbool(not (c - 5)); // true 
+    putbool(not d); // true 
+
+    putbool(d & c); // false & true == false OR 5 & 0 == 0
+    putbool(b & c); // true & true == true OR 1 & 5 == 1
+end program.
+

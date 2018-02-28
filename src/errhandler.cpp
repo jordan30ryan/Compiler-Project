@@ -15,5 +15,12 @@ void ErrHandler::reportError(std::string message, int line_num)
 void ErrHandler::reportWarning(std::string message)
 {
     std::cout << "Warning: " << message << '\n';
+    warnings++;
+}
+
+void ErrHandler::reportWarning(std::string message, int line_num)
+{
+    std::cout << "Warning (line " << line_num << "): " << message << '\n';
+    warnings++;
 }
 

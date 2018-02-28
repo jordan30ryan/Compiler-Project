@@ -8,6 +8,7 @@
 
 void compile(char* filename, ErrHandler* err_handler)
 {
+    std::cout << "\nCompiling " << filename << '\n';
     SymbolTableManager* sym_manager = new SymbolTableManager(err_handler);
 
     Scanner* scanner = new Scanner(err_handler, sym_manager);

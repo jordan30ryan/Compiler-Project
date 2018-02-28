@@ -8,6 +8,8 @@ public:
     void reportError(std::string message);
     void reportError(std::string message, int line_num);
     void reportWarning(std::string message);
-    int errors;
+    void reportWarning(std::string message, int line_num);
+    int errors = 0;
+    int warnings = 0;
 };
 

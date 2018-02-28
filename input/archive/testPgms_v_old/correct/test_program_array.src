@@ -1,8 +1,8 @@
 program test_program_array is
-    integer numbers[0:10];
-    integer res[0:10];
+    integer numbers[10];
+    integer res[10];
     integer i;
-    procedure square_array(integer array[0:10] in, integer result[0:10] out)
+    procedure square_array(integer array[10] in, integer result[10] out)
         integer i;
     begin
         i := 0;

@@ -1,0 +1,6 @@
+program FLOATS is
+    float a;
+begin
+    a := 3.1415;
+    putFloat(a);
+end program.

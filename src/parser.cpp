@@ -1,4 +1,5 @@
 #include "parser.h"
+#define DEBUG false
 
 // To assist in error printing 
 const char* TokenTypeStrings[] = 
@@ -14,20 +15,25 @@ const char* SymbolTypeStrings[] =
 
 
 Parser::Parser(ErrHandler* handler, SymbolTableManager* manager, Scanner* scan)
-    : err_handler(handler), symtable_manager(manager), scanner(scan) { }
+    : err_handler(handler), symtable_manager(manager), scanner(scan) 
+{ 
+    // Initialize curr_token so old values aren't used 
+    curr_token.type = UNKNOWN;
+    curr_token.val.sym_type = S_UNDEFINED;
+}
 
 TokenType Parser::token()
 {
     if (curr_token.type == TokenType::FILE_END)
     {
-        // Desynchronized - this will go on infinitely so terminate here
+        // Possibly desynchronized - this would go on infinitely, terminate here
         throw std::runtime_error("Repeated attempt to get FILE_END token. Terminating due to desynchronization.");
     }
     if (!curr_token_valid)
     {
         curr_token_valid = true;
         curr_token = scanner->getToken();
-        std::cout << "\tGot: " << TokenTypeStrings[curr_token.type] << '\n';
+        if (DEBUG) std::cout << "\tGot: " << TokenTypeStrings[curr_token.type] << '\n';
         return curr_token.type;
     }
     else return curr_token.type;
@@ -42,7 +48,7 @@ Token Parser::advance()
 }
 
 // Require that the current token is of type t
-Token Parser::require(TokenType expected_type)
+Token Parser::require(TokenType expected_type, bool error)
 {
     TokenType type = token();
     advance();
@@ -52,36 +58,40 @@ Token Parser::require(TokenType expected_type)
         std::ostringstream stream;
         stream << "Bad Token: " << TokenTypeStrings[type] 
             << "\tExpected: " << TokenTypeStrings[expected_type];
-        err_handler->reportError(stream.str(), curr_token.line);
+        if (error) err_handler->reportError(stream.str(), curr_token.line);
+        else err_handler->reportWarning(stream.str(), curr_token.line);
     }
     return curr_token;
 }
 
 void Parser::parse() 
 {
+    bool synchronized = false;
     try 
     {
         program();
+        synchronized = true;
+        // This may cause the exception (repeatedly getting FILE_END)
+        // BUT, this indicates synchronization, so an error isn't reported.
         require(TokenType::FILE_END);
     }
     catch (std::runtime_error& err)
     {
-        err_handler->reportError(err.what());
-        return;
+        if (!synchronized) err_handler->reportError(err.what());
     }
 }
 
 void Parser::program()
 {
-    std::cout << "program" << '\n';
+    if (DEBUG) std::cout << "program" << '\n';
     program_header(); 
     program_body(); 
-    require(TokenType::PERIOD);
+    require(TokenType::PERIOD, false);
 }
 
 void Parser::program_header()
 {
-    std::cout << "program header" << '\n';
+    if (DEBUG) std::cout << "program header" << '\n';
     require(TokenType::RS_PROGRAM);
 
     require(TokenType::IDENTIFIER);
@@ -93,7 +103,7 @@ void Parser::program_header()
 
 void Parser::program_body()
 {
-    std::cout << "program body" << '\n';
+    if (DEBUG) std::cout << "program body" << '\n';
     bool declarations = true;
     while (true)
     {
@@ -119,7 +129,7 @@ void Parser::program_body()
 
 void Parser::declaration()
 {
-    std::cout << "declaration" << '\n';
+    if (DEBUG) std::cout << "declaration" << '\n';
     bool is_global = false;
     if (token() == TokenType::RS_GLOBAL)
     {
@@ -136,7 +146,7 @@ void Parser::declaration()
 
 void Parser::proc_declaration(bool is_global)
 {
-    std::cout << "proc decl" << '\n';
+    if (DEBUG) std::cout << "proc decl" << '\n';
     proc_header();
     proc_body();
 
@@ -146,7 +156,7 @@ void Parser::proc_declaration(bool is_global)
 
 void Parser::proc_header()
 {
-    std::cout << "proc header" << '\n';
+    if (DEBUG) std::cout << "proc header" << '\n';
     require(TokenType::RS_PROCEDURE);
 
     // Setup symbol table so the procedure's sym table is now being used
@@ -162,7 +172,7 @@ void Parser::proc_header()
 
 void Parser::proc_body()
 {
-    std::cout << "proc body" << '\n';
+    if (DEBUG) std::cout << "proc body" << '\n';
     bool declarations = true;
     while (true)
     {
@@ -188,7 +198,7 @@ void Parser::proc_body()
 
 void Parser::parameter_list()
 {
-    std::cout << "param list" << '\n';
+    if (DEBUG) std::cout << "param list" << '\n';
     while (true)
     {
         parameter(); 
@@ -203,7 +213,7 @@ void Parser::parameter_list()
 
 void Parser::parameter()
 {
-    std::cout << "param" << '\n';
+    if (DEBUG) std::cout << "param" << '\n';
 
     // curr_token is the typemark
 
@@ -224,7 +234,7 @@ void Parser::parameter()
 
 SymTableEntry* Parser::var_declaration(bool is_global)
 {
-    std::cout << "var decl" << '\n';
+    if (DEBUG) std::cout << "var decl" << '\n';
     // This is the only place in grammar type mark occurs 
     //  so it doesn't need its own function
     TokenType typemark = token();
@@ -285,7 +295,7 @@ SymTableEntry* Parser::var_declaration(bool is_global)
 
 Value Parser::lower_bound()
 {
-    std::cout << "lower_bound" << '\n';
+    if (DEBUG) std::cout << "lower_bound" << '\n';
     // Minus allowed in spec now
     if (token() == TokenType::MINUS) advance();
     return require(TokenType::INTEGER).val;
@@ -293,7 +303,7 @@ Value Parser::lower_bound()
 
 Value Parser::upper_bound()
 {
-    std::cout << "upper_bound" << '\n';
+    if (DEBUG) std::cout << "upper_bound" << '\n';
     // Minus allowed in spec now
     if (token() == TokenType::MINUS) advance();
     return require(TokenType::INTEGER).val;
@@ -301,7 +311,7 @@ Value Parser::upper_bound()
 
 bool Parser::statement()
 {
-    std::cout << "stmnt" << '\n';
+    if (DEBUG) std::cout << "stmnt" << '\n';
 
     if (token() == TokenType::IDENTIFIER)
         identifier_statement();
@@ -320,7 +330,7 @@ bool Parser::statement()
 //  start with an identifier
 void Parser::identifier_statement()
 {
-    std::cout << "identifier stmnt" << '\n';
+    if (DEBUG) std::cout << "identifier stmnt" << '\n';
     // Advance to next token; returning the current token
     //  and retrieving the identifier value
     std::string identifier = advance().val.string_value;
@@ -337,7 +347,7 @@ void Parser::identifier_statement()
 
 void Parser::assignment_statement(std::string identifier)
 {
-    std::cout << "assignment stmnt" << '\n';
+    if (DEBUG) std::cout << "assignment stmnt" << '\n';
 //    std::cout << "iden:" << identifier 
 //                << "\tType: " << (*curr_symbols)[identifier]->sym_type << '\n';
 
@@ -360,7 +370,7 @@ void Parser::assignment_statement(std::string identifier)
 
 void Parser::proc_call(std::string identifier)
 {
-    std::cout << "proc call" << '\n';
+    if (DEBUG) std::cout << "proc call" << '\n';
     // already have identifier
 
     // Check symtable for the proc
@@ -384,7 +394,7 @@ void Parser::proc_call(std::string identifier)
 
 void Parser::argument_list(SymTableEntry* proc_entry)
 {
-    std::cout << "arg list" << '\n';
+    if (DEBUG) std::cout << "arg list" << '\n';
     for (auto param : proc_entry->parameters)
     {
         Value val = expression();
@@ -414,7 +424,7 @@ void Parser::argument_list(SymTableEntry* proc_entry)
 
 void Parser::if_statement()
 {
-    std::cout << "if" << '\n';
+    if (DEBUG) std::cout << "if" << '\n';
     require(TokenType::RS_IF);
 
     require(TokenType::L_PAREN);
@@ -449,7 +459,7 @@ void Parser::if_statement()
 
 void Parser::loop_statement()
 {
-    std::cout << "loop" << '\n';
+    if (DEBUG) std::cout << "loop" << '\n';
     require(TokenType::RS_FOR);
 
     require(TokenType::L_PAREN);
@@ -471,13 +481,13 @@ void Parser::loop_statement()
 
 void Parser::return_statement()
 {
-    std::cout << "return" << '\n';
+    if (DEBUG) std::cout << "return" << '\n';
     require(TokenType::RS_RETURN);
 }
 
 Value Parser::expression()
 {
-    std::cout << "expr" << '\n';
+    if (DEBUG) std::cout << "expr" << '\n';
 
     // arith_op is required and defined as:
     //  relation, arith_op_pr
@@ -509,7 +519,7 @@ Value Parser::expression()
 // lhs - left hand side of this operation. 
 Value Parser::expression_pr(Value lhs)
 {
-    std::cout << "expr prime" << '\n';
+    if (DEBUG) std::cout << "expr prime" << '\n';
 
 
     if (token() == TokenType::AND
@@ -532,7 +542,7 @@ Value Parser::expression_pr(Value lhs)
 
 Value Parser::arith_op()
 {
-    std::cout << "arith op" << '\n';
+    if (DEBUG) std::cout << "arith op" << '\n';
 
     Value val = relation();
     return arith_op_pr(val);
@@ -540,7 +550,7 @@ Value Parser::arith_op()
 
 Value Parser::arith_op_pr(Value lhs)
 {
-    std::cout << "arith op pr" << '\n';
+    if (DEBUG) std::cout << "arith op pr" << '\n';
     // TODO: Same idea as expression_pr (and same for all other _pr fxns)
     if (token() == TokenType::PLUS || token() == TokenType::MINUS)
     {
@@ -565,7 +575,7 @@ Value Parser::arith_op_pr(Value lhs)
 
 Value Parser::relation()
 {
-    std::cout << "relation" << '\n';
+    if (DEBUG) std::cout << "relation" << '\n';
 
     Value val = term();
     return relation_pr(val);
@@ -573,7 +583,7 @@ Value Parser::relation()
 
 Value Parser::relation_pr(Value lhs)
 {
-    std::cout << "relation pr" << '\n';
+    if (DEBUG) std::cout << "relation pr" << '\n';
     // TODO: Same idea as expression_pr (and same for all other _pr fxns)
     if ((token() == TokenType::LT)
         | (token() == TokenType::GT)
@@ -591,7 +601,7 @@ Value Parser::relation_pr(Value lhs)
 
 Value Parser::term()
 {
-    std::cout << "term" << '\n';
+    if (DEBUG) std::cout << "term" << '\n';
 
     Value val = factor();
     return term_pr(val);
@@ -599,7 +609,7 @@ Value Parser::term()
 
 Value Parser::term_pr(Value lhs)
 {
-    std::cout << "term pr" << '\n';
+    if (DEBUG) std::cout << "term pr" << '\n';
     // TODO: Same idea as expression_pr (and same for all other _pr fxns)
 
     if (token() == TokenType::MULTIPLICATION)
@@ -619,7 +629,7 @@ Value Parser::term_pr(Value lhs)
 
 Value Parser::factor()
 {
-    std::cout << "factor" << '\n';
+    if (DEBUG) std::cout << "factor" << '\n';
     Value retval;
 
     // Token is one of:
@@ -684,8 +694,8 @@ Value Parser::factor()
 
 Value Parser::name()
 {
+    if (DEBUG) std::cout << "name" << '\n';
     Value val;
-    std::cout << "name" << '\n';
 
     std::string id = require(TokenType::IDENTIFIER).val.string_value;
     SymTableEntry* entry = symtable_manager->resolve_symbol(id);

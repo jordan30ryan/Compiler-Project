@@ -1,0 +1,64 @@
+program VectorOps is
+
+integer indx;
+integer size;
+char x;
+float vect1[-5:5];
+float vect2[-5:5];
+float vect3[-2:8];
+float vect4[0:10];
+float vect5[10:20];
+
+begin
+
+size := 0;
+for(indx := -5; indx < 4)
+	size := size + 1;
+	indx := indx + 1;
+end for;
+
+for(indx := -5; indx < 5)
+	vect1[indx] := indx;    // [ -5, -4, -3, -2, -1,  0,  1,  2,  3,  4]
+	vect2[indx] := 1;       // [  1,  1,  1,  1,  1,  1,  1,  1,  1,  1]
+	indx := indx + 1;
+end for;
+
+putChar('a');
+for(indx := -5; indx < 5)
+	putFloat(vect1[indx]);
+	indx := indx + 1;
+end for;
+putChar(' ');
+
+putChar('b');
+for(indx := -5; indx < 5)
+	putFloat(vect2[indx]);
+	indx := indx + 1;
+end for;
+putChar(' ');
+
+vect3 := vect1 + vect2 + 1.0;    // [   -3,    -2,     -1,  0,     1,    2,     3,  4,    5,  6  ]
+vect4 := vect1 * (vect2 + 1.0);  // [  -10,    -8,     -6, -4,    -2,    0,     2,  4,    6,  8  ]
+vect5 := vect3 / vect4;          // [  0.3,  0.25,  0.167,  0,  -0.5,  inf, , 1.5,  1, 0.83, 0.75]
+
+putChar('c');
+for(indx := -2; indx < 8)
+	putFloat(vect3[indx]);
+	indx := indx + 1;
+end for;
+putChar(' ');
+
+putChar('d');
+for(indx := 0; indx < 10)
+	putFloat(vect4[indx]);
+	indx := indx + 1;
+end for;
+putChar(' ');
+
+putChar('e');
+for(indx := 10; indx < 20)
+	putFloat(vect5[indx]);
+	indx := indx + 1;
+end for;
+
+end program.
