@@ -681,16 +681,53 @@ Value Parser::term_pr(Value lhs, SymbolType hintType)
     if (token() == TokenType::MULTIPLICATION 
         || token() == TokenType::DIVISION)
     {
+        advance();
+        Value rhs = factor(hintType);
         //TODO
         // If one is int and one is float, 
         //  convert float one to int or int one to float,
         //  depending on which hintType is, or, 
         //  if hintType is neither, just assume conversion to int.
         // If one is neither an int nor float, error.
-        advance();
-        Value rhs = factor(hintType);
-        Value val = rhs; // TODO: Code gen (lhs [*/] rhs)
-        return term_pr(val, hintType);
+        if (lhs.sym_type == S_INTEGER && rhs.sym_type == S_FLOAT)
+        {
+            // TODO Convert lhs up to float
+        }
+        else if (rhs.sym_type == S_INTEGER && lhs.sym_type == S_FLOAT)
+        {
+            // TODO Convert rhs up to float
+        }
+        else if (lhs.sym_type != rhs.sym_type)
+        {
+            err_handler->reportError("Incompatible types for term", curr_token.line);
+            // TODO: return something else?  idk
+            Value val;
+            val.sym_type = hintType;
+            return val;
+        }
+
+        Value result = rhs; // TODO: Code gen (lhs [*/] rhs)
+
+        if (result.sym_type == S_INTEGER && hintType == S_FLOAT)
+        {
+            // TODO Convert val to float
+        }
+        else if (result.sym_type == S_FLOAT && hintType == S_INTEGER)
+        {
+            // TODO: Convert val to integer (floor?)
+        }
+        else if (lhs.sym_type != hintType)
+        {
+            // TODO: Is this a warning or error? Assumed warning right now
+            err_handler->reportWarning("No conversion to the expected type. Assuming float.", curr_token.line);
+            if (lhs.sym_type != S_FLOAT)
+            {
+                lhs.sym_type = S_FLOAT;
+                lhs.float_value = lhs.int_value;
+            }
+        }
+
+        return term_pr(result, hintType);
     }
     else return lhs;
 }
