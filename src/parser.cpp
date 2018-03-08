@@ -552,12 +552,23 @@ Value Parser::expression(SymbolType hintType=S_UNDEFINED)
         // not <arith_op>
         advance();
         Value val = arith_op(hintType);
-        if (val.sym_type != S_INTEGER || val.sym_type != S_BOOL)
+        if (val.sym_type == S_INTEGER)
         {
-            // TODO: Can only invert integers (bitwise) / bools (logical)
         }
-
-        // TODO: invert val in generated code
+        else if (val.sym_type == S_BOOL)
+        {
+        }
+        else
+        {
+            err_handler->reportError("Can only invert integers (bitwise) or bools (logical)");
+        }
+        // TODO: need different NOT code for ints and bools
+        /*
+        else
+        {
+            // TODO: invert val in generated code
+        }
+        */
 
         // Return becuase (not <arith_op>) can't be followed by expr_pr
         return val;
@@ -586,11 +597,13 @@ Value Parser::expression_pr(Value lhs, SymbolType hintType)
         Value rhs = arith_op(hintType);
         if (lhs.sym_type != rhs.sym_type)
         {
-            convertTypes(lhs, rhs, hintType);
+            // TODO
+            // If one is a bool and one an int, convert
+            //  depending on hintType
+            // If hintType is neither bool nor int, assume one type.
         }
-        // TODO Generate code for lhs & or | with the result of arith_op
-        // The result of that operation, gets passed into expression_pr
-        return expression_pr(rhs, hintType);
+        Value val = rhs; // TODO Generate code for lhs & or | with the result of arith_op
+        return expression_pr(val, hintType);
     }
     // No operation performed; return lhs unmodified.
     else return lhs;
@@ -612,18 +625,12 @@ Value Parser::arith_op_pr(Value lhs, SymbolType hintType)
     {
         advance();
         Value rhs = relation(hintType); 
-        if (lhs.sym_type == S_FLOAT && rhs.sym_type == S_INTEGER)
-        {
-            // TODO: Convert rhs to float first
-        }
-        else if (rhs.sym_type == S_FLOAT && lhs.sym_type == S_INTEGER)
-        {
-            // TODO: Convert lhs to float first
-        }
-        else 
-        {
-            // TODO: Error: +/- not defined for these types
-        }
+        //TODO
+        // If one is int and one is float, 
+        //  convert float one to int or int one to float,
+        //  depending on which hintType is, or, 
+        //  if hintType is neither, just assume conversion to int.
+        // If one is neither an int nor float, error.
         return arith_op_pr(rhs, hintType);
     }
     else return lhs;
@@ -648,6 +655,9 @@ Value Parser::relation_pr(Value lhs, SymbolType hintType)
         | (token() == TokenType::EQUALS)
         | (token() == TokenType::NOTEQUAL))
     {
+        // TODO: Generate code. Can compare any of:
+        //  Int/bool/float/char
+        
         advance();
         Value val = term(hintType);
         return relation_pr(val, hintType);
@@ -668,16 +678,18 @@ Value Parser::term_pr(Value lhs, SymbolType hintType)
     if (DEBUG) std::cout << "term pr" << '\n';
     // TODO: Same idea as expression_pr (and same for all other _pr fxns)
 
-    if (token() == TokenType::MULTIPLICATION)
+    if (token() == TokenType::MULTIPLICATION 
+        || token() == TokenType::DIVISION)
     {
+        //TODO
+        // If one is int and one is float, 
+        //  convert float one to int or int one to float,
+        //  depending on which hintType is, or, 
+        //  if hintType is neither, just assume conversion to int.
+        // If one is neither an int nor float, error.
         advance();
-        Value val = factor(hintType);
-        return term_pr(val, hintType);
-    }
-    else if (token() == TokenType::DIVISION)
-    {
-        advance();
-        Value val = factor(hintType);
+        Value rhs = factor(hintType);
+        Value val = rhs; // TODO: Code gen (lhs [*/] rhs)
         return term_pr(val, hintType);
     }
     else return lhs;
@@ -711,8 +723,8 @@ Value Parser::factor(SymbolType hintType)
         }
         else if (token() == TokenType::IDENTIFIER) 
         {
-            // TODO Generate instructions here to mult. id. by -1?
             retval = name(hintType);
+            // TODO Generate instructions here to mult. id. by -1?
         }
         else
         {
