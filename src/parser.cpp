@@ -64,6 +64,8 @@ Token Parser::require(TokenType expected_type, bool error)
     return curr_token;
 }
 
+// TODO: This doesn't really work ???
+/*
 // Convert val to expected, if possible.
 void Parser::convertType(Value& val, SymbolType expected)
 {
@@ -74,13 +76,13 @@ void Parser::convertType(Value& val, SymbolType expected)
     case S_INTEGER:
         if (val.sym_type == S_FLOAT) 
         {
-            val.int_value = lhs.float_value;
+            val.int_value = val.float_value;
             val.sym_type = S_INTEGER;
         }
         else if (lhs.sym_type == S_BOOL)
         {
             // bool value is already stored in int_value
-            lhs.sym_type = S_INTEGER;
+            val.sym_type = S_INTEGER;
         }
         else 
         {
@@ -90,6 +92,7 @@ void Parser::convertType(Value& val, SymbolType expected)
     case S_BOOL:
         if (lhs.sym_type == S_INTEGER) 
         {
+            // bool value is already stored in int_value
             lhs.sym_type = S_BOOL;
         }
         else 
@@ -109,6 +112,7 @@ void Parser::convertType(Value& val, SymbolType expected)
         break;
     }
 }
+*/
 
 void Parser::parse() 
 {
