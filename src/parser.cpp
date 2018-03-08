@@ -20,6 +20,11 @@ Parser::Parser(ErrHandler* handler, SymbolTableManager* manager, Scanner* scan)
     // Initialize curr_token so old values aren't used 
     curr_token.type = UNKNOWN;
     curr_token.val.sym_type = S_UNDEFINED;
+    // Init llvm stuff
+    static LLVMContext TheContext;
+    static IRBuilder<> Builder(TheContext);
+    static std::unique_ptr<Module> TheModule;
+
 }
 
 TokenType Parser::token()
