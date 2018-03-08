@@ -25,6 +25,9 @@ private:
     //  if not, report err (if error=true) or warning 
     Token require(TokenType t, bool error=true);
 
+    // Convert val to expected, if possible.
+    void convertType(Value& val, SymbolType expected);
+
     Token curr_token;
     bool curr_token_valid;
 
@@ -55,17 +58,16 @@ private:
     void loop_statement();
     void return_statement();
 
-    //void destination();
-
-    Value expression();
-    Value expression_pr(Value lhs); // needed for eliminating left recursion
-    Value arith_op();
-    Value arith_op_pr(Value lhs); // needed for eliminating left recursion
-    Value relation();
-    Value relation_pr(Value lhs); // needed for eliminating left recursion
-    Value term();
-    Value term_pr(Value lhs);
-    Value factor();
-    Value name();
+    Value expression(SymbolType hintType);
+    // _pr functions are needed for eliminating left recursion
+    Value expression_pr(Value lhs, SymbolType hintType); 
+    Value arith_op(SymbolType hintType);
+    Value arith_op_pr(Value lhs, SymbolType hintType); 
+    Value relation(SymbolType hintType);
+    Value relation_pr(Value lhs, SymbolType hintType); 
+    Value term(SymbolType hintType);
+    Value term_pr(Value lhs, SymbolType hintType);
+    Value factor(SymbolType hintType);
+    Value name(SymbolType hintType);
 };
 

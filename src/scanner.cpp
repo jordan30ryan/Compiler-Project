@@ -171,7 +171,7 @@ Token Scanner::getToken()
         // Check whether this is a reserved word or identifier
         token.type = getWordTokenType(token.val.string_value);
 
-        // Handle bools, since they used reserved words as literals.
+        // Handle bools, since they use reserved words as literals.
         if (token.type == RS_TRUE)
         {
             token.val.int_value = 1;

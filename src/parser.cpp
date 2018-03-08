@@ -64,6 +64,52 @@ Token Parser::require(TokenType expected_type, bool error)
     return curr_token;
 }
 
+// Convert val to expected, if possible.
+void Parser::convertType(Value& val, SymbolType expected)
+{
+    if (val.sym_type == expected) return;
+
+    switch (expected)
+    {
+    case S_INTEGER:
+        if (val.sym_type == S_FLOAT) 
+        {
+            val.int_value = lhs.float_value;
+            val.sym_type = S_INTEGER;
+        }
+        else if (lhs.sym_type == S_BOOL)
+        {
+            // bool value is already stored in int_value
+            lhs.sym_type = S_INTEGER;
+        }
+        else 
+        {
+            // TODO: error. can't convert anything else to int
+        }
+        break;
+    case S_BOOL:
+        if (lhs.sym_type == S_INTEGER) 
+        {
+            lhs.sym_type = S_BOOL;
+        }
+        else 
+        {
+            // TODO: error. can't convert anything else to bool
+        }
+        break;
+    case S_FLOAT:
+        // TODO
+        if (lhs.sym_type == S_INTEGER)
+        break;
+    case S_CHAR:
+        break;
+    case S_STRING:
+        break;
+    default:
+        break;
+    }
+}
+
 void Parser::parse() 
 {
     bool synchronized = false;
@@ -355,13 +401,13 @@ void Parser::assignment_statement(std::string identifier)
     if (token() == TokenType::L_BRACKET)
     {
         advance();
-        expression();
+        expression(SymbolType::S_INTEGER);
         require(TokenType::R_BRACKET);
     }
     SymTableEntry* entry = symtable_manager->resolve_symbol(identifier); 
     // TODO: something with indexing
     require(TokenType::ASSIGNMENT);
-    Value rhs = expression();
+    Value rhs = expression(entry->sym_type);
     if (entry->sym_type != rhs.sym_type)
     {
         //TODO
@@ -397,7 +443,7 @@ void Parser::argument_list(SymTableEntry* proc_entry)
     if (DEBUG) std::cout << "arg list" << '\n';
     for (auto param : proc_entry->parameters)
     {
-        Value val = expression();
+        Value val = expression(param->sym_type);
         if (val.sym_type != param->sym_type)
         {
             // TODO: Some unmatched types can be converted:
@@ -428,7 +474,7 @@ void Parser::if_statement()
     require(TokenType::RS_IF);
 
     require(TokenType::L_PAREN);
-    Value condition = expression();
+    Value condition = expression(SymbolType::S_BOOL);
     require(TokenType::R_PAREN);
 
     require(TokenType::RS_THEN);
@@ -466,7 +512,7 @@ void Parser::loop_statement()
     require(TokenType::IDENTIFIER);
     assignment_statement(curr_token.val.string_value); 
     require(TokenType::SEMICOLON);
-    Value condition = expression();
+    Value condition = expression(SymbolType::S_BOOL);
     require(TokenType::R_PAREN);
 
     while (true)
@@ -485,7 +531,10 @@ void Parser::return_statement()
     require(TokenType::RS_RETURN);
 }
 
-Value Parser::expression()
+// hintType - the expected type (e.g. if this is an assignment)
+//  used as a hint to expression on what type to convert to 
+//  (if type conversion is needed)
+Value Parser::expression(SymbolType hintType=S_UNDEFINED)
 {
     if (DEBUG) std::cout << "expr" << '\n';
 
@@ -498,7 +547,11 @@ Value Parser::expression()
     {
         // not <arith_op>
         advance();
-        Value val = arith_op();
+        Value val = arith_op(hintType);
+        if (val.sym_type != S_INTEGER || val.sym_type != S_BOOL)
+        {
+            // TODO: Can only invert integers (bitwise) / bools (logical)
+        }
 
         // TODO: invert val in generated code
 
@@ -512,12 +565,12 @@ Value Parser::expression()
     //  (and optionally another expression_pr, and so on...)
     //  OR, expression_pr(val) will just return val unmodified 
     //  if there is no operator & or | as the first token.
-    Value val = arith_op(); 
-    return expression_pr(val);
+    Value val = arith_op(hintType); 
+    return expression_pr(val, hintType);
 }
 
 // lhs - left hand side of this operation. 
-Value Parser::expression_pr(Value lhs)
+Value Parser::expression_pr(Value lhs, SymbolType hintType)
 {
     if (DEBUG) std::cout << "expr prime" << '\n';
 
@@ -526,36 +579,35 @@ Value Parser::expression_pr(Value lhs)
         || token() == TokenType::OR)
     {
         advance();
-        Value rhs = arith_op();
+        Value rhs = arith_op(hintType);
         if (lhs.sym_type != rhs.sym_type)
         {
-            
-
+            convertTypes(lhs, rhs, hintType);
         }
         // TODO Generate code for lhs & or | with the result of arith_op
         // The result of that operation, gets passed into expression_pr
-        return expression_pr(rhs);
+        return expression_pr(rhs, hintType);
     }
     // No operation performed; return lhs unmodified.
     else return lhs;
 }
 
-Value Parser::arith_op()
+Value Parser::arith_op(SymbolType hintType)
 {
     if (DEBUG) std::cout << "arith op" << '\n';
 
-    Value val = relation();
-    return arith_op_pr(val);
+    Value val = relation(hintType);
+    return arith_op_pr(val, hintType);
 }
 
-Value Parser::arith_op_pr(Value lhs)
+Value Parser::arith_op_pr(Value lhs, SymbolType hintType)
 {
     if (DEBUG) std::cout << "arith op pr" << '\n';
     // TODO: Same idea as expression_pr (and same for all other _pr fxns)
     if (token() == TokenType::PLUS || token() == TokenType::MINUS)
     {
         advance();
-        Value rhs = relation(); 
+        Value rhs = relation(hintType); 
         if (lhs.sym_type == S_FLOAT && rhs.sym_type == S_INTEGER)
         {
             // TODO: Convert rhs to float first
@@ -568,20 +620,20 @@ Value Parser::arith_op_pr(Value lhs)
         {
             // TODO: Error: +/- not defined for these types
         }
-        return arith_op_pr(rhs);
+        return arith_op_pr(rhs, hintType);
     }
     else return lhs;
 }
 
-Value Parser::relation()
+Value Parser::relation(SymbolType hintType)
 {
     if (DEBUG) std::cout << "relation" << '\n';
 
-    Value val = term();
-    return relation_pr(val);
+    Value val = term(hintType);
+    return relation_pr(val, hintType);
 }
 
-Value Parser::relation_pr(Value lhs)
+Value Parser::relation_pr(Value lhs, SymbolType hintType)
 {
     if (DEBUG) std::cout << "relation pr" << '\n';
     // TODO: Same idea as expression_pr (and same for all other _pr fxns)
@@ -593,21 +645,21 @@ Value Parser::relation_pr(Value lhs)
         | (token() == TokenType::NOTEQUAL))
     {
         advance();
-        Value val = term();
-        return relation_pr(val);
+        Value val = term(hintType);
+        return relation_pr(val, hintType);
     }
     else return lhs;
 }
 
-Value Parser::term()
+Value Parser::term(SymbolType hintType)
 {
     if (DEBUG) std::cout << "term" << '\n';
 
-    Value val = factor();
-    return term_pr(val);
+    Value val = factor(hintType);
+    return term_pr(val, hintType);
 }
 
-Value Parser::term_pr(Value lhs)
+Value Parser::term_pr(Value lhs, SymbolType hintType)
 {
     if (DEBUG) std::cout << "term pr" << '\n';
     // TODO: Same idea as expression_pr (and same for all other _pr fxns)
@@ -615,19 +667,19 @@ Value Parser::term_pr(Value lhs)
     if (token() == TokenType::MULTIPLICATION)
     {
         advance();
-        Value val = factor();
-        return term_pr(val);
+        Value val = factor(hintType);
+        return term_pr(val, hintType);
     }
     else if (token() == TokenType::DIVISION)
     {
         advance();
-        Value val = factor();
-        return term_pr(val);
+        Value val = factor(hintType);
+        return term_pr(val, hintType);
     }
     else return lhs;
 }
 
-Value Parser::factor()
+Value Parser::factor(SymbolType hintType)
 {
     if (DEBUG) std::cout << "factor" << '\n';
     Value retval;
@@ -637,7 +689,7 @@ Value Parser::factor()
     if (token() == TokenType::L_PAREN)
     {
         advance();
-        retval = expression();
+        retval = expression(hintType);
         require(TokenType::R_PAREN);
     }
     else if (token() == TokenType::MINUS)
@@ -656,7 +708,7 @@ Value Parser::factor()
         else if (token() == TokenType::IDENTIFIER) 
         {
             // TODO Generate instructions here to mult. id. by -1?
-            retval = name();
+            retval = name(hintType);
         }
         else
         {
@@ -668,7 +720,7 @@ Value Parser::factor()
     }
     else if (token() == TokenType::IDENTIFIER)
     {
-        retval = name();
+        retval = name(hintType);
     }
     else if (curr_token.val.sym_type == S_STRING 
             || curr_token.val.sym_type == S_CHAR 
@@ -692,7 +744,7 @@ Value Parser::factor()
     return retval;
 }
 
-Value Parser::name()
+Value Parser::name(SymbolType hintType)
 {
     if (DEBUG) std::cout << "name" << '\n';
     Value val;
@@ -705,7 +757,7 @@ Value Parser::name()
     {
         // TODO deal with indexing 
         advance();
-        expression();
+        expression(SymbolType::S_INTEGER);
         require(TokenType::R_BRACKET);
     }
     return val;
