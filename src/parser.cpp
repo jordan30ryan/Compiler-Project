@@ -414,7 +414,24 @@ void Parser::assignment_statement(std::string identifier)
     Value rhs = expression(entry->sym_type);
     if (entry->sym_type != rhs.sym_type)
     {
-        //TODO
+        if (entry->sym_type == S_INTEGER && rhs.sym_type == S_FLOAT)
+        {
+            rhs.sym_type = S_INTEGER;
+            rhs.int_value = rhs.float_value;
+        }
+        else if (entry->sym_type == S_FLOAT && rhs.sym_type == S_INTEGER)
+        {
+            rhs.sym_type = S_FLOAT;
+            rhs.float_value = rhs.int_value;
+        }
+        else if (entry->sym_type == S_BOOL && rhs.sym_type == S_INTEGER)
+        {
+            rhs.sym_type = S_BOOL;
+        }
+        else if (entry->sym_type == S_INTEGER && rhs.sym_type == S_BOOL)
+        {
+            rhs.sym_type = S_INTEGER;
+        }
     }
 }
 
@@ -562,13 +579,6 @@ Value Parser::expression(SymbolType hintType=S_UNDEFINED)
         {
             err_handler->reportError("Can only invert integers (bitwise) or bools (logical)");
         }
-        // TODO: need different NOT code for ints and bools
-        /*
-        else
-        {
-            // TODO: invert val in generated code
-        }
-        */
 
         // Return becuase (not <arith_op>) can't be followed by expr_pr
         return val;
@@ -599,8 +609,24 @@ Value Parser::expression_pr(Value lhs, SymbolType hintType)
         {
             // TODO
             // If one is a bool and one an int, convert
-            //  depending on hintType
-            // If hintType is neither bool nor int, assume one type.
+            if (lhs.sym_type == S_BOOL && rhs.sym_type == S_INTEGER)
+            {
+                if (hintType == S_BOOL)
+                    rhs.sym_type = S_BOOL;
+                else if (hintType == S_INTEGER)
+                    lhs.sym_type = S_INTEGER;
+                else 
+                    lhs.sym_type = S_INTEGER; // Default to integer bitwise
+            }
+            if (lhs.sym_type == S_INTEGER && rhs.sym_type == S_BOOL)
+            {
+                if (hintType == S_BOOL)
+                    lhs.sym_type = S_BOOL;
+                else if (hintType == S_INTEGER)
+                    rhs.sym_type = S_INTEGER;
+                else 
+                    rhs.sym_type = S_INTEGER; // Default to integer bitwise
+            }
         }
         Value val = rhs; // TODO Generate code for lhs & or | with the result of arith_op
         return expression_pr(val, hintType);
@@ -625,12 +651,23 @@ Value Parser::arith_op_pr(Value lhs, SymbolType hintType)
     {
         advance();
         Value rhs = relation(hintType); 
-        //TODO
         // If one is int and one is float, 
-        //  convert float one to int or int one to float,
-        //  depending on which hintType is, or, 
-        //  if hintType is neither, just assume conversion to int.
-        // If one is neither an int nor float, error.
+        //  convert all to float
+        // Any other types can't be used here.
+        if (lhs.sym_type == S_INTEGER && rhs.sym_type == S_FLOAT)
+        {
+            lhs.float_value = lhs.int_value;
+            lhs.sym_type = S_FLOAT;
+        }
+        else if (lhs.sym_type == S_FLOAT && rhs.sym_type == S_INTEGER)
+        {
+            rhs.float_value = rhs.int_value;
+            rhs.sym_type = S_FLOAT;
+        }
+        else 
+        {
+            err_handler->reportError("Arithmetic operations are only defined on float and integer types", curr_token.line);
+        }
         return arith_op_pr(rhs, hintType);
     }
     else return lhs;
@@ -683,51 +720,25 @@ Value Parser::term_pr(Value lhs, SymbolType hintType)
     {
         advance();
         Value rhs = factor(hintType);
-        //TODO
         // If one is int and one is float, 
-        //  convert float one to int or int one to float,
-        //  depending on which hintType is, or, 
-        //  if hintType is neither, just assume conversion to int.
-        // If one is neither an int nor float, error.
+        //  convert all to float
+        // Any other types can't be used here.
         if (lhs.sym_type == S_INTEGER && rhs.sym_type == S_FLOAT)
         {
-            // TODO Convert lhs up to float
+            lhs.float_value = lhs.int_value;
+            lhs.sym_type = S_FLOAT;
         }
-        else if (rhs.sym_type == S_INTEGER && lhs.sym_type == S_FLOAT)
+        else if (lhs.sym_type == S_FLOAT && rhs.sym_type == S_INTEGER)
         {
-            // TODO Convert rhs up to float
+            rhs.float_value = rhs.int_value;
+            rhs.sym_type = S_FLOAT;
         }
-        else if (lhs.sym_type != rhs.sym_type)
+        else 
         {
-            err_handler->reportError("Incompatible types for term", curr_token.line);
-            // TODO: return something else?  idk
-            Value val;
-            val.sym_type = hintType;
-            return val;
+            err_handler->reportError("Arithmetic operations are only defined on float and integer types", curr_token.line);
         }
-
-        Value result = rhs; // TODO: Code gen (lhs [*/] rhs)
-
-        if (result.sym_type == S_INTEGER && hintType == S_FLOAT)
-        {
-            // TODO Convert val to float
-        }
-        else if (result.sym_type == S_FLOAT && hintType == S_INTEGER)
-        {
-            // TODO: Convert val to integer (floor?)
-        }
-        else if (lhs.sym_type != hintType)
-        {
-            // TODO: Is this a warning or error? Assumed warning right now
-            err_handler->reportWarning("No conversion to the expected type. Assuming float.", curr_token.line);
-            if (lhs.sym_type != S_FLOAT)
-            {
-                lhs.sym_type = S_FLOAT;
-                lhs.float_value = lhs.int_value;
-            }
-        }
-
-        return term_pr(result, hintType);
+        Value val = rhs; // TODO: Code gen (lhs [*/] rhs)
+        return term_pr(val, hintType);
     }
     else return lhs;
 }
@@ -784,7 +795,6 @@ Value Parser::factor(SymbolType hintType)
         // Literal values
         // Consume the token and get the value
         retval = advance().val;
-        // TODO: type checking 
     }
     else
     {
