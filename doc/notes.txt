@@ -643,3 +643,24 @@ pos = tellp()
 
 Literals and registers - if it's a basic literal, pass it around with Value. if it's a string literal, save it as a global and pass around the global @name in Value. Otherwise, pass around a local unnamed register in Value.
 
+
+================================================================================
+3/13
+
+Type conversion in LLVM
+
+fptoui...to - float to unsigned int
+
+%X = fptoui float 1.2 to i32
+
+
+
+
+trunc...to - between integer types
+
+%X = trunc i32 257 to i8                        ; yields i8:1
+%W = trunc <2 x i16> <i16 8, i16 7> to <2 x i8> ; yields <i8 8, i8 7>
+
+
+
+clang++ out.s src/runtime/runtime.cpp

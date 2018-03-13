@@ -10,7 +10,7 @@ const char* TokenTypeStrings[] =
 
 const char* SymbolTypeStrings[] = 
 {
-    "S_UNDEFINED", "S_STRING", "S_CHAR", "S_INTEGER", "S_FLOAT", "S_BOOL", "S_PROCEDURE"
+    "S_UNDEFINED", "S_STRING", "i8", "i32", "float", "i1", "S_PROCEDURE"
 };
 
 
@@ -22,17 +22,13 @@ Parser::Parser(ErrHandler* handler, SymbolTableManager* manager, Scanner* scan)
     curr_token.val.sym_type = S_UNDEFINED;
 
     // Initialize the llvm output stream
-    if (DEBUG)
-        llvm_out = &std::cout;
-    else
-    {
-        llvm_out = new std::ofstream("out.ll");
-    }
+    // TODO: Variable filename
+    llvm_out.open("out.ll");
 }
 
 Parser::~Parser()
 {
-    llvm_out->flush();
+    llvm_out.close();
 }
 
 TokenType Parser::token()
@@ -77,6 +73,13 @@ Token Parser::require(TokenType expected_type, bool error)
     return curr_token;
 }
 
+void Parser::decl_builtins()
+{
+    // TODO
+    llvm_out << "declare void @PUTINTEGER(i32)" << '\n';
+}
+
+// Get next available register number for use in LLVM
 std::string Parser::next_reg()
 {
     reg_no++;
@@ -84,6 +87,84 @@ std::string Parser::next_reg()
     stream << '%' << reg_no;
     return stream.str();
 }
+
+// Returns the literal value of a given Value as a string
+std::string Parser::get_val(Value val) 
+{
+    std::ostringstream stream;
+    if (val.reg != -1) 
+    {
+        int return_reg;
+        // Value is a variable register. Access its value (not pointer to it)
+        if (val.is_ptr)
+        {
+            llvm_out << '\t' << next_reg() << " = load " 
+                        << SymbolTypeStrings[val.sym_type]
+                        << ", "
+                        << SymbolTypeStrings[val.sym_type]
+                        << "* %" << val.reg << '\n';
+            return_reg = reg_no;
+        }
+        else return_reg = val.reg;
+
+        // Return the current reg (one the var was loaded into.
+        stream << '%' << return_reg; 
+    }
+    else
+    {
+        switch (val.sym_type)
+        {
+        case S_INTEGER:
+        // Fall through
+        case S_BOOL:
+            stream << val.int_value;
+            break;
+        case S_FLOAT:
+            stream << val.float_value;
+            break;
+        case S_STRING:
+            stream << val.string_value;
+            break;
+        case S_CHAR:
+            stream << val.char_value;
+            break;
+        case S_PROCEDURE:
+        case S_UNDEFINED:
+            err_handler->reportError("Bad type for literal", curr_token.line);
+        }
+    }
+
+    return stream.str();
+}
+
+/*
+std::string Parser::get_type_str(SymbolType sym_type)
+{
+    std::string retstr;
+    switch (sym_type)
+    {
+    case S_INTEGER:
+        retstr = "i32";
+        break;
+    case S_BOOL:
+        retstr = "i1";
+        break;
+    case S_FLOAT:
+        retstr = "float";
+        break;
+    case S_STRING:
+        // Fall through
+    case S_CHAR:
+        retstr = "i8";
+        break;
+    case S_PROCEDURE:
+    case S_UNDEFINED:
+        err_handler->reportError("Bad type to convert to string", curr_token.line);
+    }
+
+    return retstr;
+}
+*/
 
 void Parser::parse() 
 {
@@ -106,16 +187,19 @@ void Parser::program()
 {
     if (DEBUG) std::cout << "program" << '\n';
 
+    // Declare builtin functions in llvm file
+    decl_builtins();
+
     // Use main for outer program.
-    *llvm_out << "define i32 @main() {\n";
+    llvm_out << "define i32 @main() {\n";
 
     program_header(); 
     program_body(); 
     require(TokenType::PERIOD, false);
 
     // Return 0 from the main function always
-    *llvm_out << "\tret i32 0";
-    *llvm_out << "\n}\n";
+    llvm_out << "\tret i32 0";
+    llvm_out << "\n}\n";
 }
 
 void Parser::program_header()
@@ -284,24 +368,18 @@ SymTableEntry* Parser::var_declaration(bool is_global)
     {
     case RS_STRING:
         entry->sym_type = S_STRING;
-        // TODO how to allocate strings?
-        llvm_type = "[255 x i8]";
         break;
     case RS_CHAR:
         entry->sym_type = S_CHAR;
-        llvm_type = "i8";
         break;
     case RS_INTEGER:
         entry->sym_type = S_INTEGER;
-        llvm_type = "i32";
         break;
     case RS_FLOAT:
         entry->sym_type = S_FLOAT;
-        llvm_type = "double";
         break;
     case RS_BOOL:
         entry->sym_type = S_BOOL;
-        llvm_type = "i1";
         break;
     default:
         std::ostringstream stream;
@@ -325,7 +403,11 @@ SymTableEntry* Parser::var_declaration(bool is_global)
         require(TokenType::R_BRACKET);
         // TODO: setup the variable as an array
     }
-    *llvm_out << "\t" << next_reg() << " = alloca " << llvm_type << '\n';
+    // Allocate space for this variable and associate the 
+    //  register number with the entry
+    llvm_out << "\t" << next_reg() << " = alloca " 
+                        << SymbolTypeStrings[entry->sym_type] << '\n';
+    entry->reg = reg_no;
 
     return entry;
 }
@@ -390,36 +472,71 @@ void Parser::assignment_statement(std::string identifier)
     if (token() == TokenType::L_BRACKET)
     {
         advance();
-        Value idx = expression(SymbolType::S_INTEGER);
+        Value idx = expression(S_INTEGER);
         require(TokenType::R_BRACKET);
     }
     SymTableEntry* lhs = symtable_manager->resolve_symbol(identifier); 
     // TODO: something with indexing
     require(TokenType::ASSIGNMENT);
     Value rhs = expression(lhs->sym_type);
+    // Get the register for the expression rhs. 
+    // Also load from mem if it's a variable.
+    std::string rhs_reg_str = get_val(rhs);
+
     if (lhs->sym_type != rhs.sym_type)
     {
         if (lhs->sym_type == S_INTEGER && rhs.sym_type == S_FLOAT)
         {
             rhs.sym_type = S_INTEGER;
-            rhs.int_value = rhs.float_value;
+            // Generate code converting rhs_reg_str to a register of type float
+            llvm_out << '\t' << next_reg() << " = fptoui float " 
+                << rhs_reg_str << " to i32" << '\n';
+            // Set rhs to be this new converted value.
+            rhs.reg = reg_no;
+            // Set it to not be a pointer in case it was 
+            rhs.is_ptr = false;
+            rhs_reg_str = get_val(rhs); // This must return the modified value
         }
         else if (lhs->sym_type == S_FLOAT && rhs.sym_type == S_INTEGER)
         {
             rhs.sym_type = S_FLOAT;
-            rhs.float_value = rhs.int_value;
+            // Generate code converting rhs_reg_str to a temp register type int
+            llvm_out << '\t' << next_reg() << " = uitofp i32 " 
+                << rhs_reg_str << " to float" << '\n';
+            // Set rhs to be this new converted value.
+            rhs.reg = reg_no;
+            // Set it to not be a pointer in case it was 
+            rhs.is_ptr = false;
+            rhs_reg_str = get_val(rhs);
         }
         else if (lhs->sym_type == S_BOOL && rhs.sym_type == S_INTEGER)
         {
             rhs.sym_type = S_BOOL;
+            // TODO: Generate code converting rhs_reg_str to a temp register 
+            //  that is of type bool; assigning rhs_reg_str to the temp reg
         }
         else if (lhs->sym_type == S_INTEGER && rhs.sym_type == S_BOOL)
         {
+            // TODO: Generate code converting rhs_reg_str to a temp register 
+            //  that is of type int; assigning rhs_reg_str to the temp reg
             rhs.sym_type = S_INTEGER;
+        }
+        else 
+        {
+            err_handler->reportError("Conflicting types in assignment.", curr_token.line);
+            return;
         }
     }
     // TODO: Support something other than i32
-    *llvm_out << "\tstore i32 " << '%' << rhs.reg << ", i32* %" << lhs->reg << '\n';
+    // Have to do this first because get_val might generate more LLVM code
+    llvm_out << "\tstore "
+        << SymbolTypeStrings[rhs.sym_type]
+        << ' '
+        << rhs_reg_str 
+        << ", "
+        << SymbolTypeStrings[rhs.sym_type]
+        << "* %" 
+        << lhs->reg << '\n';
 }
 
 void Parser::proc_call(std::string identifier)
@@ -431,7 +548,7 @@ void Parser::proc_call(std::string identifier)
     SymTableEntry* proc_entry = symtable_manager->resolve_symbol(identifier); 
     if (proc_entry != NULL && proc_entry->sym_type == S_PROCEDURE)
     {
-        // TODO: call the proc defined by proc_entry in the symtable
+        // TODO: this means we're good to generate code.
     }
     else
     {
@@ -440,15 +557,37 @@ void Parser::proc_call(std::string identifier)
         err_handler->reportError(stream.str(), curr_token.line);
     }
 
+
+    std::vector<Value> arg_list;
     require(TokenType::L_PAREN);
     if (token() != TokenType::R_PAREN)
-        argument_list(proc_entry);
+        arg_list = argument_list(proc_entry);
     require(TokenType::R_PAREN);
+    
+    std::vector<std::string> arg_list_strings;
+    for (auto it = arg_list.begin(); it != arg_list.end(); ++it)
+    {
+        std::ostringstream stringbuilder;
+        stringbuilder 
+            << SymbolTypeStrings[it->sym_type]
+            << ' '
+            << get_val(*it);
+        arg_list_strings.push_back(stringbuilder.str());
+    }
+    llvm_out << "\tcall void @" << identifier << "(";
+    for (auto it = arg_list_strings.begin(); it != arg_list_strings.end(); ++it)
+    {
+        if (it != arg_list_strings.begin())
+            llvm_out << ", ";
+        llvm_out << *it;
+    }
+    llvm_out << ")\n";
 }
 
-void Parser::argument_list(SymTableEntry* proc_entry)
+std::vector<Value> Parser::argument_list(SymTableEntry* proc_entry)
 {
     if (DEBUG) std::cout << "arg list" << '\n';
+    std::vector <Value> vec;
     for (auto param : proc_entry->parameters)
     {
         Value val = expression(param->sym_type);
@@ -467,13 +606,16 @@ void Parser::argument_list(SymTableEntry* proc_entry)
             err_handler->reportError(stream.str(), curr_token.line);
         }
 
+        vec.push_back(val); 
+
         if (token() == TokenType::COMMA) 
         {
             advance();
             continue;
         }
-        else return;
+        else break;
     }
+    return vec;
 }
 
 void Parser::if_statement()
@@ -482,7 +624,7 @@ void Parser::if_statement()
     require(TokenType::RS_IF);
 
     require(TokenType::L_PAREN);
-    Value condition = expression(SymbolType::S_BOOL);
+    Value condition = expression(S_BOOL);
     require(TokenType::R_PAREN);
 
     require(TokenType::RS_THEN);
@@ -520,7 +662,7 @@ void Parser::loop_statement()
     require(TokenType::IDENTIFIER);
     assignment_statement(curr_token.val.string_value); 
     require(TokenType::SEMICOLON);
-    Value condition = expression(SymbolType::S_BOOL);
+    Value condition = expression(S_BOOL);
     require(TokenType::R_PAREN);
 
     while (true)
@@ -546,6 +688,8 @@ Value Parser::expression(SymbolType hintType=S_UNDEFINED)
 {
     if (DEBUG) std::cout << "expr" << '\n';
 
+    Value retval;
+
     // arith_op is required and defined as:
     //  relation, arith_op_pr
     // expression_pr is completely optional; defined as:
@@ -568,17 +712,69 @@ Value Parser::expression(SymbolType hintType=S_UNDEFINED)
         }
 
         // Return becuase (not <arith_op>) can't be followed by expr_pr
-        return val;
+        retval = val;
+    }
+    else 
+    {
+        // Because arith_op is required to result in something, take its value
+        //  and give it to expression_pr. expression_pr will return that value,
+        //  either modified with its operation (& or |) and another arith_op, 
+        //  (and optionally another expression_pr, and so on...)
+        //  OR, expression_pr(val) will just return val unmodified 
+        //  if there is no operator & or | as the first token.
+        Value val = arith_op(hintType); 
+        retval = expression_pr(val, hintType);
     }
 
-    // Because arith_op is required to result in something, take its value
-    //  and give it to expression_pr. expression_pr will return that value,
-    //  either modified with its operation (& or |) and another arith_op, 
-    //  (and optionally another expression_pr, and so on...)
-    //  OR, expression_pr(val) will just return val unmodified 
-    //  if there is no operator & or | as the first token.
-    Value val = arith_op(hintType); 
-    return expression_pr(val, hintType);
+    // Type conversion to expected type before returning from expression.
+    if (hintType != retval.sym_type)
+    {
+        switch (hintType) 
+        {
+        case S_INTEGER:
+            if (retval.sym_type == S_FLOAT)
+            {
+                // TODO: Convert retval to an int and return that value
+            }
+            else if (retval.sym_type == S_BOOL)
+            {
+                // TODO: Convert retval to int 
+            }
+            else 
+            {
+                // TODO: Can't convert
+            }
+            break;
+        case S_BOOL:
+            if (retval.sym_type == S_INTEGER)
+            {
+                // TODO: Convert retval to a bool (llvm trunc?) and return that value
+            }
+            else 
+            {
+                // TODO: Can't convert
+            }
+            break;
+        case S_FLOAT:
+            if (retval.sym_type == S_INTEGER)
+            {
+                // TODO: Convert retval to a float and return that value
+            }
+            break;
+        case S_STRING:
+        // Fall through
+        case S_CHAR:
+            // TODO: Can't convert
+            break;
+        case S_UNDEFINED:
+            // TODO: Can't convert. Just warn.
+            break;
+        case S_PROCEDURE:
+            // TODO: Can't convert. How'd this happen?
+            break;
+        }
+    }
+    return retval;
 }
 
 // lhs - left hand side of this operation. 
@@ -636,26 +832,50 @@ Value Parser::arith_op_pr(Value lhs, SymbolType hintType)
     // TODO: Same idea as expression_pr (and same for all other _pr fxns)
     if (token() == TokenType::PLUS || token() == TokenType::MINUS)
     {
-        advance();
+        // Advance and save current token's operator.
+        TokenType op = advance().type;
+
         Value rhs = relation(hintType); 
         // If one is int and one is float, 
-        //  convert all to float
+        //  convert all to float to get the most precision.
         // Any other types can't be used here.
-        if (lhs.sym_type == S_INTEGER && rhs.sym_type == S_FLOAT)
+        if (lhs.sym_type != rhs.sym_type)
         {
-            lhs.float_value = lhs.int_value;
-            lhs.sym_type = S_FLOAT;
+            if (lhs.sym_type == S_INTEGER && rhs.sym_type == S_FLOAT)
+            {
+                lhs.float_value = lhs.int_value;
+                lhs.sym_type = S_FLOAT;
+            }
+            else if (lhs.sym_type == S_FLOAT && rhs.sym_type == S_INTEGER)
+            {
+                rhs.float_value = rhs.int_value;
+                rhs.sym_type = S_FLOAT;
+            }
+            else 
+            {
+                err_handler->reportError("Arithmetic operations are only defined on float and integer types", curr_token.line);
+                // TODO: Return?
+            }
         }
-        else if (lhs.sym_type == S_FLOAT && rhs.sym_type == S_INTEGER)
-        {
-            rhs.float_value = rhs.int_value;
-            rhs.sym_type = S_FLOAT;
-        }
-        else 
-        {
-            err_handler->reportError("Arithmetic operations are only defined on float and integer types", curr_token.line);
-        }
-        return arith_op_pr(rhs, hintType);
+        // Need to get value string here because it might requrie code gen
+        //  (for loading from variable pointers)
+        std::string lhs_str = get_val(lhs);
+        std::string rhs_str = get_val(rhs);
+        llvm_out << '\t' << next_reg() << " = "
+            << (op == TokenType::PLUS ? "add" : "sub") 
+            << ' '
+            << SymbolTypeStrings[lhs.sym_type]
+            << ' '
+            << lhs_str
+            << ", "
+            << rhs_str
+            << '\n';
+
+        Value result;
+        result.reg = reg_no;
+        result.sym_type = lhs.sym_type;
+
+        return arith_op_pr(result, hintType);
     }
     else return lhs;
 }
@@ -773,22 +993,9 @@ Value Parser::factor(SymbolType hintType)
     {
         retval = name(hintType);
     }
-    else if (curr_token.val.sym_type == S_INTEGER)
-    {
-        // Consume the token and get the value
-        retval = advance().val;
-
-        // TODO: Support all types, not just int.
-        // TODO: This doesn't work. becuase it's an int literal, it should use the number and not store in a local register.
-        //  Possible solution would be save this as a global variable, though that isn't supported yet.
-        //  Maybe then the pointer can just be passed around? But then we need to know that it's a pointer and not a register.
-        // ALTERNATIVELY, know when something is a literal and communicate that info inside Value 
-        //  (i.e. Value.isConst = true), and then keep saving the int/float/str/char value inside Value (Maybe use a union?).
-        *llvm_out << '\t' << next_reg() << " = " << retval.int_value << '\n';
-        retval.reg = reg_no;
-    }
     else if (curr_token.val.sym_type == S_STRING 
             || curr_token.val.sym_type == S_CHAR 
+            || curr_token.val.sym_type == S_INTEGER
             || curr_token.val.sym_type == S_FLOAT
             || curr_token.val.sym_type == S_BOOL)
     {
@@ -823,6 +1030,9 @@ Value Parser::name(SymbolType hintType)
         expression(SymbolType::S_INTEGER);
         require(TokenType::R_BRACKET);
     }
+
+    val.reg = entry->reg;
+    val.is_ptr = true;
     return val;
 }
 

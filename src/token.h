@@ -29,8 +29,10 @@ struct Value
 {
     SymbolType sym_type;
 
-    // LLVM Register number
-    int reg;
+    // LLVM Register number. -1 if literal or unassigned.
+    int reg = -1;
+    // LLVM Resgister - is it a pointer?
+    bool is_ptr = false;
 
     std::string string_value;
     char char_value;

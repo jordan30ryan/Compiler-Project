@@ -36,7 +36,7 @@ struct SymTableEntry
     // For identifers where the type is known
     SymTableEntry(TokenType t, SymbolType st) : type(t), sym_type(st) {}
 
-    // The LLVM register that points to this symbol variable
+    // The LLVM register (pointer) for this symbol (variable)
     int reg;
 };
 
@@ -99,3 +99,4 @@ private:
     // (essentially, this tracks curr_symbols and curr_proc for inner scopes)
     std::stack<std::pair<SymTable*, SymTableEntry*>> scope_stack;
 };
+

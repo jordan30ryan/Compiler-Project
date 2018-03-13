@@ -15,9 +15,13 @@ public:
     void parse();
 private:
     // The stream to output LLVM to. Can be a file or stdout (for debugging)
-    std::ostream* llvm_out;
+    std::ofstream llvm_out;
 
     // For use in LLVM assembly codegen. 
+    // Declare builtin functions in the llvm output file
+    void decl_builtins();
+    // Get value of val; can be either a literal or a register
+    std::string get_val(Value val);
     // Get next unnamed register.
     std::string next_reg();
     int reg_no = 0; // Current numbered register.
@@ -62,7 +66,7 @@ private:
     void identifier_statement();
     void assignment_statement(std::string);
     void proc_call(std::string);
-    void argument_list(SymTableEntry* proc_entry);
+    std::vector<Value> argument_list(SymTableEntry* proc_entry);
 
     void if_statement();
     void loop_statement();

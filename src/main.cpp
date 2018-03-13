@@ -18,6 +18,7 @@ void compile(char* filename, ErrHandler* err_handler)
         return;
     }
 
+
     // Parse the tokens
     Parser* parser = new Parser(err_handler, sym_manager, scanner);
     parser->parse();

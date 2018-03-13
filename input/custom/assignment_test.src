@@ -1,0 +1,14 @@
+program assignments is
+    integer a;
+    integer b;
+    integer c;
+    float d;
+begin
+    a := 2;
+    b := 2;
+    c := a + b;
+    c := c - 1;
+    d := c;
+    a := 1.5;
+    putInteger(a);
+end program.
