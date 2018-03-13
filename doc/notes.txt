@@ -641,4 +641,5 @@ pos = tellp()
 
 
 
+Literals and registers - if it's a basic literal, pass it around with Value. if it's a string literal, save it as a global and pass around the global @name in Value. Otherwise, pass around a local unnamed register in Value.
 
