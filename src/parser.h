@@ -11,8 +11,17 @@ class Parser
 {
 public:
     Parser(ErrHandler* handler, SymbolTableManager* manager, Scanner* scan);
+    ~Parser();
     void parse();
 private:
+    // The stream to output LLVM to. Can be a file or stdout (for debugging)
+    std::ostream* llvm_out;
+
+    // For use in LLVM assembly codegen. 
+    // Get next unnamed register.
+    std::string next_reg();
+    int reg_no = 0; // Current numbered register.
+
     ErrHandler* err_handler;
     SymbolTableManager* symtable_manager;
     Scanner* scanner;
@@ -24,6 +33,7 @@ private:
     // Ensure current_token has type t, 
     //  if not, report err (if error=true) or warning 
     Token require(TokenType t, bool error=true);
+
 
     // Convert val to expected, if possible.
     void convertType(Value& val, SymbolType expected);

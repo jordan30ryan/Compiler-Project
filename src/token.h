@@ -29,6 +29,9 @@ struct Value
 {
     SymbolType sym_type;
 
+    // LLVM Register number
+    int reg;
+
     std::string string_value;
     char char_value;
     int int_value;

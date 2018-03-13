@@ -20,6 +20,19 @@ Parser::Parser(ErrHandler* handler, SymbolTableManager* manager, Scanner* scan)
     // Initialize curr_token so old values aren't used 
     curr_token.type = UNKNOWN;
     curr_token.val.sym_type = S_UNDEFINED;
+
+    // Initialize the llvm output stream
+    if (DEBUG)
+        llvm_out = &std::cout;
+    else
+    {
+        llvm_out = new std::ofstream("out.ll");
+    }
+}
+
+Parser::~Parser()
+{
+    llvm_out->flush();
 }
 
 TokenType Parser::token()
@@ -64,55 +77,13 @@ Token Parser::require(TokenType expected_type, bool error)
     return curr_token;
 }
 
-// TODO: This doesn't really work ???
-/*
-// Convert val to expected, if possible.
-void Parser::convertType(Value& val, SymbolType expected)
+std::string Parser::next_reg()
 {
-    if (val.sym_type == expected) return;
-
-    switch (expected)
-    {
-    case S_INTEGER:
-        if (val.sym_type == S_FLOAT) 
-        {
-            val.int_value = val.float_value;
-            val.sym_type = S_INTEGER;
-        }
-        else if (lhs.sym_type == S_BOOL)
-        {
-            // bool value is already stored in int_value
-            val.sym_type = S_INTEGER;
-        }
-        else 
-        {
-            // TODO: error. can't convert anything else to int
-        }
-        break;
-    case S_BOOL:
-        if (lhs.sym_type == S_INTEGER) 
-        {
-            // bool value is already stored in int_value
-            lhs.sym_type = S_BOOL;
-        }
-        else 
-        {
-            // TODO: error. can't convert anything else to bool
-        }
-        break;
-    case S_FLOAT:
-        // TODO
-        if (lhs.sym_type == S_INTEGER)
-        break;
-    case S_CHAR:
-        break;
-    case S_STRING:
-        break;
-    default:
-        break;
-    }
+    reg_no++;
+    std::ostringstream stream;
+    stream << '%' << reg_no;
+    return stream.str();
 }
-*/
 
 void Parser::parse() 
 {
@@ -127,16 +98,24 @@ void Parser::parse()
     }
     catch (std::runtime_error& err)
     {
-        if (!synchronized) err_handler->reportError(err.what());
+        if (!synchronized) err_handler->reportError(err.what(), curr_token.line);
     }
 }
 
 void Parser::program()
 {
     if (DEBUG) std::cout << "program" << '\n';
+
+    // Use main for outer program.
+    *llvm_out << "define i32 @main() {\n";
+
     program_header(); 
     program_body(); 
     require(TokenType::PERIOD, false);
+
+    // Return 0 from the main function always
+    *llvm_out << "\tret i32 0";
+    *llvm_out << "\n}\n";
 }
 
 void Parser::program_header()
@@ -146,7 +125,6 @@ void Parser::program_header()
 
     require(TokenType::IDENTIFIER);
     std::string program_name = curr_token.val.string_value;
-    std::cout << "Prog. name is " << program_name << '\n';
 
     require(TokenType::RS_IS);
 }
@@ -299,23 +277,31 @@ SymTableEntry* Parser::var_declaration(bool is_global)
         err_handler->reportError(stream.str(), curr_token.line);
     }
 
+    std::string llvm_type;
+
     // TODO: Better way to do this? lol
     switch (typemark)
     {
     case RS_STRING:
         entry->sym_type = S_STRING;
+        // TODO how to allocate strings?
+        llvm_type = "[255 x i8]";
         break;
     case RS_CHAR:
         entry->sym_type = S_CHAR;
+        llvm_type = "i8";
         break;
     case RS_INTEGER:
         entry->sym_type = S_INTEGER;
+        llvm_type = "i32";
         break;
     case RS_FLOAT:
         entry->sym_type = S_FLOAT;
+        llvm_type = "double";
         break;
     case RS_BOOL:
         entry->sym_type = S_BOOL;
+        llvm_type = "i1";
         break;
     default:
         std::ostringstream stream;
@@ -339,6 +325,7 @@ SymTableEntry* Parser::var_declaration(bool is_global)
         require(TokenType::R_BRACKET);
         // TODO: setup the variable as an array
     }
+    *llvm_out << "\t" << next_reg() << " = alloca " << llvm_type << '\n';
 
     return entry;
 }
@@ -398,41 +385,41 @@ void Parser::identifier_statement()
 void Parser::assignment_statement(std::string identifier)
 {
     if (DEBUG) std::cout << "assignment stmnt" << '\n';
-//    std::cout << "iden:" << identifier 
-//                << "\tType: " << (*curr_symbols)[identifier]->sym_type << '\n';
 
     // already have identifier; need to check for indexing first
     if (token() == TokenType::L_BRACKET)
     {
         advance();
-        expression(SymbolType::S_INTEGER);
+        Value idx = expression(SymbolType::S_INTEGER);
         require(TokenType::R_BRACKET);
     }
-    SymTableEntry* entry = symtable_manager->resolve_symbol(identifier); 
+    SymTableEntry* lhs = symtable_manager->resolve_symbol(identifier); 
     // TODO: something with indexing
     require(TokenType::ASSIGNMENT);
-    Value rhs = expression(entry->sym_type);
-    if (entry->sym_type != rhs.sym_type)
+    Value rhs = expression(lhs->sym_type);
+    if (lhs->sym_type != rhs.sym_type)
     {
-        if (entry->sym_type == S_INTEGER && rhs.sym_type == S_FLOAT)
+        if (lhs->sym_type == S_INTEGER && rhs.sym_type == S_FLOAT)
         {
             rhs.sym_type = S_INTEGER;
             rhs.int_value = rhs.float_value;
         }
-        else if (entry->sym_type == S_FLOAT && rhs.sym_type == S_INTEGER)
+        else if (lhs->sym_type == S_FLOAT && rhs.sym_type == S_INTEGER)
         {
             rhs.sym_type = S_FLOAT;
             rhs.float_value = rhs.int_value;
         }
-        else if (entry->sym_type == S_BOOL && rhs.sym_type == S_INTEGER)
+        else if (lhs->sym_type == S_BOOL && rhs.sym_type == S_INTEGER)
         {
             rhs.sym_type = S_BOOL;
         }
-        else if (entry->sym_type == S_INTEGER && rhs.sym_type == S_BOOL)
+        else if (lhs->sym_type == S_INTEGER && rhs.sym_type == S_BOOL)
         {
             rhs.sym_type = S_INTEGER;
         }
     }
+    // TODO: Support something other than i32
+    *llvm_out << "\tstore i32 " << '%' << rhs.reg << ", i32* %" << lhs->reg << '\n';
 }
 
 void Parser::proc_call(std::string identifier)
@@ -477,7 +464,7 @@ void Parser::argument_list(SymTableEntry* proc_entry)
                 << "Procedure call paramater type doesn't match expected type."
                 << "\n\tGot:\t\t" << SymbolTypeStrings[val.sym_type] 
                 << "\n\tExpected:\t" << SymbolTypeStrings[param->sym_type];
-            err_handler->reportError(stream.str());
+            err_handler->reportError(stream.str(), curr_token.line);
         }
 
         if (token() == TokenType::COMMA) 
@@ -508,7 +495,7 @@ void Parser::if_statement()
         bool valid = statement();
         if (first_stmnt && !valid)
         {
-            err_handler->reportError("No statement in IF body");
+            err_handler->reportError("No statement in IF body", curr_token.line);
         }
         first_stmnt = false;
         require(TokenType::SEMICOLON);
@@ -577,7 +564,7 @@ Value Parser::expression(SymbolType hintType=S_UNDEFINED)
         }
         else
         {
-            err_handler->reportError("Can only invert integers (bitwise) or bools (logical)");
+            err_handler->reportError("Can only invert integers (bitwise) or bools (logical)", curr_token.line);
         }
 
         // Return becuase (not <arith_op>) can't be followed by expr_pr
@@ -778,7 +765,7 @@ Value Parser::factor(SymbolType hintType)
         {
             std::ostringstream stream;
             stream << "Bad token following negative sign: " << TokenTypeStrings[token()];
-            err_handler->reportError(stream.str());
+            err_handler->reportError(stream.str(), curr_token.line);
             advance();
         }
     }
@@ -786,9 +773,22 @@ Value Parser::factor(SymbolType hintType)
     {
         retval = name(hintType);
     }
+    else if (curr_token.val.sym_type == S_INTEGER)
+    {
+        // Consume the token and get the value
+        retval = advance().val;
+
+        // TODO: Support all types, not just int.
+        // TODO: This doesn't work. becuase it's an int literal, it should use the number and not store in a local register.
+        //  Possible solution would be save this as a global variable, though that isn't supported yet.
+        //  Maybe then the pointer can just be passed around? But then we need to know that it's a pointer and not a register.
+        // ALTERNATIVELY, know when something is a literal and communicate that info inside Value 
+        //  (i.e. Value.isConst = true), and then keep saving the int/float/str/char value inside Value (Maybe use a union?).
+        *llvm_out << '\t' << next_reg() << " = " << retval.int_value << '\n';
+        retval.reg = reg_no;
+    }
     else if (curr_token.val.sym_type == S_STRING 
             || curr_token.val.sym_type == S_CHAR 
-            || curr_token.val.sym_type == S_INTEGER
             || curr_token.val.sym_type == S_FLOAT
             || curr_token.val.sym_type == S_BOOL)
     {

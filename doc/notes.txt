@@ -621,3 +621,24 @@ TODO: Get rid of tokentypestrings. Each token should store the original token st
 2/27
 
 Start working with code generation
+
+
+================================================================================
+3/12
+
+How to define procedures in the llvm files?
+
+Go to position in stream
+seekp(off, pos)
+
+off - 0
+pos - ios_base::end 
+    - ios_base::beg
+
+
+Get current position in stream
+pos = tellp()
+
+
+
+

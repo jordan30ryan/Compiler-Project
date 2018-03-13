@@ -1,0 +1,27 @@
+program typeConv is
+    integer a;
+    float b;
+    char c;
+    string d;
+    bool e;
+
+    integer intout;
+
+    procedure foo(integer a inout, integer b in, integer c out) 
+        begin 
+            c := a + b;
+    end procedure;
+
+begin
+    b := 1.2;
+
+    a := b; // Allowed; a = 1.
+    a := c; // Not allowed; no implicit int to char
+    a := d; // Not allowed; no implicit int to str
+
+    e := c == 'a'; // Allowed; relational compare of two chars returns a bool
+
+    foo(1.2, 1, intout); // Allowed; automatic conversion between int/float. 
+    putinteger(intout);
+
+end program.

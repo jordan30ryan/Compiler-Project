@@ -35,6 +35,9 @@ struct SymTableEntry
     SymTableEntry(TokenType t) : type(t) {}
     // For identifers where the type is known
     SymTableEntry(TokenType t, SymbolType st) : type(t), sym_type(st) {}
+
+    // The LLVM register that points to this symbol variable
+    int reg;
 };
 
 class SymbolTableManager
