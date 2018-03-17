@@ -11,4 +11,6 @@ begin
     d := c;
     a := 1.5;
     putInteger(a);
+    b := b * 3;
+    putInteger(b);
 end program.

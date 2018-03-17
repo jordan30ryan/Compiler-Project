@@ -75,8 +75,11 @@ Token Parser::require(TokenType expected_type, bool error)
 
 void Parser::decl_builtins()
 {
-    // TODO
     llvm_out << "declare void @PUTINTEGER(i32)" << '\n';
+    llvm_out << "declare void @PUTFLOAT(i32)" << '\n';
+    llvm_out << "declare void @PUTCHAR(i32)" << '\n';
+    llvm_out << "declare void @PUTSTRING(i32)" << '\n';
+    llvm_out << "declare void @PUTBOOL(i32)" << '\n';
 }
 
 // Get next available register number for use in LLVM
@@ -917,6 +920,7 @@ Value Parser::term(SymbolType hintType)
     return term_pr(val, hintType);
 }
 
+// Multiplication / Division 
 Value Parser::term_pr(Value lhs, SymbolType hintType)
 {
     if (DEBUG) std::cout << "term pr" << '\n';
@@ -925,27 +929,47 @@ Value Parser::term_pr(Value lhs, SymbolType hintType)
     if (token() == TokenType::MULTIPLICATION 
         || token() == TokenType::DIVISION)
     {
-        advance();
+        TokenType op = advance().type;
         Value rhs = factor(hintType);
-        // If one is int and one is float, 
-        //  convert all to float
-        // Any other types can't be used here.
-        if (lhs.sym_type == S_INTEGER && rhs.sym_type == S_FLOAT)
+        if (lhs.sym_type != rhs.sym_type)
         {
-            lhs.float_value = lhs.int_value;
-            lhs.sym_type = S_FLOAT;
+            // If one is int and one is float, 
+            //  convert all to float
+            // Any other types can't be used here.
+            if (lhs.sym_type == S_INTEGER && rhs.sym_type == S_FLOAT)
+            {
+                lhs.float_value = lhs.int_value;
+                lhs.sym_type = S_FLOAT;
+            }
+            else if (lhs.sym_type == S_FLOAT && rhs.sym_type == S_INTEGER)
+            {
+                rhs.float_value = rhs.int_value;
+                rhs.sym_type = S_FLOAT;
+            }
+            else 
+            {
+                err_handler->reportError("Term operations (multiplication and division) are only defined on float and integer types.", curr_token.line);
+            }
         }
-        else if (lhs.sym_type == S_FLOAT && rhs.sym_type == S_INTEGER)
-        {
-            rhs.float_value = rhs.int_value;
-            rhs.sym_type = S_FLOAT;
-        }
-        else 
-        {
-            err_handler->reportError("Arithmetic operations are only defined on float and integer types", curr_token.line);
-        }
-        Value val = rhs; // TODO: Code gen (lhs [*/] rhs)
-        return term_pr(val, hintType);
+
+        std::string lhs_str = get_val(lhs);
+        std::string rhs_str = get_val(rhs);
+        llvm_out << '\t' << next_reg() << " = "
+            // TODO: udiv (unsigned int)? fdiv (floating point)? 
+            << (op == TokenType::MULTIPLICATION ? "mul" : "udiv") 
+            << ' '
+            << SymbolTypeStrings[lhs.sym_type]
+            << ' '
+            << lhs_str
+            << ", "
+            << rhs_str
+            << '\n';
+
+        Value result;
+        result.reg = reg_no;
+        result.sym_type = lhs.sym_type;
+
+        return term_pr(result, hintType);
     }
     else return lhs;
 }
