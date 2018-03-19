@@ -1,0 +1,7 @@
+program assignments is
+    float f;
+begin
+    f := 2.5;
+    //f := 2.3; // HOW
+    putfloat(f);
+end program.

@@ -76,10 +76,10 @@ Token Parser::require(TokenType expected_type, bool error)
 void Parser::decl_builtins()
 {
     llvm_out << "declare void @PUTINTEGER(i32)" << '\n';
-    llvm_out << "declare void @PUTFLOAT(i32)" << '\n';
-    llvm_out << "declare void @PUTCHAR(i32)" << '\n';
-    llvm_out << "declare void @PUTSTRING(i32)" << '\n';
-    llvm_out << "declare void @PUTBOOL(i32)" << '\n';
+    llvm_out << "declare void @PUTFLOAT(float)" << '\n';
+    llvm_out << "declare void @PUTCHAR(i8)" << '\n';
+    llvm_out << "declare void @PUTSTRING(i8*)" << '\n';
+    llvm_out << "declare void @PUTBOOL(i1)" << '\n';
 }
 
 // Get next available register number for use in LLVM

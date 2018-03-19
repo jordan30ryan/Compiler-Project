@@ -15,9 +15,9 @@ void PUTFLOAT(float val)
     printf("%f", val);
 }
 
-void PUTBOOL(bool val)
+void PUTBOOL(int val)
 {
-    printf("%d", val);
+    printf("%s", val? "true" : "false");
 }
 
 void PUTSTRING(char* str)
