@@ -8,7 +8,14 @@
 
 void compile(char* filename, ErrHandler* err_handler)
 {
-    std::cout << "\nCompiling " << filename << '\n';
+    // Remove extension from input filename
+    std::string filenamestr(filename);
+    int extidx = filenamestr.find(".src");
+    std::cout << extidx;
+    if (extidx > 0)
+        filenamestr = filenamestr.substr(0, extidx);
+
+    std::cout << "\nCompiling " << filenamestr << '\n';
     SymbolTableManager* sym_manager = new SymbolTableManager(err_handler);
 
     Scanner* scanner = new Scanner(err_handler, sym_manager);
@@ -20,13 +27,15 @@ void compile(char* filename, ErrHandler* err_handler)
 
 
     // Parse the tokens
-    Parser* parser = new Parser(err_handler, sym_manager, scanner);
+    Parser* parser = new Parser(err_handler, sym_manager, scanner, filenamestr);
     parser->parse();
 
     // Delete instances
     delete sym_manager;
     delete scanner;
     delete parser;
+
+
 }
 
 /*

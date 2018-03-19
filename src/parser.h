@@ -10,7 +10,7 @@
 class Parser
 {
 public:
-    Parser(ErrHandler* handler, SymbolTableManager* manager, Scanner* scan);
+    Parser(ErrHandler* handler, SymbolTableManager* manager, Scanner* scan, std::string filename);
     ~Parser();
     void parse();
 private:

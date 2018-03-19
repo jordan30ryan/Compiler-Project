@@ -14,16 +14,16 @@ const char* SymbolTypeStrings[] =
 };
 
 
-Parser::Parser(ErrHandler* handler, SymbolTableManager* manager, Scanner* scan)
-    : err_handler(handler), symtable_manager(manager), scanner(scan) 
+Parser::Parser(ErrHandler* handler, SymbolTableManager* manager, Scanner* scan, std::string filename)
+    : err_handler(handler), symtable_manager(manager), scanner(scan)
 { 
     // Initialize curr_token so old values aren't used 
     curr_token.type = UNKNOWN;
     curr_token.val.sym_type = S_UNDEFINED;
 
     // Initialize the llvm output stream
-    // TODO: Variable filename
-    llvm_out.open("out.ll");
+    filename.append(".ll");
+    llvm_out.open(filename);
 }
 
 Parser::~Parser()
@@ -80,6 +80,12 @@ void Parser::decl_builtins()
     llvm_out << "declare void @PUTCHAR(i8)" << '\n';
     llvm_out << "declare void @PUTSTRING(i8*)" << '\n';
     llvm_out << "declare void @PUTBOOL(i1)" << '\n';
+
+    llvm_out << "declare i32 @GETINTEGER()" << '\n';
+    llvm_out << "declare float @GETFLOAT()" << '\n';
+    llvm_out << "declare i8 @GETCHAR()" << '\n';
+    llvm_out << "declare i8* @GETSTRING()" << '\n';
+    llvm_out << "declare i1 @GETBOOL()" << '\n';
 }
 
 // Get next available register number for use in LLVM
@@ -139,35 +145,6 @@ std::string Parser::get_val(Value val)
 
     return stream.str();
 }
-
-/*
-std::string Parser::get_type_str(SymbolType sym_type)
-{
-    std::string retstr;
-    switch (sym_type)
-    {
-    case S_INTEGER:
-        retstr = "i32";
-        break;
-    case S_BOOL:
-        retstr = "i1";
-        break;
-    case S_FLOAT:
-        retstr = "float";
-        break;
-    case S_STRING:
-        // Fall through
-    case S_CHAR:
-        retstr = "i8";
-        break;
-    case S_PROCEDURE:
-    case S_UNDEFINED:
-        err_handler->reportError("Bad type to convert to string", curr_token.line);
-    }
-
-    return retstr;
-}
-*/
 
 void Parser::parse() 
 {
@@ -560,7 +537,6 @@ void Parser::proc_call(std::string identifier)
         err_handler->reportError(stream.str(), curr_token.line);
     }
 
-
     std::vector<Value> arg_list;
     require(TokenType::L_PAREN);
     if (token() != TokenType::R_PAREN)
@@ -832,7 +808,7 @@ Value Parser::arith_op(SymbolType hintType)
 Value Parser::arith_op_pr(Value lhs, SymbolType hintType)
 {
     if (DEBUG) std::cout << "arith op pr" << '\n';
-    // TODO: Same idea as expression_pr (and same for all other _pr fxns)
+
     if (token() == TokenType::PLUS || token() == TokenType::MINUS)
     {
         // Advance and save current token's operator.
@@ -894,7 +870,7 @@ Value Parser::relation(SymbolType hintType)
 Value Parser::relation_pr(Value lhs, SymbolType hintType)
 {
     if (DEBUG) std::cout << "relation pr" << '\n';
-    // TODO: Same idea as expression_pr (and same for all other _pr fxns)
+
     if ((token() == TokenType::LT)
         | (token() == TokenType::GT)
         | (token() == TokenType::LT_EQ)
@@ -924,7 +900,7 @@ Value Parser::term(SymbolType hintType)
 Value Parser::term_pr(Value lhs, SymbolType hintType)
 {
     if (DEBUG) std::cout << "term pr" << '\n';
-    // TODO: Same idea as expression_pr (and same for all other _pr fxns)
+
 
     if (token() == TokenType::MULTIPLICATION 
         || token() == TokenType::DIVISION)
@@ -955,8 +931,10 @@ Value Parser::term_pr(Value lhs, SymbolType hintType)
         std::string lhs_str = get_val(lhs);
         std::string rhs_str = get_val(rhs);
         llvm_out << '\t' << next_reg() << " = "
-            // TODO: udiv (unsigned int)? fdiv (floating point)? 
-            << (op == TokenType::MULTIPLICATION ? "mul" : "udiv") 
+            // Multiplication
+            << (op == TokenType::MULTIPLICATION ? "mul" : 
+                // fdiv (floating) / udiv (unsigned int)
+                lhs.sym_type == S_FLOAT ? "fdiv" : "udiv") 
             << ' '
             << SymbolTypeStrings[lhs.sym_type]
             << ' '
