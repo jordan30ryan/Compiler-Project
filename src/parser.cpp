@@ -468,6 +468,7 @@ void Parser::assignment_statement(std::string identifier)
     // Type conversion
     if (lhs->sym_type != rhs.sym_type)
     {
+        // TODO: Pull this out into a function for use anywhere
         if (lhs->sym_type == S_INTEGER && rhs.sym_type == S_FLOAT)
         {
             rhs.sym_type = S_INTEGER;
@@ -827,6 +828,7 @@ Value Parser::arith_op_pr(Value lhs, SymbolType hintType)
         // Any other types can't be used here.
         if (lhs.sym_type != rhs.sym_type)
         {
+            // TODO: Convert if lhs/rhs are registers. (Use new function)
             if (lhs.sym_type == S_INTEGER && rhs.sym_type == S_FLOAT)
             {
                 lhs.float_value = lhs.int_value;
@@ -916,6 +918,7 @@ Value Parser::term_pr(Value lhs, SymbolType hintType)
         Value rhs = factor(hintType);
         if (lhs.sym_type != rhs.sym_type)
         {
+            // TODO: Convert if lhs/rhs are registers. (Use new function)
             // If one is int and one is float, 
             //  convert all to float
             // Any other types can't be used here.
@@ -940,6 +943,7 @@ Value Parser::term_pr(Value lhs, SymbolType hintType)
         llvm_out << '\t' << next_reg() << " = "
             // Multiplication
             << (op == TokenType::MULTIPLICATION ? "mul" : 
+                // Division
                 // fdiv (floating) / udiv (unsigned int)
                 lhs.sym_type == S_FLOAT ? "fdiv" : "udiv") 
             << ' '
