@@ -458,11 +458,14 @@ void Parser::assignment_statement(std::string identifier)
     SymTableEntry* lhs = symtable_manager->resolve_symbol(identifier); 
     // TODO: something with indexing
     require(TokenType::ASSIGNMENT);
+
     Value rhs = expression(lhs->sym_type);
+
     // Get the register for the expression rhs. 
     // Also load from mem if it's a variable.
     std::string rhs_reg_str = get_val(rhs);
 
+    // Type conversion
     if (lhs->sym_type != rhs.sym_type)
     {
         if (lhs->sym_type == S_INTEGER && rhs.sym_type == S_FLOAT)
@@ -507,7 +510,7 @@ void Parser::assignment_statement(std::string identifier)
             return;
         }
     }
-    // TODO: Support something other than i32
+
     // Have to do this first because get_val might generate more LLVM code
     llvm_out << "\tstore "
         << SymbolTypeStrings[rhs.sym_type]
@@ -681,9 +684,13 @@ Value Parser::expression(SymbolType hintType=S_UNDEFINED)
         Value val = arith_op(hintType);
         if (val.sym_type == S_INTEGER)
         {
+            std::string valstr = get_val(val);
+            llvm_out << '\t' << next_reg() << " = xor i32 " << valstr << ", -1" << '\n';
         }
         else if (val.sym_type == S_BOOL)
         {
+            std::string valstr = get_val(val);
+            llvm_out << '\t' << next_reg() << " = xor i1 " << valstr << ", -1" << '\n';
         }
         else
         {

@@ -677,3 +677,13 @@ help
 Floating point thing
 
 Signed or unsigned ints?
+
+
+How to make the compile process easier?
+Right now I'm doing:
+./bin/compiler -> inputfile.ll
+llc inputfile.ll
+clang inputfile.s ./src/runtime/runtime.c
+
+
+

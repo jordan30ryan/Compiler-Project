@@ -6,23 +6,23 @@
 #include <iostream>
 
 
-void compile(char* filename, ErrHandler* err_handler)
+bool compile(char* filename, ErrHandler* err_handler)
 {
     // Remove extension from input filename
     std::string filenamestr(filename);
     int extidx = filenamestr.find(".src");
-    std::cout << extidx;
     if (extidx > 0)
         filenamestr = filenamestr.substr(0, extidx);
 
-    std::cout << "\nCompiling " << filenamestr << '\n';
+    std::cout << "Compiling: " << filenamestr << '\n';
+
     SymbolTableManager* sym_manager = new SymbolTableManager(err_handler);
 
     Scanner* scanner = new Scanner(err_handler, sym_manager);
     if (!scanner->init(filename))
     {
         err_handler->reportError("Scanner initialization failed. Ensure the input file is valid.");
-        return;
+        return false;
     }
 
 
@@ -35,14 +35,14 @@ void compile(char* filename, ErrHandler* err_handler)
     delete scanner;
     delete parser;
 
-
+    // TODO: Compile ll / link with runtime?
+    return true;
 }
 
 /*
 Return codes
 1 - No filename given
-2 - Empty file or I/O error (no tokens given by scanner)
-3 - Some errors reported by err_handler
+2 - Some errors reported by err_handler
 */
 int main(int argc, char** argv)
 {
@@ -62,7 +62,7 @@ int main(int argc, char** argv)
     if (err_handler->errors)
     {
         std::cerr << err_handler->errors << " error(s) reported during scanner/parser phase.\n";
-        return 3;
+        return 2;
     }   
 
     return 0;

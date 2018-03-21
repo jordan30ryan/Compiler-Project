@@ -1,0 +1,13 @@
+program assignments is
+    bool f;
+    integer i;
+begin
+    f := false;
+    f := not f;
+    i := 2;
+    i := not i;
+    putbool(f);
+    putinteger(i);
+    i := not 1;
+    putinteger(i);
+end program.
