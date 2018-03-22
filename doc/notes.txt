@@ -686,4 +686,7 @@ llc inputfile.ll
 clang inputfile.s ./src/runtime/runtime.c
 
 
+================================================================================
+3/22
 
+bitwise weirdness (esp. with not)

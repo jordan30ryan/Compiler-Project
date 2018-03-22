@@ -168,7 +168,9 @@ void Parser::convert_type(Value& val, std::string& val_reg_str, SymbolType requi
         }
         else
         {
-            // TODO: Convert literal 
+            // Convert literal 
+            val.float_value = val.int_value;
+            val.sym_type = S_FLOAT;
         }
     }
     else if (required_type == S_FLOAT && val.sym_type == S_INTEGER)
@@ -188,20 +190,35 @@ void Parser::convert_type(Value& val, std::string& val_reg_str, SymbolType requi
         }
         else 
         {
-            // TODO: Convert literal 
+            // Convert literal 
+            val.float_value = val.int_value;
+            val.sym_type = S_FLOAT;
         }
     }
     else if (required_type == S_BOOL && val.sym_type == S_INTEGER)
     {
         val.sym_type = S_BOOL;
-        // TODO: Generate code converting val_reg_str to a temp register 
-        //  that is of type bool; assigning val_reg_str to the temp reg
+        llvm_out << '\t' << next_reg() << " = trunc i32 " 
+            << val_reg_str << " to i1" << '\n';
+        // Set val to be this new converted value.
+        val.reg = reg_no;
+        // Set it to not be a pointer in case it was 
+        val.is_ptr = false;
+        val_reg_str = get_val(val);
     }
     else if (required_type == S_INTEGER && val.sym_type == S_BOOL)
     {
-        // TODO: Generate code converting val_reg_str to a temp register 
-        //  that is of type int; assigning val_reg_str to the temp reg
         val.sym_type = S_INTEGER;
+        llvm_out << '\t' << next_reg() << " = zext i1 " 
+            << val_reg_str << " to i32" << '\n';
+        val.reg = reg_no;
+        val.is_ptr = false;
+        val_reg_str = get_val(val);
+        // Set val to be this new converted value.
+        val.reg = reg_no;
+        // Set it to not be a pointer in case it was 
+        val.is_ptr = false;
+        val_reg_str = get_val(val);
     }
     else 
     {
@@ -555,11 +572,7 @@ void Parser::proc_call(std::string identifier)
 
     // Check symtable for the proc
     SymTableEntry* proc_entry = symtable_manager->resolve_symbol(identifier); 
-    if (proc_entry != NULL && proc_entry->sym_type == S_PROCEDURE)
-    {
-        // TODO: this means we're good to generate code.
-    }
-    else
+    if (proc_entry == NULL || proc_entry->sym_type != S_PROCEDURE)
     {
         std::ostringstream stream;
         stream << "Procedure " << identifier << " not defined\n";
@@ -756,34 +769,55 @@ Value Parser::expression_pr(Value lhs, SymbolType hintType)
     if (token() == TokenType::AND
         || token() == TokenType::OR)
     {
-        advance();
+        TokenType op = advance().type;
+
         Value rhs = arith_op(hintType);
-        if (lhs.sym_type != rhs.sym_type)
+
+        // Need to get value string here because it might requrie 
+        //  code gen (for loading from variable pointers)
+        std::string lhs_str = get_val(lhs);
+        std::string rhs_str = get_val(rhs);
+
+        // If one is a bool and one an int, convert
+        if (lhs.sym_type == S_BOOL && rhs.sym_type == S_INTEGER)
         {
-            // TODO
-            // If one is a bool and one an int, convert
-            if (lhs.sym_type == S_BOOL && rhs.sym_type == S_INTEGER)
-            {
-                if (hintType == S_BOOL)
-                    rhs.sym_type = S_BOOL;
-                else if (hintType == S_INTEGER)
-                    lhs.sym_type = S_INTEGER;
-                else 
-                    lhs.sym_type = S_INTEGER; // Default to integer bitwise
-            }
-            if (lhs.sym_type == S_INTEGER && rhs.sym_type == S_BOOL)
-            {
-                if (hintType == S_BOOL)
-                    lhs.sym_type = S_BOOL;
-                else if (hintType == S_INTEGER)
-                    rhs.sym_type = S_INTEGER;
-                else 
-                    rhs.sym_type = S_INTEGER; // Default to integer bitwise
-            }
+            if (hintType == S_BOOL)
+                convert_type(rhs, rhs_str, S_BOOL);
+            else 
+                convert_type(lhs, lhs_str, S_INTEGER);
         }
-        Value val = rhs; // TODO Generate code for lhs & or | with the result of arith_op
-        return expression_pr(val, hintType);
+        else if (lhs.sym_type == S_INTEGER && rhs.sym_type == S_BOOL)
+        {
+            if (hintType == S_BOOL)
+                convert_type(lhs, lhs_str, S_BOOL);
+            else 
+                convert_type(rhs, lhs_str, S_INTEGER);
+        }
+        else if (lhs.sym_type != rhs.sym_type 
+                    && lhs.sym_type != S_BOOL 
+                    && lhs.sym_type != S_INTEGER)
+        {
+            // Types aren't the same or aren't both bool/int
+            err_handler->reportError("Bitwise or boolean operations are only defined on bool and integer types", curr_token.line);
+        }
+
+        llvm_out << '\t' << next_reg() << " = "
+            << (op == TokenType::AND ? "and" : "or") 
+            << ' '
+            << SymbolTypeStrings[lhs.sym_type]
+            << ' '
+            << lhs_str
+            << ", "
+            << rhs_str
+            << '\n';
+
+        Value result;
+        result.reg = reg_no;
+        result.sym_type = lhs.sym_type;
+
+        return expression_pr(result, hintType);
     }
+
     // No operation performed; return lhs unmodified.
     else return lhs;
 }
@@ -806,32 +840,34 @@ Value Parser::arith_op_pr(Value lhs, SymbolType hintType)
         TokenType op = advance().type;
 
         Value rhs = relation(hintType); 
+
+        // Need to get value string here because it might requrie 
+        //  code gen (for loading from variable pointers)
+        std::string lhs_str = get_val(lhs);
+        std::string rhs_str = get_val(rhs);
+
         // If one is int and one is float, 
         //  convert all to float to get the most precision.
         // Any other types can't be used here.
-        if (lhs.sym_type != rhs.sym_type)
+        if (lhs.sym_type == S_INTEGER && rhs.sym_type == S_FLOAT)
         {
-            // TODO: Convert if lhs/rhs are registers. (Use new function)
-            if (lhs.sym_type == S_INTEGER && rhs.sym_type == S_FLOAT)
-            {
-                lhs.float_value = lhs.int_value;
-                lhs.sym_type = S_FLOAT;
-            }
-            else if (lhs.sym_type == S_FLOAT && rhs.sym_type == S_INTEGER)
-            {
-                rhs.float_value = rhs.int_value;
-                rhs.sym_type = S_FLOAT;
-            }
-            else 
-            {
-                err_handler->reportError("Arithmetic operations are only defined on float and integer types", curr_token.line);
-                // TODO: Return?
-            }
+            // Convert lhs to float
+            convert_type(lhs, lhs_str, S_FLOAT);
         }
-        // Need to get value string here because it might requrie code gen
-        //  (for loading from variable pointers)
-        std::string lhs_str = get_val(lhs);
-        std::string rhs_str = get_val(rhs);
+        else if (lhs.sym_type == S_FLOAT && rhs.sym_type == S_INTEGER)
+        {
+            // Convert rhs to float
+            convert_type(rhs, rhs_str, S_FLOAT);
+        }
+        else if (lhs.sym_type != rhs.sym_type 
+                    && lhs.sym_type != S_FLOAT
+                    && lhs.sym_type != S_INTEGER)
+        {
+            // Types aren't the same or aren't both float/int
+            err_handler->reportError("Arithmetic operations are only defined on float and integer types", curr_token.line);
+            // TODO: Return?
+        }
+
         llvm_out << '\t' << next_reg() << " = "
             << (op == TokenType::PLUS 
                     ?  lhs.sym_type == S_FLOAT ? "fadd" : "add" 
@@ -901,36 +937,39 @@ Value Parser::term_pr(Value lhs, SymbolType hintType)
     {
         TokenType op = advance().type;
         Value rhs = factor(hintType);
-        if (lhs.sym_type != rhs.sym_type)
-        {
-            // TODO: Convert if lhs/rhs are registers. (Use new function)
-            // If one is int and one is float, 
-            //  convert all to float
-            // Any other types can't be used here.
-            if (lhs.sym_type == S_INTEGER && rhs.sym_type == S_FLOAT)
-            {
-                lhs.float_value = lhs.int_value;
-                lhs.sym_type = S_FLOAT;
-            }
-            else if (lhs.sym_type == S_FLOAT && rhs.sym_type == S_INTEGER)
-            {
-                rhs.float_value = rhs.int_value;
-                rhs.sym_type = S_FLOAT;
-            }
-            else 
-            {
-                err_handler->reportError("Term operations (multiplication and division) are only defined on float and integer types.", curr_token.line);
-            }
-        }
 
+        // Need to get value string here because it might requrie 
+        //  code gen (for loading from variable pointers)
         std::string lhs_str = get_val(lhs);
         std::string rhs_str = get_val(rhs);
+
+        if (lhs.sym_type == S_INTEGER && rhs.sym_type == S_FLOAT)
+        {
+            // Convert lhs to float
+            convert_type(lhs, lhs_str, S_FLOAT);
+        }
+        else if (lhs.sym_type == S_FLOAT && rhs.sym_type == S_INTEGER)
+        {
+            // Convert rhs to float
+            convert_type(rhs, rhs_str, S_FLOAT);
+        }
+        else if (lhs.sym_type != rhs.sym_type 
+                    && lhs.sym_type != S_FLOAT
+                    && lhs.sym_type != S_INTEGER)
+        {
+            // Types aren't the same or aren't both float/int
+            err_handler->reportError("Term operations (multiplication and division) are only defined on float and integer types.", curr_token.line);
+        }
+
         llvm_out << '\t' << next_reg() << " = "
             // Multiplication
-            << (op == TokenType::MULTIPLICATION ? "mul" : 
+            << (op == TokenType::MULTIPLICATION 
+                // Multiplication
+                // fmul (floating) / mul (ints)
+                ? lhs.sym_type == S_FLOAT ? "fmul" : "mul"
                 // Division
                 // fdiv (floating) / udiv (unsigned int)
-                lhs.sym_type == S_FLOAT ? "fdiv" : "udiv") 
+                : lhs.sym_type == S_FLOAT ? "fdiv" : "udiv") 
             << ' '
             << SymbolTypeStrings[lhs.sym_type]
             << ' '

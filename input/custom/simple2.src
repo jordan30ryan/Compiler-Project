@@ -1,0 +1,24 @@
+// Basic test of what's working right now.
+program typeConv is
+    integer a;
+    integer b;
+    float f1;
+    float f2;
+begin
+    b := 2;
+
+    // operator precedence test.
+    // 1.5 * b == 3 (everything cast up to float)
+    // 1 + 3 == 4
+    // 4 - 4 == 0
+    // cast back to int for variable a
+    a := 1 + 1.5 * b - 4;
+    putinteger(a); // prints 0
+
+    putchar('_'); // delimiter
+
+    a := 1 + 1 * b - 4;
+    putinteger(a); // prints -1 (to show that the 1.5 * b above is fp math, not int)
+
+
+end program.
