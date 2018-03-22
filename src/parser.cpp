@@ -81,6 +81,7 @@ void Parser::decl_builtins()
     llvm_out << "declare void @PUTSTRING(i8*)" << '\n';
     llvm_out << "declare void @PUTBOOL(i1)" << '\n';
 
+    // TODO: How do these work? they get passed a variable, not returned. Need to pass in a pointer?
     llvm_out << "declare i32 @GETINTEGER()" << '\n';
     llvm_out << "declare float @GETFLOAT()" << '\n';
     llvm_out << "declare i8 @GETCHAR()" << '\n';
@@ -135,7 +136,9 @@ std::string Parser::get_val(Value val)
             stream << val.string_value;
             break;
         case S_CHAR:
-            stream << val.char_value;
+            // Cast to int because char literals in llvm assembly 
+            //  should be numbers, not the char literal itself.
+            stream << (int)val.char_value;
             break;
         case S_PROCEDURE:
         case S_UNDEFINED:
@@ -144,6 +147,69 @@ std::string Parser::get_val(Value val)
     }
 
     return stream.str();
+}
+
+void Parser::convert_type(Value& val, std::string& val_reg_str, SymbolType required_type)
+{
+    if (required_type == S_INTEGER && val.sym_type == S_FLOAT)
+    {
+        val.sym_type = S_INTEGER;
+        // If there's a register string, val is a register. Otherwise, it's a literal.
+        if (val_reg_str != "")
+        {
+            // Generate code converting val_reg_str to a register of type float
+            llvm_out << '\t' << next_reg() << " = fptoui float " 
+                << val_reg_str << " to i32" << '\n';
+            // Set val to be this new converted value.
+            val.reg = reg_no;
+            // Set it to not be a pointer in case it was 
+            val.is_ptr = false;
+            val_reg_str = get_val(val); // This must return the modified value
+        }
+        else
+        {
+            // TODO: Convert literal 
+        }
+    }
+    else if (required_type == S_FLOAT && val.sym_type == S_INTEGER)
+    {
+        val.sym_type = S_FLOAT;
+        // If there's a register string, val is a register. Otherwise, it's a literal.
+        if (val_reg_str != "")
+        {
+            // Generate code converting val_reg_str to a temp register type int
+            llvm_out << '\t' << next_reg() << " = uitofp i32 " 
+                << val_reg_str << " to float" << '\n';
+            // Set val to be this new converted value.
+            val.reg = reg_no;
+            // Set it to not be a pointer in case it was 
+            val.is_ptr = false;
+            val_reg_str = get_val(val);
+        }
+        else 
+        {
+            // TODO: Convert literal 
+        }
+    }
+    else if (required_type == S_BOOL && val.sym_type == S_INTEGER)
+    {
+        val.sym_type = S_BOOL;
+        // TODO: Generate code converting val_reg_str to a temp register 
+        //  that is of type bool; assigning val_reg_str to the temp reg
+    }
+    else if (required_type == S_INTEGER && val.sym_type == S_BOOL)
+    {
+        // TODO: Generate code converting val_reg_str to a temp register 
+        //  that is of type int; assigning val_reg_str to the temp reg
+        val.sym_type = S_INTEGER;
+    }
+    else 
+    {
+        std::ostringstream stream;
+        stream << "Conflicting types in conversion: " << SymbolTypeStrings[required_type] << ", " << SymbolTypeStrings[val.sym_type] << '\n';
+        err_handler->reportError(stream.str(), curr_token.line);
+        return;
+    }
 }
 
 void Parser::parse() 
@@ -468,48 +534,7 @@ void Parser::assignment_statement(std::string identifier)
     // Type conversion
     if (lhs->sym_type != rhs.sym_type)
     {
-        // TODO: Pull this out into a function for use anywhere
-        if (lhs->sym_type == S_INTEGER && rhs.sym_type == S_FLOAT)
-        {
-            rhs.sym_type = S_INTEGER;
-            // Generate code converting rhs_reg_str to a register of type float
-            llvm_out << '\t' << next_reg() << " = fptoui float " 
-                << rhs_reg_str << " to i32" << '\n';
-            // Set rhs to be this new converted value.
-            rhs.reg = reg_no;
-            // Set it to not be a pointer in case it was 
-            rhs.is_ptr = false;
-            rhs_reg_str = get_val(rhs); // This must return the modified value
-        }
-        else if (lhs->sym_type == S_FLOAT && rhs.sym_type == S_INTEGER)
-        {
-            rhs.sym_type = S_FLOAT;
-            // Generate code converting rhs_reg_str to a temp register type int
-            llvm_out << '\t' << next_reg() << " = uitofp i32 " 
-                << rhs_reg_str << " to float" << '\n';
-            // Set rhs to be this new converted value.
-            rhs.reg = reg_no;
-            // Set it to not be a pointer in case it was 
-            rhs.is_ptr = false;
-            rhs_reg_str = get_val(rhs);
-        }
-        else if (lhs->sym_type == S_BOOL && rhs.sym_type == S_INTEGER)
-        {
-            rhs.sym_type = S_BOOL;
-            // TODO: Generate code converting rhs_reg_str to a temp register 
-            //  that is of type bool; assigning rhs_reg_str to the temp reg
-        }
-        else if (lhs->sym_type == S_INTEGER && rhs.sym_type == S_BOOL)
-        {
-            // TODO: Generate code converting rhs_reg_str to a temp register 
-            //  that is of type int; assigning rhs_reg_str to the temp reg
-            rhs.sym_type = S_INTEGER;
-        }
-        else 
-        {
-            err_handler->reportError("Conflicting types in assignment.", curr_token.line);
-            return;
-        }
+        convert_type(rhs, rhs_reg_str, lhs->sym_type);
     }
 
     // Have to do this first because get_val might generate more LLVM code
@@ -683,14 +708,13 @@ Value Parser::expression(SymbolType hintType=S_UNDEFINED)
         // not <arith_op>
         advance();
         Value val = arith_op(hintType);
+        std::string valstr = get_val(val);
         if (val.sym_type == S_INTEGER)
         {
-            std::string valstr = get_val(val);
             llvm_out << '\t' << next_reg() << " = xor i32 " << valstr << ", -1" << '\n';
         }
         else if (val.sym_type == S_BOOL)
         {
-            std::string valstr = get_val(val);
             llvm_out << '\t' << next_reg() << " = xor i1 " << valstr << ", -1" << '\n';
         }
         else
@@ -698,7 +722,7 @@ Value Parser::expression(SymbolType hintType=S_UNDEFINED)
             err_handler->reportError("Can only invert integers (bitwise) or bools (logical)", curr_token.line);
         }
 
-        // Return becuase (not <arith_op>) can't be followed by expr_pr
+        // Return becuase (not <arith_op>) is a complete expression
         retval = val;
     }
     else 
@@ -716,51 +740,10 @@ Value Parser::expression(SymbolType hintType=S_UNDEFINED)
     // Type conversion to expected type before returning from expression.
     if (hintType != retval.sym_type)
     {
-        switch (hintType) 
-        {
-        case S_INTEGER:
-            if (retval.sym_type == S_FLOAT)
-            {
-                // TODO: Convert retval to an int and return that value
-            }
-            else if (retval.sym_type == S_BOOL)
-            {
-                // TODO: Convert retval to int 
-            }
-            else 
-            {
-                // TODO: Can't convert
-            }
-            break;
-        case S_BOOL:
-            if (retval.sym_type == S_INTEGER)
-            {
-                // TODO: Convert retval to a bool (llvm trunc?) and return that value
-            }
-            else 
-            {
-                // TODO: Can't convert
-            }
-            break;
-        case S_FLOAT:
-            if (retval.sym_type == S_INTEGER)
-            {
-                // TODO: Convert retval to a float and return that value
-            }
-            break;
-        case S_STRING:
-        // Fall through
-        case S_CHAR:
-            // TODO: Can't convert
-            break;
-        case S_UNDEFINED:
-            // TODO: Can't convert. Just warn.
-            break;
-        case S_PROCEDURE:
-            // TODO: Can't convert. How'd this happen?
-            break;
-        }
+        std::string retval_str = get_val(retval);
+        convert_type(retval, retval_str, hintType);
     }
+
     return retval;
 }
 
@@ -850,7 +833,9 @@ Value Parser::arith_op_pr(Value lhs, SymbolType hintType)
         std::string lhs_str = get_val(lhs);
         std::string rhs_str = get_val(rhs);
         llvm_out << '\t' << next_reg() << " = "
-            << (op == TokenType::PLUS ? "add" : "sub") 
+            << (op == TokenType::PLUS 
+                    ?  lhs.sym_type == S_FLOAT ? "fadd" : "add" 
+                    : lhs.sym_type == S_FLOAT ? "fsub" : "sub") 
             << ' '
             << SymbolTypeStrings[lhs.sym_type]
             << ' '

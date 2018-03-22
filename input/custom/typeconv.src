@@ -1,0 +1,22 @@
+program typeConv is
+    integer a;
+    float b;
+
+begin
+    b := 1.5;
+
+    a := b; // a = 1
+    putinteger(a);
+    putchar(' ');
+
+    a := 3.5; // a = 3
+    putinteger(a);
+    putchar(' ');
+
+    Putinteger(10.5);
+    putchar(' ');
+
+    //e := c == 'a'; // Allowed; relational compare of two chars returns a bool
+
+
+end program.

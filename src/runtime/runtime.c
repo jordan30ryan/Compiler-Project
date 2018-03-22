@@ -24,3 +24,10 @@ void PUTSTRING(char* str)
 {
     printf("%s", str);
 }
+
+int GETINTEGER()
+{
+    int ret;
+    scanf("%d", &ret);
+    return ret;
+}

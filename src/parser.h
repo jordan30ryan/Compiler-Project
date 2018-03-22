@@ -21,10 +21,13 @@ private:
     // Declare builtin functions in the llvm output file
     void decl_builtins();
     // Get value of val; can be either a literal or a register
+    // If it's a variable, it loads from the variable's pointer and returns a temp register.
+    // If it's a literal, it just returns the literal in string form for use in llvm generation
     std::string get_val(Value val);
     // Get next unnamed register.
     std::string next_reg();
     int reg_no = 0; // Current numbered register.
+
 
     ErrHandler* err_handler;
     SymbolTableManager* symtable_manager;
@@ -37,6 +40,12 @@ private:
     // Ensure current_token has type t, 
     //  if not, report err (if error=true) or warning 
     Token require(TokenType t, bool error=true);
+
+    // For type conversion
+    // Val - the value to convert.
+    // reg_str - the register of val, if it has one, otherwise nullptr
+    // required_type - the type to convert to.
+    void convert_type(Value& val, std::string& val_reg_str, SymbolType required_type);
 
 
     // Convert val to expected, if possible.
