@@ -151,7 +151,8 @@ std::string Parser::get_val(Value val)
 
 void Parser::convert_type(Value& val, std::string& val_reg_str, SymbolType required_type)
 {
-    if (required_type == S_INTEGER && val.sym_type == S_FLOAT)
+    if (required_type == S_UNDEFINED) return;
+    else if (required_type == S_INTEGER && val.sym_type == S_FLOAT)
     {
         val.sym_type = S_INTEGER;
         // If there's a register string, val is a register. Otherwise, it's a literal.
@@ -198,8 +199,10 @@ void Parser::convert_type(Value& val, std::string& val_reg_str, SymbolType requi
     else if (required_type == S_BOOL && val.sym_type == S_INTEGER)
     {
         val.sym_type = S_BOOL;
-        llvm_out << '\t' << next_reg() << " = trunc i32 " 
-            << val_reg_str << " to i1" << '\n';
+        //llvm_out << '\t' << next_reg() << " = trunc i32 " 
+            //<< val_reg_str << " to i1" << '\n';
+        llvm_out << '\t' << next_reg() << " = icmp ne i32 " 
+            << val_reg_str << ", 0" << '\n';
         // Set val to be this new converted value.
         val.reg = reg_no;
         // Set it to not be a pointer in case it was 
@@ -724,11 +727,17 @@ Value Parser::expression(SymbolType hintType=S_UNDEFINED)
         std::string valstr = get_val(val);
         if (val.sym_type == S_INTEGER)
         {
-            llvm_out << '\t' << next_reg() << " = xor i32 " << valstr << ", -1" << '\n';
+            llvm_out << '\t' << next_reg() << " = xor i32 " 
+                << valstr << ", -1" << '\n';
+            val.reg = reg_no;
+            val.is_ptr = false;
         }
         else if (val.sym_type == S_BOOL)
         {
-            llvm_out << '\t' << next_reg() << " = xor i1 " << valstr << ", -1" << '\n';
+            llvm_out << '\t' << next_reg() << " = xor i1 " 
+                << valstr << ", 1" << '\n';
+            val.reg = reg_no;
+            val.is_ptr = false;
         }
         else
         {

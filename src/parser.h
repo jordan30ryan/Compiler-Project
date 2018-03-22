@@ -43,7 +43,7 @@ private:
 
     // For type conversion
     // Val - the value to convert.
-    // reg_str - the register of val, if it has one, otherwise nullptr
+    // reg_str - the register of val
     // required_type - the type to convert to.
     void convert_type(Value& val, std::string& val_reg_str, SymbolType required_type);
 

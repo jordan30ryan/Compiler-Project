@@ -1,17 +1,19 @@
 === BUILD ===
 
-to use g++:
-make [g]
+clang++:
+make
 
-to use clang++:
-make c
+g++:
+make g
+
 
 === USAGE ===
 
-./bin/compiler <src_file_name>
+./compile.sh <input_file>.src
+./<input_file>.out
+
 
 === FILES ===
-
 
 main.cpp        - Entry point. Handles command line args and each step of the compile process
 
@@ -20,7 +22,6 @@ token.h         - Stores custom data types (i.e. Token, TokenType, etc.)
 scanner.h       - Scanner class definition
 
 errhandler.h    - handles reporting errors and keeping track of error count
-
 
 
 === NOTES ===

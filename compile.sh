@@ -7,8 +7,10 @@ filename="${1%.*}"
 outfile="${filename##*/}.out"
 
 ./bin/compiler $1
-#opt -S -O3 "${filename}.ll" -o "${filename}.ll"
+
+#Ensure llvm > 3.5 is used
 llc "${filename}.ll"
+
 clang "${filename}.s" ./src/runtime/runtime.c -o $outfile
 
 #Remove intermediates

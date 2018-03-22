@@ -1,35 +1,20 @@
 program bitwise is
     integer a;
     bool b;
-    integer c;
-    bool d;
 begin
     a := 4;
     b := true;
-    c := 5;
-    d := false;
 
-    putbool(not a); // false
+    putbool(not a); // (bitwise) true, NOT (boolean) false 
     putchar('_');//delimiter
 
-    putbool(not b); // false
+    putbool(not b); // (boolean) false, NOT (bitwise) true
     putchar('_');//delimiter
 
-    putbool(a & b); // 4 & 1 == 0 OR true & true == true
+    putbool(8 & true); // (boolean) true & true == true, NOT (bitwise) 8 & 1 == 0
     putchar('_');//delimiter
 
-    putbool(not false); // true 
+    putinteger(8 & true); // (bitwise) 8 & 1 == 0
     putchar('_');//delimiter
-
-    putbool(not (c - 5)); // true 
-    putchar('_');//delimiter
-
-    putbool(not d); // true 
-    putchar('_');//delimiter
-
-    putbool(d & c); // false & true == false OR 5 & 0 == 0
-    putchar('_');//delimiter
-
-    putbool(b & c); // true & true == true OR 1 & 5 == 1
 end program.
 

@@ -690,3 +690,8 @@ clang inputfile.s ./src/runtime/runtime.c
 3/22
 
 bitwise weirdness (esp. with not)
+
+
+Solved bitwise weirdness:
+when doing not, use xor, make sure value we're returning has its register set properly
+integers should be converted to bool with icmp, not just trunc
