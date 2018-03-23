@@ -917,12 +917,64 @@ Value Parser::relation_pr(Value lhs, SymbolType hintType)
         | (token() == TokenType::EQUALS)
         | (token() == TokenType::NOTEQUAL))
     {
-        // TODO: Generate code. Can compare any of:
+        TokenType op = advance().type;
+        Value rhs = term(hintType);
+
+        // Need to get value string here because it might requrie 
+        //  code gen (for loading from variable pointers)
+        std::string lhs_str = get_val(lhs);
+        std::string rhs_str = get_val(rhs);
+
+        // TODO: Type check/convert
+        // Can compare any of:
         //  Int/bool/float/char
-        
-        advance();
-        Value val = term(hintType);
-        return relation_pr(val, hintType);
+
+        std::string llvm_op;
+        switch (op)
+        {
+            case LT:
+                // TODO: Unsigned or signed?
+                llvm_op = "slt";
+                break;
+            case GT:
+                llvm_op = "sgt";
+                break;
+            case LT_EQ:
+                llvm_op = "ule";
+                break;
+            case GT_EQ:
+                llvm_op = "uge";
+                break;
+            case EQUALS:
+                llvm_op = "eq";
+                break;
+            case NOTEQUAL:
+                llvm_op = "ne";
+                break;
+            default:
+                // This shouldn't happen; how'd we get in this outer if anyway lol
+                break;
+        }
+
+        llvm_out << '\t' << next_reg() << " = "
+            // Type checking above will convert it to either a float or int-like type
+            << (lhs.sym_type == S_FLOAT ? "fcmp" : "icmp")
+            << ' '
+            << llvm_op
+            << ' '
+            << SymbolTypeStrings[lhs.sym_type]
+            << ' '
+            << lhs_str
+            << ", "
+            << rhs_str
+            << '\n';
+
+        Value result;
+        result.reg = reg_no;
+        // All relational compares return a bool
+        result.sym_type = S_BOOL;
+
+        return relation_pr(result, hintType);
     }
     else return lhs;
 }

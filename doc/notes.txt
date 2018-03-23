@@ -695,3 +695,12 @@ bitwise weirdness (esp. with not)
 Solved bitwise weirdness:
 when doing not, use xor, make sure value we're returning has its register set properly
 integers should be converted to bool with icmp, not just trunc
+
+
+================================================================================
+3/23
+
+Finish type conversion for relational operator. Right now it's generating correctly but it does zero type conversion. Figure out which types are compatible (i.e. int <-> float), which are not allowed (strings), etc.
+
+
+
