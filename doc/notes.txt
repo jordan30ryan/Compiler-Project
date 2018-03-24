@@ -703,4 +703,15 @@ integers should be converted to bool with icmp, not just trunc
 Finish type conversion for relational operator. Right now it's generating correctly but it does zero type conversion. Figure out which types are compatible (i.e. int <-> float), which are not allowed (strings), etc.
 
 
+================================================================================
+3/24
+
+For defining procedures:
+
+Tried to do stack of streampos and push for new procs and pop for end of procs,
+didn't work because you can't insert in the middle of the file without overwriting old data.
+
+Only other way seems to be put every new proc into its own file and then cat them all together before compiling
+
+
 
