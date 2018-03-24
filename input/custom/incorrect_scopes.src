@@ -1,0 +1,22 @@
+program PROCS is
+    procedure s1()
+        procedure s2()
+            procedure s3()
+            begin
+                s1(); // Not defined
+                s2(); // Not defined
+                s3(); // Defined - self
+            end procedure;
+        begin
+            s1(); // Not defined
+            s2(); // Defined - self
+            s3(); // Defined - declared in this scope
+        end procedure;
+    begin
+        s1(); // Defined - self
+        s2(); // Defined - declared in this scope
+        s3(); // Not defined
+    end procedure;
+begin
+    s1(); // Defined - declared in this scope
+end program.

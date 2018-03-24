@@ -6,6 +6,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <stack>
 
 class Parser
 {
@@ -14,8 +15,14 @@ public:
     ~Parser();
     void parse();
 private:
-    // The stream to output LLVM to. Can be a file or stdout (for debugging)
+
+    // The stream to output LLVM to
     std::ofstream llvm_out;
+    // A list of previous file positions to return to 
+    //  when generating procedure code.
+    // When a new procedure is encountered, it gets generated all at once,
+    //  then the position in llvm_out is reset to the top of this stack.
+    std::stack<std::streampos> file_positions;
 
     // For use in LLVM assembly codegen. 
     // Declare builtin functions in the llvm output file

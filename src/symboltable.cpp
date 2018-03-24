@@ -50,7 +50,6 @@ void SymbolTableManager::init_tables()
     add_symbol(true, "FALSE", TokenType::RS_FALSE);
     add_symbol(true, "NOT", TokenType::RS_NOT);
 
-    // TODO: Make builtin functions usable 
     add_builtin_proc(true, "GETBOOL", IDENTIFIER, S_PROCEDURE, S_BOOL, RS_OUT);
     add_builtin_proc(true, "GETINTEGER", IDENTIFIER, S_PROCEDURE, S_INTEGER, RS_OUT);
     add_builtin_proc(true, "GETFLOAT", IDENTIFIER, S_PROCEDURE, S_FLOAT, RS_OUT);

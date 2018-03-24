@@ -330,6 +330,18 @@ void Parser::proc_declaration(bool is_global)
 
     // Reset to scope above this proc decl
     symtable_manager->reset_scope();
+
+    llvm_out << "\tret void";
+    llvm_out << "\n}\n";
+
+    // Reset file position to where it was before in codegen.
+    std::streampos pos = file_positions.top();
+    //std::cout << pos << std::endl;
+    llvm_out.flush();
+    //llvm_out.seekp(pos);
+    llvm_out.flush();
+    file_positions.pop();
+
 }
 
 void Parser::proc_header()
@@ -341,6 +353,17 @@ void Parser::proc_header()
     std::string proc_id = require(TokenType::IDENTIFIER).val.string_value;
     // Sets the current scope to this procedure's scope
     symtable_manager->set_proc_scope(proc_id);
+
+    // Push the current file pos on the stack so it can be returned to 
+    //  when this procedure's codegen is done.
+    llvm_out.flush();
+    file_positions.push(llvm_out.tellp());
+    llvm_out.flush();
+
+    llvm_out << "define " /*TODO: Proc type? */
+        << '@' << proc_id << '('
+        /*TODO: Parameters */
+        << ") {\n";
 
     require(TokenType::L_PAREN);
     if (token() != TokenType::R_PAREN)
@@ -701,6 +724,9 @@ void Parser::return_statement()
 {
     if (DEBUG) std::cout << "return" << '\n';
     require(TokenType::RS_RETURN);
+
+    // No functions actualy return a value
+    llvm_out << "\tret void\n";
 }
 
 // hintType - the expected type (e.g. if this is an assignment)

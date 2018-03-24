@@ -1,23 +1,37 @@
 program asdf is 
 begin
     putbool(1 < 2); // true
+    putchar('_');
     putbool(1 < 0); // false 
+    putchar('_');
 
     putbool(1 > 0); // true
+    putchar('_');
     putbool(1 > 2); // false 
+    putchar('_');
 
     putbool(1 == 1); // true
+    putchar('_');
     putbool(1 == 2); // false
+    putchar('_');
 
     putbool(1 != 2); // true
+    putchar('_');
     putbool(1 != 1); // false
+    putchar('_');
 
     putbool(1 >= 1); // true
+    putchar('_');
     putbool(1 >= 0); // true
+    putchar('_');
     putbool(1 >= 2); // false
+    putchar('_');
 
     putbool(1 <= 1); // true 
+    putchar('_');
     putbool(1 <= 2); // true 
+    putchar('_');
     putbool(1 <= 0); // false
+    putchar('_');
 
 end program.
