@@ -613,13 +613,10 @@ std::vector<Value> Parser::argument_list(SymTableEntry* proc_entry)
     for (auto param : proc_entry->parameters)
     {
         Value val = expression(param->sym_type);
+        // Expression should do type conversion.
+        // If it's not the right type now, it probably can't be converted.
         if (val.sym_type != param->sym_type)
         {
-            // TODO: Some unmatched types can be converted:
-            //  Integer<->Float
-            //  Integer->Bool
-            //  Bool->Integer ????
-            //  Integer<->Char ????
             std::ostringstream stream;
             stream 
                 << "Procedure call paramater type doesn't match expected type."
