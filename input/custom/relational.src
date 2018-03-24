@@ -1,13 +1,23 @@
 program asdf is 
-    bool a;
-    bool b;
-    bool c;
 begin
-    a := 1 < 3; // a = true
-    putbool(a);
-    b := 1 > 3; // b = false
-    putbool(b);
-    c := a == b; // c = false
-    putbool(c);
+    putbool(1 < 2); // true
+    putbool(1 < 0); // false 
+
+    putbool(1 > 0); // true
+    putbool(1 > 2); // false 
+
+    putbool(1 == 1); // true
+    putbool(1 == 2); // false
+
+    putbool(1 != 2); // true
+    putbool(1 != 1); // false
+
+    putbool(1 >= 1); // true
+    putbool(1 >= 0); // true
+    putbool(1 >= 2); // false
+
+    putbool(1 <= 1); // true 
+    putbool(1 <= 2); // true 
+    putbool(1 <= 0); // false
 
 end program.

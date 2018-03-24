@@ -393,10 +393,9 @@ void Parser::parameter()
 {
     if (DEBUG) std::cout << "param" << '\n';
 
-    // curr_token is the typemark
-
     SymTableEntry* entry = var_declaration(false);
 
+    // curr_token is the typemark
     if (token() != TokenType::RS_IN
         && token() != TokenType::RS_OUT
         && token() != TokenType::RS_INOUT)
@@ -429,7 +428,6 @@ SymTableEntry* Parser::var_declaration(bool is_global)
 
     std::string llvm_type;
 
-    // TODO: Better way to do this? lol
     switch (typemark)
     {
     case RS_STRING:

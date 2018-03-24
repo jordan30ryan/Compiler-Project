@@ -1,0 +1,8 @@
+program ret is
+    procedure ret()
+    begin
+        return;
+    end procedure;
+begin
+    return;
+end program.
