@@ -16,9 +16,12 @@ public:
 private:
     // The stream to output LLVM to. Can be a file or stdout (for debugging)
     std::ofstream llvm_out;
+
     // The codegen output. Can be llvm_out or an ostringstream to be appended
     //  to llvm_out at the end (for procedures)
-    std::ostream codegen_out;
+    std::ostream* codegen_out;
+    std::vector<std::ostringstream*> procedure_defs;
+    std::stack<std::ostream*> stream_stack;
 
     // For use in LLVM assembly codegen. 
     // Declare builtin functions in the llvm output file

@@ -26,6 +26,7 @@ errhandler.h    - handles reporting errors and keeping track of error count
 
 === NOTES ===
 
+................................................................................
 
 struct TokenType 
 This contains every type of token the scanner can output and the parser uses.
@@ -37,6 +38,31 @@ TokenType:: - Value - Explanation
 EQUALS      - ==    - Comparision; "is equal to". Returns a bool
 ASSIGNMENT  - :=    - Assigns the right side expression to the left variable 
 RS_[...]    - [...] - The reserved word [...]. 
+
+
+................................................................................
+
+
+Procedure code generation
+
+This was a problem because procedures occur in the middle of defining other code.
+When defining a program (the outermost scope), multiple procedures can be defined
+    inside the program, and each procedure can have procedures inside it.
+When doing codegen, if we encounter a proc, we need to switch to compiling code for
+    the procedure and not main() or the program's scope; in llvm functions all
+    need to be defined separate, so main can't have procedures inside it.
+
+Current solution is the ostream object used for code generation, codegen_out,
+    can point to multiple streams; it can point to llvm_out, which is an ofstream
+    for the actual .ll file we're outputting, but codegen_out can also point to 
+    one of many ostringstreams, which are used for each procedure. These ostringstreams
+    are appended to a vector and at the end of parsing, they're all appended to the 
+    llvm_out stream (file). Because procedures can be defined in procedures,
+    we also need a stack of streams to keep track of where we left off when we're done
+    defining a procedure. This stack contains all procedure ostringstreams 
+    we're in the middle of, and llvm_out at the bottom, 
+    unless codegen_out is currently llvm_out.
+
 
 
 

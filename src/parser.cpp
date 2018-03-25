@@ -24,10 +24,17 @@ Parser::Parser(ErrHandler* handler, SymbolTableManager* manager, Scanner* scan, 
     // Initialize the llvm output stream
     filename.append(".ll");
     llvm_out.open(filename);
+
+    codegen_out = &llvm_out;
 }
 
 Parser::~Parser()
 {
+    // TODO: Append procedures to llvm_out
+    for (auto it = procedure_defs.begin(); it != procedure_defs.end(); ++it)
+    {
+        llvm_out << (*it)->str();
+    }
     llvm_out.close();
 }
 
@@ -75,18 +82,18 @@ Token Parser::require(TokenType expected_type, bool error)
 
 void Parser::decl_builtins()
 {
-    llvm_out << "declare void @PUTINTEGER(i32)" << '\n';
-    llvm_out << "declare void @PUTFLOAT(float)" << '\n';
-    llvm_out << "declare void @PUTCHAR(i8)" << '\n';
-    llvm_out << "declare void @PUTSTRING(i8*)" << '\n';
-    llvm_out << "declare void @PUTBOOL(i1)" << '\n';
+    *codegen_out << "declare void @PUTINTEGER(i32)" << '\n';
+    *codegen_out << "declare void @PUTFLOAT(float)" << '\n';
+    *codegen_out << "declare void @PUTCHAR(i8)" << '\n';
+    *codegen_out << "declare void @PUTSTRING(i8*)" << '\n';
+    *codegen_out << "declare void @PUTBOOL(i1)" << '\n';
 
     // TODO: How do these work? they get passed a variable, not returned. Need to pass in a pointer?
-    llvm_out << "declare i32 @GETINTEGER()" << '\n';
-    llvm_out << "declare float @GETFLOAT()" << '\n';
-    llvm_out << "declare i8 @GETCHAR()" << '\n';
-    llvm_out << "declare i8* @GETSTRING()" << '\n';
-    llvm_out << "declare i1 @GETBOOL()" << '\n';
+    *codegen_out << "declare i32 @GETINTEGER()" << '\n';
+    *codegen_out << "declare float @GETFLOAT()" << '\n';
+    *codegen_out << "declare i8 @GETCHAR()" << '\n';
+    *codegen_out << "declare i8* @GETSTRING()" << '\n';
+    *codegen_out << "declare i1 @GETBOOL()" << '\n';
 }
 
 // Get next available register number for use in LLVM
@@ -116,7 +123,7 @@ std::string Parser::get_val(Value val)
         // Value is a variable register. Access its value (not pointer to it)
         if (val.is_ptr)
         {
-            llvm_out << '\t' << next_reg() << " = load " 
+            *codegen_out << '\t' << next_reg() << " = load " 
                         << SymbolTypeStrings[val.sym_type]
                         << ", "
                         << SymbolTypeStrings[val.sym_type]
@@ -167,7 +174,7 @@ void Parser::convert_type(Value& val, std::string& val_reg_str, SymbolType requi
         if (val_reg_str != "")
         {
             // Generate code converting val_reg_str to a register of type float
-            llvm_out << '\t' << next_reg() << " = fptoui float " 
+            *codegen_out << '\t' << next_reg() << " = fptoui float " 
                 << val_reg_str << " to i32" << '\n';
             // Set val to be this new converted value.
             val.reg = reg_no;
@@ -189,7 +196,7 @@ void Parser::convert_type(Value& val, std::string& val_reg_str, SymbolType requi
         if (val_reg_str != "")
         {
             // Generate code converting val_reg_str to a temp register type int
-            llvm_out << '\t' << next_reg() << " = uitofp i32 " 
+            *codegen_out << '\t' << next_reg() << " = uitofp i32 " 
                 << val_reg_str << " to float" << '\n';
             // Set val to be this new converted value.
             val.reg = reg_no;
@@ -207,9 +214,9 @@ void Parser::convert_type(Value& val, std::string& val_reg_str, SymbolType requi
     else if (required_type == S_BOOL && val.sym_type == S_INTEGER)
     {
         val.sym_type = S_BOOL;
-        //llvm_out << '\t' << next_reg() << " = trunc i32 " 
+        //*codegen_out << '\t' << next_reg() << " = trunc i32 " 
             //<< val_reg_str << " to i1" << '\n';
-        llvm_out << '\t' << next_reg() << " = icmp ne i32 " 
+        *codegen_out << '\t' << next_reg() << " = icmp ne i32 " 
             << val_reg_str << ", 0" << '\n';
         // Set val to be this new converted value.
         val.reg = reg_no;
@@ -220,7 +227,7 @@ void Parser::convert_type(Value& val, std::string& val_reg_str, SymbolType requi
     else if (required_type == S_INTEGER && val.sym_type == S_BOOL)
     {
         val.sym_type = S_INTEGER;
-        llvm_out << '\t' << next_reg() << " = zext i1 " 
+        *codegen_out << '\t' << next_reg() << " = zext i1 " 
             << val_reg_str << " to i32" << '\n';
         val.reg = reg_no;
         val.is_ptr = false;
@@ -265,15 +272,15 @@ void Parser::program()
     decl_builtins();
 
     // Use main for outer program.
-    llvm_out << "define i32 @main() {\n";
+    *codegen_out << "define i32 @main() {\n";
 
     program_header(); 
     program_body(); 
     require(TokenType::PERIOD, false);
 
     // Return 0 from the main function always
-    llvm_out << "\tret i32 0";
-    llvm_out << "\n}\n";
+    *codegen_out << "\tret i32 0\n";
+    *codegen_out << "}\n";
 }
 
 void Parser::program_header()
@@ -336,8 +343,19 @@ void Parser::proc_declaration(bool is_global)
     proc_header();
     proc_body();
 
+    *codegen_out << "\tret void\n";
+    *codegen_out << "}\n";
+
     // Reset to scope above this proc decl
     symtable_manager->reset_scope();
+
+    // Add the finished procedure definition to a vector 
+    //  to be added at the end of the file at the end of parsing.
+    // See documentation for more info.
+    procedure_defs.push_back((std::ostringstream*)codegen_out);
+    // Reset codegen stream up a stream
+    codegen_out = stream_stack.top();
+    stream_stack.pop();
 }
 
 void Parser::proc_header()
@@ -349,6 +367,12 @@ void Parser::proc_header()
     std::string proc_id = require(TokenType::IDENTIFIER).val.string_value;
     // Sets the current scope to this procedure's scope
     symtable_manager->set_proc_scope(proc_id);
+
+    stream_stack.push(codegen_out);
+    // Start outputting to a new stream
+    codegen_out = new std::ostringstream;
+
+    *codegen_out << "define void @" << proc_id << "()" /*TODO: Parametrs*/<< " {\n";
 
     require(TokenType::L_PAREN);
     if (token() != TokenType::R_PAREN)
@@ -477,7 +501,7 @@ SymTableEntry* Parser::var_declaration(bool is_global)
     }
     // Allocate space for this variable and associate the 
     //  register number with the entry
-    llvm_out << "\t" << next_reg() << " = alloca " 
+    *codegen_out << "\t" << next_reg() << " = alloca " 
                         << SymbolTypeStrings[entry->sym_type] << '\n';
     entry->reg = reg_no;
 
@@ -564,7 +588,7 @@ void Parser::assignment_statement(std::string identifier)
     }
 
     // Have to do this first because get_val might generate more LLVM code
-    llvm_out << "\tstore "
+    *codegen_out << "\tstore "
         << SymbolTypeStrings[rhs.sym_type]
         << ' '
         << rhs_reg_str 
@@ -604,14 +628,14 @@ void Parser::proc_call(std::string identifier)
             << get_val(*it);
         arg_list_strings.push_back(stringbuilder.str());
     }
-    llvm_out << "\tcall void @" << identifier << "(";
+    *codegen_out << "\tcall void @" << identifier << "(";
     for (auto it = arg_list_strings.begin(); it != arg_list_strings.end(); ++it)
     {
         if (it != arg_list_strings.begin())
-            llvm_out << ", ";
-        llvm_out << *it;
+            *codegen_out << ", ";
+        *codegen_out << *it;
     }
-    llvm_out << ")\n";
+    *codegen_out << ")\n";
 }
 
 std::vector<Value> Parser::argument_list(SymTableEntry* proc_entry)
@@ -662,11 +686,11 @@ void Parser::if_statement()
     std::string else_label = next_label();
     std::string after_label = next_label();
 
-    llvm_out << '\t' << "br i1 " << condition_reg 
+    *codegen_out << '\t' << "br i1 " << condition_reg 
         << ", label %" << then_label << ", label %" << else_label << '\n';
 
 
-    llvm_out << then_label << ": \n"; // begin then block
+    *codegen_out << then_label << ": \n"; // begin then block
 
     bool first_stmnt = true;
     while (true)
@@ -682,19 +706,19 @@ void Parser::if_statement()
 
         if (token() == TokenType::RS_END) 
         {
-            llvm_out << '\t' << "br label %" << after_label << '\n';
+            *codegen_out << '\t' << "br label %" << after_label << '\n';
             break;
         }
         if (token() == TokenType::RS_ELSE) 
         {
-            llvm_out << '\t' << "br label %" << after_label << '\n';
-            llvm_out << else_label << ": \n"; // begin else block
+            *codegen_out << '\t' << "br label %" << after_label << '\n';
+            *codegen_out << else_label << ": \n"; // begin else block
             advance();
             continue;
         }
     }
 
-    llvm_out << after_label << ": \n"; // begin after block
+    *codegen_out << after_label << ": \n"; // begin after block
     
     require(TokenType::RS_END);
     require(TokenType::RS_IF);
@@ -715,9 +739,9 @@ void Parser::loop_statement()
     std::string after_loop_label = next_label();
 
     // Need to explicitly break from a basic block.
-    llvm_out << "\tbr label %" << start_loop_label << '\n'; 
+    *codegen_out << "\tbr label %" << start_loop_label << '\n'; 
 
-    llvm_out << start_loop_label << ": \n"; // begin for block (expr check)
+    *codegen_out << start_loop_label << ": \n"; // begin for block (expr check)
 
     // Generate expression code in for block
     Value condition = expression(S_BOOL);
@@ -725,11 +749,11 @@ void Parser::loop_statement()
 
     std::string condition_reg = get_val(condition);
 
-    llvm_out << "\tbr i1 " << condition_reg 
+    *codegen_out << "\tbr i1 " << condition_reg 
         << ", label %" << loop_stmnts_label 
         << ", label %" << after_loop_label << '\n';
 
-    llvm_out << loop_stmnts_label << ": \n"; // begin for statements block
+    *codegen_out << loop_stmnts_label << ": \n"; // begin for statements block
 
     // Consume and generate code for all inner for statements
     while (true)
@@ -740,9 +764,9 @@ void Parser::loop_statement()
     }
 
     // End of for statements; jmp to beginning of for
-    llvm_out << "\tbr label %" << start_loop_label << '\n';
+    *codegen_out << "\tbr label %" << start_loop_label << '\n';
     
-    llvm_out << after_loop_label << ": \n"; // begin block after for
+    *codegen_out << after_loop_label << ": \n"; // begin block after for
 
     require(TokenType::RS_END); // Just to be sure, also to advance the token
     require(TokenType::RS_FOR);
@@ -776,14 +800,14 @@ Value Parser::expression(SymbolType hintType=S_UNDEFINED)
         std::string valstr = get_val(val);
         if (val.sym_type == S_INTEGER)
         {
-            llvm_out << '\t' << next_reg() << " = xor i32 " 
+            *codegen_out << '\t' << next_reg() << " = xor i32 " 
                 << valstr << ", -1" << '\n';
             val.reg = reg_no;
             val.is_ptr = false;
         }
         else if (val.sym_type == S_BOOL)
         {
-            llvm_out << '\t' << next_reg() << " = xor i1 " 
+            *codegen_out << '\t' << next_reg() << " = xor i1 " 
                 << valstr << ", 1" << '\n';
             val.reg = reg_no;
             val.is_ptr = false;
@@ -859,7 +883,7 @@ Value Parser::expression_pr(Value lhs, SymbolType hintType)
             err_handler->reportError("Bitwise or boolean operations are only defined on bool and integer types", curr_token.line);
         }
 
-        llvm_out << '\t' << next_reg() << " = "
+        *codegen_out << '\t' << next_reg() << " = "
             << (op == TokenType::AND ? "and" : "or") 
             << ' '
             << SymbolTypeStrings[lhs.sym_type]
@@ -926,7 +950,7 @@ Value Parser::arith_op_pr(Value lhs, SymbolType hintType)
             // TODO: Return?
         }
 
-        llvm_out << '\t' << next_reg() << " = "
+        *codegen_out << '\t' << next_reg() << " = "
             << (op == TokenType::PLUS 
                     ?  lhs.sym_type == S_FLOAT ? "fadd" : "add" 
                     : lhs.sym_type == S_FLOAT ? "fsub" : "sub") 
@@ -1005,7 +1029,7 @@ Value Parser::relation_pr(Value lhs, SymbolType hintType)
                 break;
         }
 
-        llvm_out << '\t' << next_reg() << " = "
+        *codegen_out << '\t' << next_reg() << " = "
             // Type checking above will convert it to either a float or int-like type
             << (lhs.sym_type == S_FLOAT ? "fcmp" : "icmp")
             << ' '
@@ -1071,7 +1095,7 @@ Value Parser::term_pr(Value lhs, SymbolType hintType)
             err_handler->reportError("Term operations (multiplication and division) are only defined on float and integer types.", curr_token.line);
         }
 
-        llvm_out << '\t' << next_reg() << " = "
+        *codegen_out << '\t' << next_reg() << " = "
             // Multiplication
             << (op == TokenType::MULTIPLICATION 
                 // Multiplication
