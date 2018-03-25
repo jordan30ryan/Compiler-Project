@@ -4,23 +4,40 @@ SymbolTableManager::SymbolTableManager(ErrHandler* handler) : err_handler(handle
 
 SymTableEntry* SymbolTableManager::resolve_symbol(std::string id, bool check)
 {
+    // exists but not well-defined, and is expected to be (check ==true)    
+    bool check_err = false; 
+
     SymTableEntry* entry = NULL;
+
     if (curr_symbols->count(id) != 0)
     {
         // It's in the current scope's symbol table
         entry = (*curr_symbols)[id];
+        if (check && entry->sym_type == S_UNDEFINED)
+        {
+            // We're checking for it to exist but it's type is undefined
+            check_err = true;
+        }
     }
     else if (global_symbols.count(id) != 0)
     {
         // It's in the global symbol table
         entry = global_symbols[id];
+        if (check && entry->sym_type == S_UNDEFINED)
+        {
+            // We're checking for it to exist but it's type is undefined
+            check_err = true;
+        }
     }
-    else if (check)
+    else if (check) check_err = true;
+
+    if (check_err)
     {
         std::ostringstream stream;
         stream << "Identifier " << id << " not defined.";
         err_handler->reportError(stream.str());  
     }
+
     return entry;
 }
 
@@ -50,12 +67,12 @@ void SymbolTableManager::init_tables()
     add_symbol(true, "FALSE", TokenType::RS_FALSE);
     add_symbol(true, "NOT", TokenType::RS_NOT);
 
-    // TODO: Make builtin functions usable 
     add_builtin_proc(true, "GETBOOL", IDENTIFIER, S_PROCEDURE, S_BOOL, RS_OUT);
     add_builtin_proc(true, "GETINTEGER", IDENTIFIER, S_PROCEDURE, S_INTEGER, RS_OUT);
     add_builtin_proc(true, "GETFLOAT", IDENTIFIER, S_PROCEDURE, S_FLOAT, RS_OUT);
     add_builtin_proc(true, "GETSTRING", IDENTIFIER, S_PROCEDURE, S_STRING, RS_OUT);
     add_builtin_proc(true, "GETCHAR", IDENTIFIER, S_PROCEDURE, S_CHAR, RS_OUT);
+
     add_builtin_proc(true, "PUTBOOL", IDENTIFIER, S_PROCEDURE, S_BOOL, RS_IN);
     add_builtin_proc(true, "PUTINTEGER", IDENTIFIER, S_PROCEDURE, S_INTEGER, RS_IN);
     add_builtin_proc(true, "PUTFLOAT", IDENTIFIER, S_PROCEDURE, S_FLOAT, RS_IN);

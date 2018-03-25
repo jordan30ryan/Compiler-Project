@@ -98,6 +98,14 @@ std::string Parser::next_reg()
     return stream.str();
 }
 
+std::string Parser::next_label()
+{
+    label_no++;
+    std::ostringstream stream;
+    stream << "l" << label_no;
+    return stream.str();
+}
+
 // Returns the literal value of a given Value as a string
 std::string Parser::get_val(Value val) 
 {
@@ -418,7 +426,7 @@ SymTableEntry* Parser::var_declaration(bool is_global)
     advance();
 
     std::string id = require(TokenType::IDENTIFIER).val.string_value;
-    SymTableEntry* entry = symtable_manager->resolve_symbol(id);
+    SymTableEntry* entry = symtable_manager->resolve_symbol(id, false);
     if (entry != NULL && entry->sym_type != S_UNDEFINED)
     {
         std::ostringstream stream;
@@ -648,25 +656,45 @@ void Parser::if_statement()
 
     require(TokenType::RS_THEN);
 
-    //TODO handle else (code generation stage)
+    std::string condition_reg = get_val(condition);
+
+    std::string then_label = next_label();
+    std::string else_label = next_label();
+    std::string after_label = next_label();
+
+    llvm_out << '\t' << "br i1 " << condition_reg 
+        << ", label %" << then_label << ", label %" << else_label << '\n';
+
+
+    llvm_out << then_label << ": \n"; // begin then block
+
     bool first_stmnt = true;
     while (true)
     {
-        // Make sure there is at least one valid statement
         bool valid = statement();
+        // Make sure there is at least one valid statement
         if (first_stmnt && !valid)
         {
             err_handler->reportError("No statement in IF body", curr_token.line);
         }
+        else require(TokenType::SEMICOLON);
         first_stmnt = false;
-        require(TokenType::SEMICOLON);
-        if (token() == TokenType::RS_END) break;
+
+        if (token() == TokenType::RS_END) 
+        {
+            llvm_out << '\t' << "br label %" << after_label << '\n';
+            break;
+        }
         if (token() == TokenType::RS_ELSE) 
         {
+            llvm_out << '\t' << "br label %" << after_label << '\n';
+            llvm_out << else_label << ": \n"; // begin else block
             advance();
             continue;
         }
     }
+
+    llvm_out << after_label << ": \n"; // begin after block
     
     require(TokenType::RS_END);
     require(TokenType::RS_IF);
@@ -674,22 +702,48 @@ void Parser::if_statement()
 
 void Parser::loop_statement()
 {
-    if (DEBUG) std::cout << "loop" << '\n';
+    if (DEBUG) std::cout << "for" << '\n';
     require(TokenType::RS_FOR);
 
     require(TokenType::L_PAREN);
     require(TokenType::IDENTIFIER);
     assignment_statement(curr_token.val.string_value); 
     require(TokenType::SEMICOLON);
+
+    std::string start_loop_label = next_label();
+    std::string loop_stmnts_label = next_label();
+    std::string after_loop_label = next_label();
+
+    // Need to explicitly break from a basic block.
+    llvm_out << "\tbr label %" << start_loop_label << '\n'; 
+
+    llvm_out << start_loop_label << ": \n"; // begin for block (expr check)
+
+    // Generate expression code in for block
     Value condition = expression(S_BOOL);
     require(TokenType::R_PAREN);
 
+    std::string condition_reg = get_val(condition);
+
+    llvm_out << "\tbr i1 " << condition_reg 
+        << ", label %" << loop_stmnts_label 
+        << ", label %" << after_loop_label << '\n';
+
+    llvm_out << loop_stmnts_label << ": \n"; // begin for statements block
+
+    // Consume and generate code for all inner for statements
     while (true)
     {
         statement();
         require(TokenType::SEMICOLON);
         if (token() == TokenType::RS_END) break;
     }
+
+    // End of for statements; jmp to beginning of for
+    llvm_out << "\tbr label %" << start_loop_label << '\n';
+    
+    llvm_out << after_loop_label << ": \n"; // begin block after for
+
     require(TokenType::RS_END); // Just to be sure, also to advance the token
     require(TokenType::RS_FOR);
 }

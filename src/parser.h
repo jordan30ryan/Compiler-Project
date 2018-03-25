@@ -16,6 +16,9 @@ public:
 private:
     // The stream to output LLVM to. Can be a file or stdout (for debugging)
     std::ofstream llvm_out;
+    // The codegen output. Can be llvm_out or an ostringstream to be appended
+    //  to llvm_out at the end (for procedures)
+    std::ostream codegen_out;
 
     // For use in LLVM assembly codegen. 
     // Declare builtin functions in the llvm output file
@@ -27,6 +30,9 @@ private:
     // Get next unnamed register.
     std::string next_reg();
     int reg_no = 0; // Current numbered register.
+    // Like next_reg but for labels
+    std::string next_label();
+    int label_no = 0;
 
 
     ErrHandler* err_handler;

@@ -1,0 +1,9 @@
+program ifprog is
+begin
+    if ('b' == 'a') then
+        putchar('y');
+    else
+        putchar('n');
+    end if;
+
+end program.

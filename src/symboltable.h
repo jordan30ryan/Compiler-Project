@@ -37,7 +37,7 @@ struct SymTableEntry
     SymTableEntry(TokenType t, SymbolType st) : type(t), sym_type(st) {}
 
     // The LLVM register (pointer) for this symbol (variable)
-    int reg;
+    int reg = -1;
 };
 
 class SymbolTableManager

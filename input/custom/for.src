@@ -1,0 +1,13 @@
+program forprog is
+    integer k;
+begin
+    for(k := 1; k < 10)
+        putinteger(k);
+        k := k + 1;
+    end for;
+    putchar('_');
+    for(k := 100; k < 110)
+        putinteger(k);
+        k := k + 1;
+    end for;
+end program.
