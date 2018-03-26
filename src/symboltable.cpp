@@ -173,7 +173,27 @@ void SymbolTableManager::set_proc_scope(std::string id)
 
 void SymbolTableManager::add_param_to_proc(SymTableEntry* param_entry)
 {
-    curr_proc->parameters.push_back(param_entry);
+    if (curr_proc != NULL)
+        curr_proc->parameters.push_back(param_entry);
+    else; // TODO: This is probably an error...
+}
+
+std::vector<SymTableEntry*> SymbolTableManager::get_current_proc_params()
+{
+    if (curr_proc != NULL) return curr_proc->parameters;
+    else 
+        // TODO: This is probably an error...
+        return std::vector<SymTableEntry*>();
+}
+
+int SymbolTableManager::get_current_proc_next_reg(bool increment)
+{
+    if (curr_proc != NULL) 
+    {
+        if (increment) ++(curr_proc->register_counter);
+        return curr_proc->register_counter;
+    }
+    else return -1;
 }
 
 void SymbolTableManager::reset_scope()

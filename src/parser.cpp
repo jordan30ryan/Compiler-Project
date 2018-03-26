@@ -31,9 +31,9 @@ Parser::Parser(ErrHandler* handler, SymbolTableManager* manager, Scanner* scan, 
 Parser::~Parser()
 {
     // TODO: Append procedures to llvm_out
-    for (auto it = procedure_defs.begin(); it != procedure_defs.end(); ++it)
+    for (auto it : procedure_defs) //= procedure_defs.begin(); it != procedure_defs.end(); ++it)
     {
-        llvm_out << (*it)->str();
+        llvm_out << it->str();
     }
     llvm_out.close();
 }
@@ -99,9 +99,15 @@ void Parser::decl_builtins()
 // Get next available register number for use in LLVM
 std::string Parser::next_reg()
 {
-    reg_no++;
+    int reg = symtable_manager->get_current_proc_next_reg(true);
+    if (reg == -1) 
+    {
+        // Not currently in a procedure; use the general counter
+        reg_no++;
+        reg = reg_no;
+    }
     std::ostringstream stream;
-    stream << '%' << reg_no;
+    stream << '%' << reg;
     return stream.str();
 }
 
@@ -372,12 +378,29 @@ void Parser::proc_header()
     // Start outputting to a new stream
     codegen_out = new std::ostringstream;
 
-    *codegen_out << "define void @" << proc_id << "()" /*TODO: Parametrs*/<< " {\n";
+    *codegen_out << "define void @" << proc_id << '(';
 
     require(TokenType::L_PAREN);
     if (token() != TokenType::R_PAREN)
         parameter_list(); 
     require(TokenType::R_PAREN);
+
+    std::vector<SymTableEntry*> params_vec 
+        = symtable_manager->get_current_proc_params();
+
+    for (auto it = params_vec.begin(); it != params_vec.end(); ++it)
+    {
+        // TODO pointer type? depends on whether it's out/in
+        if (it != params_vec.begin()) *codegen_out << ", ";
+        *codegen_out << SymbolTypeStrings[(*it)->sym_type] 
+            << "* " << next_reg();
+        int entry_reg = symtable_manager->get_current_proc_next_reg(false);
+        // Weird syntax; it is an iterator so it has to be derefrenced (*)
+        // params_vec stores pointers to SymTableEntry so that also gets dereferenced (->)
+        (*it)->reg = entry_reg;
+    }
+
+    *codegen_out << ") {\n";
 }
 
 void Parser::proc_body()
@@ -425,7 +448,7 @@ void Parser::parameter()
 {
     if (DEBUG) std::cout << "param" << '\n';
 
-    SymTableEntry* entry = var_declaration(false);
+    SymTableEntry* entry = var_declaration(false, false);
 
     // curr_token is the typemark
     if (token() != TokenType::RS_IN
@@ -441,7 +464,9 @@ void Parser::parameter()
 }
 
 
-SymTableEntry* Parser::var_declaration(bool is_global)
+// need_alloc - variable needs to be allocated before using (defaults to true)
+//  need_alloc==false for parameter variable declarations
+SymTableEntry* Parser::var_declaration(bool is_global, bool need_alloc)
 {
     if (DEBUG) std::cout << "var decl" << '\n';
     // This is the only place in grammar type mark occurs 
@@ -499,10 +524,15 @@ SymTableEntry* Parser::var_declaration(bool is_global)
         require(TokenType::R_BRACKET);
         // TODO: setup the variable as an array
     }
-    // Allocate space for this variable and associate the 
-    //  register number with the entry
-    *codegen_out << "\t" << next_reg() << " = alloca " 
-                        << SymbolTypeStrings[entry->sym_type] << '\n';
+
+    if (need_alloc)
+    {
+        // Allocate space for this variable and associate the 
+        //  register number with the entry
+        *codegen_out << "\t" << next_reg() << " = alloca " 
+            << SymbolTypeStrings[entry->sym_type] << '\n';
+    }
+
     entry->reg = reg_no;
 
     return entry;
@@ -619,15 +649,16 @@ void Parser::proc_call(std::string identifier)
     require(TokenType::R_PAREN);
     
     std::vector<std::string> arg_list_strings;
-    for (auto it = arg_list.begin(); it != arg_list.end(); ++it)
+    for (auto it : arg_list)
     {
         std::ostringstream stringbuilder;
         stringbuilder 
-            << SymbolTypeStrings[it->sym_type]
+            << SymbolTypeStrings[it.sym_type]
             << ' '
-            << get_val(*it);
+            << get_val(it);
         arg_list_strings.push_back(stringbuilder.str());
     }
+
     *codegen_out << "\tcall void @" << identifier << "(";
     for (auto it = arg_list_strings.begin(); it != arg_list_strings.end(); ++it)
     {

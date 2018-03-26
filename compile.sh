@@ -13,6 +13,6 @@ llc "${filename}.ll"
 clang "${filename}.s" ./src/runtime/runtime.c -o "${filename##*/}.out"
 
 #Remove intermediates
-rm "${filename}.ll"
+#rm "${filename}.ll"
 rm "${filename}.s"
 

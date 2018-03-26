@@ -1,0 +1,13 @@
+program parameters is
+    procedure a(integer ia in, bool b in, char c in)
+    begin
+        putinteger(ia);
+        putbool(b);
+        putchar(c);
+    end procedure;
+    
+    integer b;
+begin
+    b := 1;
+    a(b, true, 's');
+end program.

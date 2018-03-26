@@ -713,5 +713,39 @@ didn't work because you can't insert in the middle of the file without overwriti
 
 Only other way seems to be put every new proc into its own file and then cat them all together before compiling
 
+if/for done
+
+proc code gen with stack done (see doc.txt)
+
+Parametrs must be pass by reference or out/inout won't work.
+This means in LLVM they need to be pointers.
+This means that when passing variables into a function, the expression
+    needs to evaluate to a pointer and not load the variable first.
+
+If a param is out or inout can we assume it's always a pointer reg?
+That would simplify things.
+If a param is in, it could be an expression (read only). 
+    if it's not, it has to be a reg pointer 
+    because that's the only way the 'out' part makes any sense.
+    You can't output to an expression. once the expression is evaluated,
+    it's done and can't be used anymore. you can't just assign to it.
+
+
+
+
+
+TODO:
+    Procedure parameters
+    Arrays
+    Type checking for relational types
+    Strings
+    Global variables 
+
+
+================================================================================
+3/26
+
+direct usage of reg_no must not happen, or proc scopes will not work.
+
 
 

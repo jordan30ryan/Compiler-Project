@@ -37,7 +37,6 @@ private:
     std::string next_label();
     int label_no = 0;
 
-
     ErrHandler* err_handler;
     SymbolTableManager* symtable_manager;
     Scanner* scanner;
@@ -56,10 +55,6 @@ private:
     // required_type - the type to convert to.
     void convert_type(Value& val, std::string& val_reg_str, SymbolType required_type);
 
-
-    // Convert val to expected, if possible.
-    void convertType(Value& val, SymbolType expected);
-
     Token curr_token;
     bool curr_token_valid;
 
@@ -75,7 +70,7 @@ private:
     void parameter_list();
     void parameter();
 
-    SymTableEntry* var_declaration(bool is_global);
+    SymTableEntry* var_declaration(bool is_global, bool need_alloc=true);
     void type_mark();
     Value lower_bound();
     Value upper_bound();
