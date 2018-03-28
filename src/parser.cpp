@@ -1,10 +1,20 @@
 #include "parser.h"
 
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Verifier.h"
+
 #include <iostream>
 #include <cstdint>
 #include <cstring>
 
-#define DEBUG false
+#define P_DEBUG false
 
 // To assist in error printing 
 const char* TokenTypeStrings[] = 
@@ -18,6 +28,11 @@ const char* SymbolTypeStrings[] =
     "S_UNDEFINED", "S_STRING", "i8", "i32", "float", "i1", "S_PROCEDURE"
 };
 
+// Initialize llvm stuff
+using namespace llvm::sys;
+static llvm::LLVMContext TheContext;
+static llvm::IRBuilder<> Builder(TheContext);
+static std::unique_ptr<llvm::Module> TheModule;
 
 Parser::Parser(ErrHandler* handler, SymbolTableManager* manager, Scanner* scan, std::string filename)
     : err_handler(handler), symtable_manager(manager), scanner(scan)
@@ -35,12 +50,14 @@ Parser::Parser(ErrHandler* handler, SymbolTableManager* manager, Scanner* scan, 
 
 Parser::~Parser()
 {
+    /*
     // TODO: Append procedures to llvm_out
     for (auto it : procedure_defs) 
     {
         llvm_out << it->str();
     }
     llvm_out.close();
+    */
 }
 
 TokenType Parser::token()
@@ -48,13 +65,14 @@ TokenType Parser::token()
     if (curr_token.type == TokenType::FILE_END)
     {
         // Possibly desynchronized - this would go on infinitely, terminate here
-        throw std::runtime_error("Repeated attempt to get FILE_END token. Terminating due to desynchronization.");
+        // TODO: LLVM Doesn't support exceptions
+        //throw std::runtime_error("Repeated attempt to get FILE_END token. Terminating due to desynchronization.");
     }
     if (!curr_token_valid)
     {
         curr_token_valid = true;
         curr_token = scanner->getToken();
-        if (DEBUG) std::cout << "\tGot: " << TokenTypeStrings[curr_token.type] << '\n';
+        if (P_DEBUG) std::cout << "\tGot: " << TokenTypeStrings[curr_token.type] << '\n';
         return curr_token.type;
     }
     else return curr_token.type;
@@ -126,7 +144,7 @@ std::string Parser::next_label()
 }
 
 // Returns the literal value of a given Value as a string
-std::string Parser::get_val(Value val) 
+std::string Parser::get_val(MyValue val) 
 {
     std::ostringstream stream;
     //stream.setf(std::ios_base::floatfield);
@@ -187,7 +205,7 @@ std::string Parser::get_val(Value val)
     return stream.str();
 }
 
-void Parser::convert_type(Value& val, std::string& val_reg_str, SymbolType required_type)
+void Parser::convert_type(MyValue& val, std::string& val_reg_str, SymbolType required_type)
 {
     if (required_type == S_UNDEFINED) return;
     else if (required_type == S_INTEGER && val.sym_type == S_FLOAT)
@@ -272,8 +290,33 @@ void Parser::convert_type(Value& val, std::string& val_reg_str, SymbolType requi
 
 void Parser::parse() 
 {
+    using namespace llvm;
+
+    TheModule = make_unique<Module>("my IR", TheContext);
+
+    // Build a simple IR
+    // Set up function main (returns i32, no params)
+    std::vector<Type *> Parameters;
+    FunctionType *FT =
+        FunctionType::get(Type::getInt32Ty(TheContext), Parameters, false);
+    Function *F =
+        Function::Create(FT, Function::ExternalLinkage, "main", TheModule.get());
+
+    // Create basic block of main
+    BasicBlock *bb = BasicBlock::Create(TheContext, "entry", F);
+    Builder.SetInsertPoint(bb);
+
+    // Return a value
+    Value *val = ConstantInt::get(TheContext, APInt(32, 2));
+    Builder.CreateRet(val);
+
+    //compile_to_file(std::move(TheModule));
+    return;
+
+/*
     bool synchronized = false;
-    try 
+    // TODO: LLVM doesn't support exceptions
+    //try 
     {
         program();
         synchronized = true;
@@ -281,15 +324,16 @@ void Parser::parse()
         // BUT, this indicates synchronization, so an error isn't reported.
         require(TokenType::FILE_END);
     }
-    catch (std::runtime_error& err)
-    {
-        if (!synchronized) err_handler->reportError(err.what(), curr_token.line);
-    }
+    //catch (std::runtime_error& err)
+    //{
+    //    if (!synchronized) err_handler->reportError(err.what(), curr_token.line);
+    //}
+*/
 }
 
 void Parser::program()
 {
-    if (DEBUG) std::cout << "program" << '\n';
+    if (P_DEBUG) std::cout << "program" << '\n';
 
     // Declare builtin functions in llvm file
     decl_builtins();
@@ -308,7 +352,7 @@ void Parser::program()
 
 void Parser::program_header()
 {
-    if (DEBUG) std::cout << "program header" << '\n';
+    if (P_DEBUG) std::cout << "program header" << '\n';
     require(TokenType::RS_PROGRAM);
 
     require(TokenType::IDENTIFIER);
@@ -319,7 +363,7 @@ void Parser::program_header()
 
 void Parser::program_body()
 {
-    if (DEBUG) std::cout << "program body" << '\n';
+    if (P_DEBUG) std::cout << "program body" << '\n';
     bool declarations = true;
     while (true)
     {
@@ -345,7 +389,7 @@ void Parser::program_body()
 
 void Parser::declaration()
 {
-    if (DEBUG) std::cout << "declaration" << '\n';
+    if (P_DEBUG) std::cout << "declaration" << '\n';
     bool is_global = false;
     if (token() == TokenType::RS_GLOBAL)
     {
@@ -362,7 +406,7 @@ void Parser::declaration()
 
 void Parser::proc_declaration(bool is_global)
 {
-    if (DEBUG) std::cout << "proc decl" << '\n';
+    if (P_DEBUG) std::cout << "proc decl" << '\n';
     proc_header();
     proc_body();
 
@@ -383,7 +427,7 @@ void Parser::proc_declaration(bool is_global)
 
 void Parser::proc_header()
 {
-    if (DEBUG) std::cout << "proc header" << '\n';
+    if (P_DEBUG) std::cout << "proc header" << '\n';
     require(TokenType::RS_PROCEDURE);
 
     // Setup symbol table so the procedure's sym table is now being used
@@ -425,7 +469,7 @@ void Parser::proc_header()
 
 void Parser::proc_body()
 {
-    if (DEBUG) std::cout << "proc body" << '\n';
+    if (P_DEBUG) std::cout << "proc body" << '\n';
     bool declarations = true;
     while (true)
     {
@@ -451,7 +495,7 @@ void Parser::proc_body()
 
 void Parser::parameter_list()
 {
-    if (DEBUG) std::cout << "param list" << '\n';
+    if (P_DEBUG) std::cout << "param list" << '\n';
     while (true)
     {
         parameter(); 
@@ -466,7 +510,7 @@ void Parser::parameter_list()
 
 void Parser::parameter()
 {
-    if (DEBUG) std::cout << "param" << '\n';
+    if (P_DEBUG) std::cout << "param" << '\n';
 
     SymTableEntry* entry = var_declaration(false, false);
 
@@ -488,7 +532,7 @@ void Parser::parameter()
 //  need_alloc==false for parameter variable declarations
 SymTableEntry* Parser::var_declaration(bool is_global, bool need_alloc)
 {
-    if (DEBUG) std::cout << "var decl" << '\n';
+    if (P_DEBUG) std::cout << "var decl" << '\n';
     // This is the only place in grammar type mark occurs 
     //  so it doesn't need its own function
     TokenType typemark = token();
@@ -537,9 +581,9 @@ SymTableEntry* Parser::var_declaration(bool is_global, bool need_alloc)
     {
         advance();
 
-        Value lower = lower_bound();
+        MyValue lower = lower_bound();
         require(TokenType::COLON);
-        Value upper = upper_bound();
+        MyValue upper = upper_bound();
 
         require(TokenType::R_BRACKET);
         // TODO: setup the variable as an array
@@ -566,17 +610,17 @@ SymTableEntry* Parser::var_declaration(bool is_global, bool need_alloc)
     return entry;
 }
 
-Value Parser::lower_bound()
+MyValue Parser::lower_bound()
 {
-    if (DEBUG) std::cout << "lower_bound" << '\n';
+    if (P_DEBUG) std::cout << "lower_bound" << '\n';
     // Minus allowed in spec now
     if (token() == TokenType::MINUS) advance();
     return require(TokenType::INTEGER).val;
 }
 
-Value Parser::upper_bound()
+MyValue Parser::upper_bound()
 {
-    if (DEBUG) std::cout << "upper_bound" << '\n';
+    if (P_DEBUG) std::cout << "upper_bound" << '\n';
     // Minus allowed in spec now
     if (token() == TokenType::MINUS) advance();
     return require(TokenType::INTEGER).val;
@@ -584,7 +628,7 @@ Value Parser::upper_bound()
 
 bool Parser::statement()
 {
-    if (DEBUG) std::cout << "stmnt" << '\n';
+    if (P_DEBUG) std::cout << "stmnt" << '\n';
 
     if (token() == TokenType::IDENTIFIER)
         identifier_statement();
@@ -603,7 +647,7 @@ bool Parser::statement()
 //  start with an identifier
 void Parser::identifier_statement()
 {
-    if (DEBUG) std::cout << "identifier stmnt" << '\n';
+    if (P_DEBUG) std::cout << "identifier stmnt" << '\n';
     // Advance to next token; returning the current token
     //  and retrieving the identifier value
     std::string identifier = advance().val.string_value;
@@ -620,20 +664,20 @@ void Parser::identifier_statement()
 
 void Parser::assignment_statement(std::string identifier)
 {
-    if (DEBUG) std::cout << "assignment stmnt" << '\n';
+    if (P_DEBUG) std::cout << "assignment stmnt" << '\n';
 
     // already have identifier; need to check for indexing first
     if (token() == TokenType::L_BRACKET)
     {
         advance();
-        Value idx = expression(S_INTEGER);
+        MyValue idx = expression(S_INTEGER);
         require(TokenType::R_BRACKET);
     }
     SymTableEntry* lhs = symtable_manager->resolve_symbol(identifier); 
     // TODO: something with indexing
     require(TokenType::ASSIGNMENT);
 
-    Value rhs = expression(lhs->sym_type);
+    MyValue rhs = expression(lhs->sym_type);
 
     // Get the register for the expression rhs. 
     // Also load from mem if it's a variable.
@@ -658,7 +702,7 @@ void Parser::assignment_statement(std::string identifier)
 
 void Parser::proc_call(std::string identifier)
 {
-    if (DEBUG) std::cout << "proc call" << '\n';
+    if (P_DEBUG) std::cout << "proc call" << '\n';
     // already have identifier
 
     // Check symtable for the proc
@@ -670,7 +714,7 @@ void Parser::proc_call(std::string identifier)
         err_handler->reportError(stream.str(), curr_token.line);
     }
 
-    std::vector<Value> arg_list;
+    std::vector<MyValue> arg_list;
     require(TokenType::L_PAREN);
     if (token() != TokenType::R_PAREN)
         arg_list = argument_list(proc_entry);
@@ -697,13 +741,13 @@ void Parser::proc_call(std::string identifier)
     *codegen_out << ")\n";
 }
 
-std::vector<Value> Parser::argument_list(SymTableEntry* proc_entry)
+std::vector<MyValue> Parser::argument_list(SymTableEntry* proc_entry)
 {
-    if (DEBUG) std::cout << "arg list" << '\n';
-    std::vector <Value> vec;
+    if (P_DEBUG) std::cout << "arg list" << '\n';
+    std::vector <MyValue> vec;
     for (auto param : proc_entry->parameters)
     {
-        Value val = expression(param->sym_type);
+        MyValue val = expression(param->sym_type);
         // Expression should do type conversion.
         // If it's not the right type now, it probably can't be converted.
         if (val.sym_type != param->sym_type)
@@ -730,11 +774,11 @@ std::vector<Value> Parser::argument_list(SymTableEntry* proc_entry)
 
 void Parser::if_statement()
 {
-    if (DEBUG) std::cout << "if" << '\n';
+    if (P_DEBUG) std::cout << "if" << '\n';
     require(TokenType::RS_IF);
 
     require(TokenType::L_PAREN);
-    Value condition = expression(S_BOOL);
+    MyValue condition = expression(S_BOOL);
     require(TokenType::R_PAREN);
 
     require(TokenType::RS_THEN);
@@ -785,7 +829,7 @@ void Parser::if_statement()
 
 void Parser::loop_statement()
 {
-    if (DEBUG) std::cout << "for" << '\n';
+    if (P_DEBUG) std::cout << "for" << '\n';
     require(TokenType::RS_FOR);
 
     require(TokenType::L_PAREN);
@@ -803,7 +847,7 @@ void Parser::loop_statement()
     *codegen_out << start_loop_label << ": \n"; // begin for block (expr check)
 
     // Generate expression code in for block
-    Value condition = expression(S_BOOL);
+    MyValue condition = expression(S_BOOL);
     require(TokenType::R_PAREN);
 
     std::string condition_reg = get_val(condition);
@@ -833,18 +877,18 @@ void Parser::loop_statement()
 
 void Parser::return_statement()
 {
-    if (DEBUG) std::cout << "return" << '\n';
+    if (P_DEBUG) std::cout << "return" << '\n';
     require(TokenType::RS_RETURN);
 }
 
 // hintType - the expected type (e.g. if this is an assignment)
 //  used as a hint to expression on what type to convert to 
 //  (if type conversion is needed)
-Value Parser::expression(SymbolType hintType=S_UNDEFINED)
+MyValue Parser::expression(SymbolType hintType=S_UNDEFINED)
 {
-    if (DEBUG) std::cout << "expr" << '\n';
+    if (P_DEBUG) std::cout << "expr" << '\n';
 
-    Value retval;
+    MyValue retval;
 
     // arith_op is required and defined as:
     //  relation, arith_op_pr
@@ -855,7 +899,7 @@ Value Parser::expression(SymbolType hintType=S_UNDEFINED)
     {
         // not <arith_op>
         advance();
-        Value val = arith_op(hintType);
+        MyValue val = arith_op(hintType);
         std::string valstr = get_val(val);
         if (val.sym_type == S_INTEGER)
         {
@@ -887,7 +931,7 @@ Value Parser::expression(SymbolType hintType=S_UNDEFINED)
         //  (and optionally another expression_pr, and so on...)
         //  OR, expression_pr(val) will just return val unmodified 
         //  if there is no operator & or | as the first token.
-        Value val = arith_op(hintType); 
+        MyValue val = arith_op(hintType); 
         retval = expression_pr(val, hintType);
     }
 
@@ -902,9 +946,9 @@ Value Parser::expression(SymbolType hintType=S_UNDEFINED)
 }
 
 // lhs - left hand side of this operation. 
-Value Parser::expression_pr(Value lhs, SymbolType hintType)
+MyValue Parser::expression_pr(MyValue lhs, SymbolType hintType)
 {
-    if (DEBUG) std::cout << "expr prime" << '\n';
+    if (P_DEBUG) std::cout << "expr prime" << '\n';
 
 
     if (token() == TokenType::AND
@@ -912,7 +956,7 @@ Value Parser::expression_pr(Value lhs, SymbolType hintType)
     {
         TokenType op = advance().type;
 
-        Value rhs = arith_op(hintType);
+        MyValue rhs = arith_op(hintType);
 
         // Need to get value string here because it might requrie 
         //  code gen (for loading from variable pointers)
@@ -952,7 +996,7 @@ Value Parser::expression_pr(Value lhs, SymbolType hintType)
             << rhs_str
             << '\n';
 
-        Value result;
+        MyValue result;
         result.reg = reg_no;
         result.sym_type = lhs.sym_type;
 
@@ -963,24 +1007,24 @@ Value Parser::expression_pr(Value lhs, SymbolType hintType)
     else return lhs;
 }
 
-Value Parser::arith_op(SymbolType hintType)
+MyValue Parser::arith_op(SymbolType hintType)
 {
-    if (DEBUG) std::cout << "arith op" << '\n';
+    if (P_DEBUG) std::cout << "arith op" << '\n';
 
-    Value val = relation(hintType);
+    MyValue val = relation(hintType);
     return arith_op_pr(val, hintType);
 }
 
-Value Parser::arith_op_pr(Value lhs, SymbolType hintType)
+MyValue Parser::arith_op_pr(MyValue lhs, SymbolType hintType)
 {
-    if (DEBUG) std::cout << "arith op pr" << '\n';
+    if (P_DEBUG) std::cout << "arith op pr" << '\n';
 
     if (token() == TokenType::PLUS || token() == TokenType::MINUS)
     {
         // Advance and save current token's operator.
         TokenType op = advance().type;
 
-        Value rhs = relation(hintType); 
+        MyValue rhs = relation(hintType); 
 
         // Need to get value string here because it might requrie 
         //  code gen (for loading from variable pointers)
@@ -1021,7 +1065,7 @@ Value Parser::arith_op_pr(Value lhs, SymbolType hintType)
             << rhs_str
             << '\n';
 
-        Value result;
+        MyValue result;
         result.reg = reg_no;
         result.sym_type = lhs.sym_type;
 
@@ -1030,17 +1074,17 @@ Value Parser::arith_op_pr(Value lhs, SymbolType hintType)
     else return lhs;
 }
 
-Value Parser::relation(SymbolType hintType)
+MyValue Parser::relation(SymbolType hintType)
 {
-    if (DEBUG) std::cout << "relation" << '\n';
+    if (P_DEBUG) std::cout << "relation" << '\n';
 
-    Value val = term(hintType);
+    MyValue val = term(hintType);
     return relation_pr(val, hintType);
 }
 
-Value Parser::relation_pr(Value lhs, SymbolType hintType)
+MyValue Parser::relation_pr(MyValue lhs, SymbolType hintType)
 {
-    if (DEBUG) std::cout << "relation pr" << '\n';
+    if (P_DEBUG) std::cout << "relation pr" << '\n';
 
     if ((token() == TokenType::LT)
         | (token() == TokenType::GT)
@@ -1050,7 +1094,7 @@ Value Parser::relation_pr(Value lhs, SymbolType hintType)
         | (token() == TokenType::NOTEQUAL))
     {
         TokenType op = advance().type;
-        Value rhs = term(hintType);
+        MyValue rhs = term(hintType);
 
         // Need to get value string here because it might requrie 
         //  code gen (for loading from variable pointers)
@@ -1134,7 +1178,7 @@ Value Parser::relation_pr(Value lhs, SymbolType hintType)
             << rhs_str
             << '\n';
 
-        Value result;
+        MyValue result;
         result.reg = reg_no;
         // All relational compares return a bool
         result.sym_type = S_BOOL;
@@ -1144,25 +1188,25 @@ Value Parser::relation_pr(Value lhs, SymbolType hintType)
     else return lhs;
 }
 
-Value Parser::term(SymbolType hintType)
+MyValue Parser::term(SymbolType hintType)
 {
-    if (DEBUG) std::cout << "term" << '\n';
+    if (P_DEBUG) std::cout << "term" << '\n';
 
-    Value val = factor(hintType);
+    MyValue val = factor(hintType);
     return term_pr(val, hintType);
 }
 
 // Multiplication / Division 
-Value Parser::term_pr(Value lhs, SymbolType hintType)
+MyValue Parser::term_pr(MyValue lhs, SymbolType hintType)
 {
-    if (DEBUG) std::cout << "term pr" << '\n';
+    if (P_DEBUG) std::cout << "term pr" << '\n';
 
 
     if (token() == TokenType::MULTIPLICATION 
         || token() == TokenType::DIVISION)
     {
         TokenType op = advance().type;
-        Value rhs = factor(hintType);
+        MyValue rhs = factor(hintType);
 
         // Need to get value string here because it might requrie 
         //  code gen (for loading from variable pointers)
@@ -1204,7 +1248,7 @@ Value Parser::term_pr(Value lhs, SymbolType hintType)
             << rhs_str
             << '\n';
 
-        Value result;
+        MyValue result;
         result.reg = reg_no;
         result.sym_type = lhs.sym_type;
 
@@ -1213,10 +1257,10 @@ Value Parser::term_pr(Value lhs, SymbolType hintType)
     else return lhs;
 }
 
-Value Parser::factor(SymbolType hintType)
+MyValue Parser::factor(SymbolType hintType)
 {
-    if (DEBUG) std::cout << "factor" << '\n';
-    Value retval;
+    if (P_DEBUG) std::cout << "factor" << '\n';
+    MyValue retval;
 
     // Token is one of:
     //  (expression), [-] name, [-] float|integer, string, char, bool 
@@ -1277,10 +1321,10 @@ Value Parser::factor(SymbolType hintType)
     return retval;
 }
 
-Value Parser::name(SymbolType hintType)
+MyValue Parser::name(SymbolType hintType)
 {
-    if (DEBUG) std::cout << "name" << '\n';
-    Value val;
+    if (P_DEBUG) std::cout << "name" << '\n';
+    MyValue val;
 
     std::string id = require(TokenType::IDENTIFIER).val.string_value;
     SymTableEntry* entry = symtable_manager->resolve_symbol(id);

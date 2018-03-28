@@ -25,7 +25,7 @@ enum CharClass
 // TODO: Code generation stage - value should just store llvm registers.
 //  Value is passed around in every stage below expression(), 
 //  which would mean it's dealing with literals and symbols, which are regs.
-struct Value
+struct MyValue
 {
     SymbolType sym_type;
 
@@ -45,7 +45,7 @@ struct Value
 struct Token
 {
     TokenType type;
-    Value val;
+    MyValue val;
     int line;
 };
 

@@ -4,6 +4,8 @@
 #include "symboltable.h"
 #include "scanner.h"
 
+#include "llvm_helper.h"
+
 #include <iostream>
 #include <sstream>
 
@@ -29,7 +31,7 @@ private:
     // Get value of val; can be either a literal or a register
     // If it's a variable, it loads from the variable's pointer and returns a temp register.
     // If it's a literal, it just returns the literal in string form for use in llvm generation
-    std::string get_val(Value val);
+    std::string get_val(MyValue val);
     // Get next unnamed register.
     std::string next_reg();
     int reg_no = 0; // Current numbered register.
@@ -56,7 +58,7 @@ private:
     // Val - the value to convert.
     // reg_str - the register of val
     // required_type - the type to convert to.
-    void convert_type(Value& val, std::string& val_reg_str, SymbolType required_type);
+    void convert_type(MyValue& val, std::string& val_reg_str, SymbolType required_type);
 
     void program();
     void program_header();
@@ -72,29 +74,29 @@ private:
 
     SymTableEntry* var_declaration(bool is_global, bool need_alloc=true);
     void type_mark();
-    Value lower_bound();
-    Value upper_bound();
+    MyValue lower_bound();
+    MyValue upper_bound();
 
     bool statement();
     void identifier_statement();
     void assignment_statement(std::string);
     void proc_call(std::string);
-    std::vector<Value> argument_list(SymTableEntry* proc_entry);
+    std::vector<MyValue> argument_list(SymTableEntry* proc_entry);
 
     void if_statement();
     void loop_statement();
     void return_statement();
 
-    Value expression(SymbolType hintType);
+    MyValue expression(SymbolType hintType);
     // _pr functions are needed for eliminating left recursion
-    Value expression_pr(Value lhs, SymbolType hintType); 
-    Value arith_op(SymbolType hintType);
-    Value arith_op_pr(Value lhs, SymbolType hintType); 
-    Value relation(SymbolType hintType);
-    Value relation_pr(Value lhs, SymbolType hintType); 
-    Value term(SymbolType hintType);
-    Value term_pr(Value lhs, SymbolType hintType);
-    Value factor(SymbolType hintType);
-    Value name(SymbolType hintType);
+    MyValue expression_pr(MyValue lhs, SymbolType hintType); 
+    MyValue arith_op(SymbolType hintType);
+    MyValue arith_op_pr(MyValue lhs, SymbolType hintType); 
+    MyValue relation(SymbolType hintType);
+    MyValue relation_pr(MyValue lhs, SymbolType hintType); 
+    MyValue term(SymbolType hintType);
+    MyValue term_pr(MyValue lhs, SymbolType hintType);
+    MyValue factor(SymbolType hintType);
+    MyValue name(SymbolType hintType);
 };
 

@@ -1,6 +1,6 @@
 # Super basic makefile
 c: CC=clang++
-c: CFLAGS=-Wall -std=c++11 -Wno-char-subscripts -O3
+c: CFLAGS=-Wall -std=c++11 -Wno-char-subscripts `llvm-config --cxxflags --ldflags --system-libs --libs core` -ggdb
 
 g: CC=g++
 g: CFLAGS=-Wall --std=c++11 -Wno-char-subscripts -ggdb

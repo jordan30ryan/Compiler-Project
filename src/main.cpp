@@ -1,9 +1,26 @@
 #include "token.h"
+#include "errhandler.h"
+#include "symboltable.h"
 #include "scanner.h"
 #include "parser.h"
 
 #include <vector>
 #include <iostream>
+
+#include "llvm_helper.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Verifier.h"
+
+#include <iostream>
+#include <cstdint>
+#include <cstring>
 
 
 bool compile(char* filename, ErrHandler* err_handler)
@@ -39,6 +56,40 @@ bool compile(char* filename, ErrHandler* err_handler)
     return true;
 }
 
+void please()
+{
+    // Initialize llvm stuff
+    using namespace llvm::sys;
+    
+    static llvm::LLVMContext TheContext;
+    static llvm::IRBuilder<> Builder(TheContext);
+    //static std::unique_ptr<llvm::Module> TheModule;
+    static llvm::Module* TheModule = new llvm::Module("my IR", TheContext);
+    using namespace llvm;
+
+    //TheModule = make_unique<Module>("my IR", TheContext);
+
+    // Build a simple IR
+    // Set up function main (returns i32, no params)
+    std::vector<Type *> Parameters;
+    FunctionType *FT =
+        FunctionType::get(Type::getInt32Ty(TheContext), Parameters, false);
+    Function *F =
+        Function::Create(FT, Function::ExternalLinkage, "main", TheModule);
+
+    // Create basic block of main
+    BasicBlock *bb = BasicBlock::Create(TheContext, "entry", F);
+    Builder.SetInsertPoint(bb);
+
+    // Return a value
+    Value *val = ConstantInt::get(TheContext, APInt(32, 2));
+    Builder.CreateRet(val);
+
+    //compile_to_file(std::move(TheModule));
+    //compile_to_file(TheModule);
+    return;
+}
+
 /*
 Return codes
 1 - No filename given
@@ -46,6 +97,9 @@ Return codes
 */
 int main(int argc, char** argv)
 {
+    compile_to_file();
+    //please();
+    /*
     ErrHandler* err_handler = new ErrHandler();
 
     if (argc < 2) 
@@ -66,5 +120,6 @@ int main(int argc, char** argv)
     }   
 
     return 0;
+    */
 }
 
