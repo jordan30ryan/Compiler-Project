@@ -424,14 +424,17 @@ void Parser::proc_header()
 
     for (auto it = params_vec.begin(); it != params_vec.end(); ++it)
     {
+        // TODO: codegen w/ api
+        /*
         // TODO pointer type? depends on whether it's out/in
         if (it != params_vec.begin()) *codegen_out << ", ";
         *codegen_out << SymbolTypeStrings[(*it)->sym_type] 
             << "* " << next_reg();
-        int entry_reg = symtable_manager->get_current_proc_next_reg(false);
+        //int entry_reg = symtable_manager->get_current_proc_next_reg(false);
         // Weird syntax; it is an iterator so it has to be derefrenced (*)
         // params_vec stores pointers to SymTableEntry so that also gets dereferenced (->)
         //(*it)->reg = entry_reg;
+        */
     }
 
     *codegen_out << ") {\n";
