@@ -121,9 +121,9 @@ void Parser::decl_builtins()
 */
 }
 
-/*
 // Get next available register number for use in LLVM
-std::string Parser::next_reg()
+std::string Parser::next_reg() { return ""; }
+/*
 {
     int reg = symtable_manager->get_current_proc_next_reg(true);
     if (reg == -1) 
