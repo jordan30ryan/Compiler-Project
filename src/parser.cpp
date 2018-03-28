@@ -30,28 +30,13 @@ Parser::Parser(ErrHandler* handler, SymbolTableManager* manager, Scanner* scan, 
     curr_token.type = UNKNOWN;
     curr_token.val.sym_type = S_UNDEFINED;
 
-    // Initialize the llvm output stream
-    //filename.append(".ll");
-    //llvm_out.open(filename);
-
-    //codegen_out = &llvm_out;
-    // temporarary
+    // TODO temporarary
     codegen_out = new std::ostringstream;
 
     TheModule = make_unique<Module>("my IR", TheContext);
 }
 
-Parser::~Parser()
-{
-    /*
-    // TODO: Append procedures to llvm_out
-    for (auto it : procedure_defs) 
-    {
-        llvm_out << it->str();
-    }
-    llvm_out.close();
-    */
-}
+Parser::~Parser() { }
 
 TokenType Parser::token()
 {
@@ -566,8 +551,7 @@ SymTableEntry* Parser::var_declaration(bool is_global, bool need_alloc)
     {
         if (is_global)
         {
-            // this is getting bad...
-            //*codegen_out << "
+            //TODO
         }
         else
         {
