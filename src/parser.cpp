@@ -1,19 +1,5 @@
 #include "parser.h"
 
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Type.h"
-#include "llvm/IR/Verifier.h"
-
-#include <iostream>
-#include <cstdint>
-#include <cstring>
-
 #define P_DEBUG false
 
 // To assist in error printing 
@@ -29,7 +15,10 @@ const char* SymbolTypeStrings[] =
 };
 
 // Initialize llvm stuff
+
+using namespace llvm;
 using namespace llvm::sys;
+
 static llvm::LLVMContext TheContext;
 static llvm::IRBuilder<> Builder(TheContext);
 static std::unique_ptr<llvm::Module> TheModule;
@@ -42,10 +31,14 @@ Parser::Parser(ErrHandler* handler, SymbolTableManager* manager, Scanner* scan, 
     curr_token.val.sym_type = S_UNDEFINED;
 
     // Initialize the llvm output stream
-    filename.append(".ll");
-    llvm_out.open(filename);
+    //filename.append(".ll");
+    //llvm_out.open(filename);
 
-    codegen_out = &llvm_out;
+    //codegen_out = &llvm_out;
+    // temporarary
+    codegen_out = new std::ostringstream;
+
+    TheModule = make_unique<Module>("my IR", TheContext);
 }
 
 Parser::~Parser()
@@ -105,6 +98,13 @@ Token Parser::require(TokenType expected_type, bool error)
 
 void Parser::decl_builtins()
 {
+    // PUTINTEGER(i32)
+    std::vector<Type*> Params(1, Type::getInt64Ty(TheContext));
+    FunctionType *FT =
+        FunctionType::get(Type::getVoidTy(TheContext), Params, false);
+    Function *F =
+        Function::Create(FT, Function::ExternalLinkage, "PUTINTEGER", TheModule.get());
+/*
     *codegen_out << "declare void @PUTINTEGER(i32)" << '\n';
     *codegen_out << "declare void @PUTFLOAT(float)" << '\n';
     *codegen_out << "declare void @PUTCHAR(i8)" << '\n';
@@ -118,6 +118,7 @@ void Parser::decl_builtins()
     *codegen_out << "declare i8 @GETCHAR()" << '\n';
     *codegen_out << "declare i8* @GETSTRING()" << '\n';
     *codegen_out << "declare i1 @GETBOOL()" << '\n';
+*/
 }
 
 // Get next available register number for use in LLVM
@@ -147,9 +148,6 @@ std::string Parser::next_label()
 std::string Parser::get_val(MyValue val) 
 {
     std::ostringstream stream;
-    //stream.setf(std::ios_base::floatfield);
-    //stream.setf(std::ios_base::fixed);
-    //stream.setf(std::ios_base::scientific);
 
     if (val.reg != -1) 
     {
@@ -174,27 +172,23 @@ std::string Parser::get_val(MyValue val)
         switch (val.sym_type)
         {
         case S_INTEGER:
-        // Fall through
+            ConstantInt::get(TheContext, APInt(64, val.float_value));
+            break;
         case S_BOOL:
-            stream << val.int_value;
+            ConstantInt::get(TheContext, APInt(1, val.float_value));
             break;
         case S_FLOAT:
-            //stream << val.float_value;
-            //std::cout << (int)val.float_value;
-            // LLVM Requires exact float values.
-            // HOW ?? ??
-            uint32_t u;
-            memcpy(&u, &val.float_value, sizeof(val.float_value));
-            //std::cout << std::hex << u;
-            stream << std::hex << u;
+            ConstantFP::get(TheContext, APFloat(val.float_value));
             break;
         case S_STRING:
+            // TODO
             stream << val.string_value;
             break;
         case S_CHAR:
             // Cast to int because char literals in llvm assembly 
             //  should be numbers, not the char literal itself.
-            stream << (int)val.char_value;
+            //stream << (int)val.char_value;
+            ConstantInt::get(TheContext, APInt(8, (int)val.char_value));
             break;
         case S_PROCEDURE:
         case S_UNDEFINED:
@@ -288,8 +282,11 @@ void Parser::convert_type(MyValue& val, std::string& val_reg_str, SymbolType req
     }
 }
 
-void Parser::parse() 
+std::unique_ptr<llvm::Module> Parser::parse() 
 {
+    program();
+    return std::move(TheModule);
+/*
     using namespace llvm;
 
     TheModule = make_unique<Module>("my IR", TheContext);
@@ -312,7 +309,7 @@ void Parser::parse()
 
     //compile_to_file(std::move(TheModule));
     return;
-
+*/
 /*
     bool synchronized = false;
     // TODO: LLVM doesn't support exceptions
@@ -339,15 +336,25 @@ void Parser::program()
     decl_builtins();
 
     // Use main for outer program.
-    *codegen_out << "define i32 @main() {\n";
+    // Build a simple IR
+    // Set up function main (returns i32, no params)
+    std::vector<Type *> Parameters;
+    FunctionType *FT =
+        FunctionType::get(Type::getInt32Ty(TheContext), Parameters, false);
+    Function* main =
+        Function::Create(FT, Function::ExternalLinkage, "main", TheModule.get());
 
-    program_header(); 
-    program_body(); 
-    require(TokenType::PERIOD, false);
+    // Create basic block of main
+    BasicBlock *bb = BasicBlock::Create(TheContext, "entry", main);
+    Builder.SetInsertPoint(bb);
+
+    //program_header(); 
+    //program_body(); 
+    //require(TokenType::PERIOD, false);
 
     // Return 0 from the main function always
-    *codegen_out << "\tret i32 0\n";
-    *codegen_out << "}\n";
+    Value *val = ConstantInt::get(TheContext, APInt(32, 2));
+    Builder.CreateRet(val);
 }
 
 void Parser::program_header()

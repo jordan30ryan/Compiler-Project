@@ -1,34 +1,11 @@
 #include "llvm_helper.h"
 
-int compile_to_file()
+int compile_to_file(std::unique_ptr<llvm::Module> TheModule)
 {
     // Applies only to this scope
     using namespace llvm;
     using namespace llvm::sys;
 
-    //AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-    static llvm::LLVMContext TheContext;
-    static llvm::IRBuilder<> Builder(TheContext);
-    static std::unique_ptr<llvm::Module> TheModule;
-
-    TheModule = make_unique<Module>("my IR", TheContext);
-
-    // Build a simple IR
-    // Set up function main (returns i32, no params)
-    std::vector<Type *> Parameters;
-    FunctionType *FT =
-        FunctionType::get(Type::getInt32Ty(TheContext), Parameters, false);
-    Function *F =
-        Function::Create(FT, Function::ExternalLinkage, "main", TheModule.get());
-
-    // Create basic block of main
-    BasicBlock *bb = BasicBlock::Create(TheContext, "entry", F);
-    Builder.SetInsertPoint(bb);
-
-    // Return a value
-    Value *val = ConstantInt::get(TheContext, APInt(32, 2));
-    Builder.CreateRet(val);
-    //AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 
     // Initialize the target registry etc.
     InitializeAllTargetInfos();

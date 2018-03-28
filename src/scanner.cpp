@@ -16,18 +16,18 @@ bool Scanner::init(const char* filename)
     // Init ascii character class mapping
     for (char k = '0'; k <= '9'; k++)
     {
-        ascii_mapping[k] = CharClass::DIGIT;
+        ascii_mapping[(int)k] = CharClass::DIGIT;
     }
     for (char i = 'A', j = 'a'; i <= 'Z'; i++, j++)
     {
-        ascii_mapping[i] = CharClass::LETTER;
-        ascii_mapping[j] = CharClass::LETTER;
+        ascii_mapping[(int)i] = CharClass::LETTER;
+        ascii_mapping[(int)j] = CharClass::LETTER;
     }
 
-    ascii_mapping['\t'] = CharClass::WHITESPACE;  
-    ascii_mapping['\n'] = CharClass::WHITESPACE; 
-    ascii_mapping['\r'] = CharClass::WHITESPACE; 
-    ascii_mapping[' '] = CharClass::WHITESPACE; 
+    ascii_mapping[(int)'\t'] = CharClass::WHITESPACE;  
+    ascii_mapping[(int)'\n'] = CharClass::WHITESPACE; 
+    ascii_mapping[(int)'\r'] = CharClass::WHITESPACE; 
+    ascii_mapping[(int)' '] = CharClass::WHITESPACE; 
 
     return true;
 }
@@ -35,7 +35,7 @@ bool Scanner::init(const char* filename)
 // Check if ch is a valid identifier character
 bool Scanner::isValidInIdentifier(char ch)
 {
-    CharClass cls = ascii_mapping[ch];
+    CharClass cls = ascii_mapping[(int)ch];
     return cls == CharClass::LETTER 
             || cls == CharClass::DIGIT 
             || ch == '_';
@@ -70,7 +70,7 @@ void Scanner::consumeWhitespaceAndComments()
     // Buffer
     char ch;
     while ((ch = input_file.peek()) 
-            && ((ascii_mapping[ch] == CharClass::WHITESPACE) || ch == '/'))
+            && ((ascii_mapping[(int)ch] == CharClass::WHITESPACE) || ch == '/'))
     {
         if (ch == '/')
         {
@@ -152,7 +152,7 @@ Token Scanner::getToken()
     token.val.char_value = ch;
 
     // Main switch to get token type (and value if necessary)
-    switch (ascii_mapping[ch])
+    switch (ascii_mapping[(int)ch])
     {
     case CharClass::WHITESPACE:
         // Something in consumeWhitespace... is not working correctly...
@@ -213,7 +213,7 @@ Token Scanner::getToken()
                     continue;
                 }
                 else if (ch == '_') continue;
-                else if (ascii_mapping[ch] != CharClass::DIGIT) 
+                else if (ascii_mapping[(int)ch] != CharClass::DIGIT) 
                 {
                     input_file.unget();
                     break;
