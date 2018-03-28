@@ -1,4 +1,9 @@
 #include "parser.h"
+
+#include <iostream>
+#include <cstdint>
+#include <cstring>
+
 #define DEBUG false
 
 // To assist in error printing 
@@ -31,7 +36,7 @@ Parser::Parser(ErrHandler* handler, SymbolTableManager* manager, Scanner* scan, 
 Parser::~Parser()
 {
     // TODO: Append procedures to llvm_out
-    for (auto it : procedure_defs) //= procedure_defs.begin(); it != procedure_defs.end(); ++it)
+    for (auto it : procedure_defs) 
     {
         llvm_out << it->str();
     }
@@ -88,7 +93,8 @@ void Parser::decl_builtins()
     *codegen_out << "declare void @PUTSTRING(i8*)" << '\n';
     *codegen_out << "declare void @PUTBOOL(i1)" << '\n';
 
-    // TODO: How do these work? they get passed a variable, not returned. Need to pass in a pointer?
+    // TODO: How do these work? they get passed a variable, not returned. 
+    //  Need to pass in a pointer?
     *codegen_out << "declare i32 @GETINTEGER()" << '\n';
     *codegen_out << "declare float @GETFLOAT()" << '\n';
     *codegen_out << "declare i8 @GETCHAR()" << '\n';
@@ -123,6 +129,10 @@ std::string Parser::next_label()
 std::string Parser::get_val(Value val) 
 {
     std::ostringstream stream;
+    //stream.setf(std::ios_base::floatfield);
+    //stream.setf(std::ios_base::fixed);
+    //stream.setf(std::ios_base::scientific);
+
     if (val.reg != -1) 
     {
         int return_reg;
@@ -151,7 +161,14 @@ std::string Parser::get_val(Value val)
             stream << val.int_value;
             break;
         case S_FLOAT:
-            stream << val.float_value;
+            //stream << val.float_value;
+            //std::cout << (int)val.float_value;
+            // LLVM Requires exact float values.
+            // HOW ?? ??
+            uint32_t u;
+            memcpy(&u, &val.float_value, sizeof(val.float_value));
+            //std::cout << std::hex << u;
+            stream << std::hex << u;
             break;
         case S_STRING:
             stream << val.string_value;
@@ -180,7 +197,7 @@ void Parser::convert_type(Value& val, std::string& val_reg_str, SymbolType requi
         if (val_reg_str != "")
         {
             // Generate code converting val_reg_str to a register of type float
-            *codegen_out << '\t' << next_reg() << " = fptoui float " 
+            *codegen_out << '\t' << next_reg() << " = fptosi float " 
                 << val_reg_str << " to i32" << '\n';
             // Set val to be this new converted value.
             val.reg = reg_no;
@@ -202,7 +219,7 @@ void Parser::convert_type(Value& val, std::string& val_reg_str, SymbolType requi
         if (val_reg_str != "")
         {
             // Generate code converting val_reg_str to a temp register type int
-            *codegen_out << '\t' << next_reg() << " = uitofp i32 " 
+            *codegen_out << '\t' << next_reg() << " = sitofp i32 " 
                 << val_reg_str << " to float" << '\n';
             // Set val to be this new converted value.
             val.reg = reg_no;
@@ -378,6 +395,9 @@ void Parser::proc_header()
     // Start outputting to a new stream
     codegen_out = new std::ostringstream;
 
+    // Output floating point numbers in scientific notation.
+    codegen_out->setf(std::ios_base::scientific);
+
     *codegen_out << "define void @" << proc_id << '(';
 
     require(TokenType::L_PAREN);
@@ -527,10 +547,18 @@ SymTableEntry* Parser::var_declaration(bool is_global, bool need_alloc)
 
     if (need_alloc)
     {
-        // Allocate space for this variable and associate the 
-        //  register number with the entry
-        *codegen_out << "\t" << next_reg() << " = alloca " 
-            << SymbolTypeStrings[entry->sym_type] << '\n';
+        if (is_global)
+        {
+            // this is getting bad...
+            //*codegen_out << "
+        }
+        else
+        {
+            // Allocate space for this variable and associate the 
+            //  register number with the entry
+            *codegen_out << "\t" << next_reg() << " = alloca " 
+                << SymbolTypeStrings[entry->sym_type] << '\n';
+        }
     }
 
     entry->reg = reg_no;
@@ -1029,31 +1057,64 @@ Value Parser::relation_pr(Value lhs, SymbolType hintType)
         std::string lhs_str = get_val(lhs);
         std::string rhs_str = get_val(rhs);
 
-        // TODO: Type check/convert
-        // Can compare any of:
-        //  Int/bool/float/char
+        // Type conversion
+        if (lhs.sym_type == S_STRING || rhs.sym_type == S_STRING)
+        {
+            err_handler->reportError("Relation operators are not defined for strings.", curr_token.line);
+        }
+        if (lhs.sym_type != rhs.sym_type)
+        {
+            if (lhs.sym_type == S_FLOAT && rhs.sym_type == S_INTEGER)
+            {
+                // Always convert up to float to avoid losing information
+                convert_type(rhs, rhs_str, S_FLOAT);
+            }
+            else if (lhs.sym_type == S_INTEGER && rhs.sym_type == S_FLOAT)
+            {
+                // Always convert up to float to avoid losing information
+                convert_type(lhs, lhs_str, S_FLOAT);
+            }
+            else if (lhs.sym_type == S_BOOL && rhs.sym_type == S_INTEGER)
+            {
+                // Prefer conversion to hint type if possible to simplify later
+                if (hintType == S_BOOL) convert_type(rhs, rhs_str, S_BOOL);
+                else convert_type(lhs, lhs_str, S_INTEGER);
+            }
+            else if (lhs.sym_type == S_INTEGER && rhs.sym_type == S_BOOL)
+            {
+                // Prefer conversion to hint type if possible to simplify later
+                if (hintType == S_BOOL) convert_type(lhs, lhs_str, S_BOOL);
+                else convert_type(rhs, rhs_str, S_INTEGER);
+            }
+        }
 
         std::string llvm_op;
         switch (op)
         {
+            // TODO: ordered? not ordered? signed? unsigned?
             case LT:
-                // TODO: Unsigned or signed?
-                llvm_op = "slt";
+                llvm_op = 
+                    lhs.sym_type == S_FLOAT ? "olt" : "slt";
                 break;
             case GT:
-                llvm_op = "sgt";
+                llvm_op = 
+                    lhs.sym_type == S_FLOAT ? "ogt" : "sgt";
                 break;
             case LT_EQ:
-                llvm_op = "ule";
+                llvm_op = 
+                    lhs.sym_type == S_FLOAT ? "ole" : "sle";
                 break;
             case GT_EQ:
-                llvm_op = "uge";
+                llvm_op = 
+                    lhs.sym_type == S_FLOAT ? "oge" : "sge";
                 break;
             case EQUALS:
-                llvm_op = "eq";
+                llvm_op = 
+                    lhs.sym_type == S_FLOAT ? "oeq" : "eq";
                 break;
             case NOTEQUAL:
-                llvm_op = "ne";
+                llvm_op = 
+                    lhs.sym_type == S_FLOAT ? "one" : "ne";
                 break;
             default:
                 // This shouldn't happen; how'd we get in this outer if anyway lol
@@ -1134,7 +1195,7 @@ Value Parser::term_pr(Value lhs, SymbolType hintType)
                 ? lhs.sym_type == S_FLOAT ? "fmul" : "mul"
                 // Division
                 // fdiv (floating) / udiv (unsigned int)
-                : lhs.sym_type == S_FLOAT ? "fdiv" : "udiv") 
+                : lhs.sym_type == S_FLOAT ? "fdiv" : "sdiv") 
             << ' '
             << SymbolTypeStrings[lhs.sym_type]
             << ' '

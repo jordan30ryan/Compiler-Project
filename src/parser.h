@@ -41,6 +41,9 @@ private:
     SymbolTableManager* symtable_manager;
     Scanner* scanner;
 
+    Token curr_token;
+    bool curr_token_valid;
+
     // Get a token from scanner and store in curr_token if !curr_token_valid
     TokenType token();
     // Consume the token; subsequent calls to getToken will return a new token.
@@ -54,9 +57,6 @@ private:
     // reg_str - the register of val
     // required_type - the type to convert to.
     void convert_type(Value& val, std::string& val_reg_str, SymbolType required_type);
-
-    Token curr_token;
-    bool curr_token_valid;
 
     void program();
     void program_header();
