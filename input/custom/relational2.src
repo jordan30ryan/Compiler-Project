@@ -1,0 +1,13 @@
+program rel2 is 
+    integer a;
+    bool b;
+    float c;
+begin 
+
+    a := 500;
+    c := 5.5;
+    putbool(a < c);
+    putbool(a == c);
+    putbool(a == 5.1);
+    
+end program.
