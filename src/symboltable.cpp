@@ -186,16 +186,6 @@ std::vector<SymTableEntry*> SymbolTableManager::get_current_proc_params()
         return std::vector<SymTableEntry*>();
 }
 
-int SymbolTableManager::get_current_proc_next_reg(bool increment)
-{
-    if (curr_proc != NULL) 
-    {
-        if (increment) ++(curr_proc->register_counter);
-        return curr_proc->register_counter;
-    }
-    else return -1;
-}
-
 void SymbolTableManager::reset_scope()
 {
     std::pair<SymTable*, SymTableEntry*> context = scope_stack.top();

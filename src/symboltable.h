@@ -35,12 +35,6 @@ struct SymTableEntry
     SymTableEntry(TokenType t) : type(t) {}
     // For identifers where the type is known
     SymTableEntry(TokenType t, SymbolType st) : type(t), sym_type(st) {}
-
-    // The LLVM register (type pointer) for this symbol (variable)
-    int reg = -1;
-
-    // The current register number if this is a procedure
-    int register_counter = 0;
 };
 
 class SymbolTableManager
@@ -82,10 +76,6 @@ public:
 
     // Get params of the current procedure
     std::vector<SymTableEntry*> get_current_proc_params();
-
-    // Get register counter (for llvm) that the current proc is at 
-    // increment- whether to increment the register counter before returning
-    int get_current_proc_next_reg(bool increment);
 
     // Reset curr_symbols to one scope up (pop from the stack)
     void reset_scope();

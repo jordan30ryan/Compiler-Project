@@ -1,0 +1,4 @@
+program al is 
+    integer a;
+begin
+end program.

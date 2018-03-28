@@ -121,6 +121,7 @@ void Parser::decl_builtins()
 */
 }
 
+/*
 // Get next available register number for use in LLVM
 std::string Parser::next_reg()
 {
@@ -132,9 +133,11 @@ std::string Parser::next_reg()
         reg = reg_no;
     }
     std::ostringstream stream;
-    stream << '%' << reg;
+    //stream << '%' << reg;
+    stream << reg;
     return stream.str();
 }
+*/
 
 std::string Parser::next_label()
 {
@@ -286,46 +289,6 @@ std::unique_ptr<llvm::Module> Parser::parse()
 {
     program();
     return std::move(TheModule);
-/*
-    using namespace llvm;
-
-    TheModule = make_unique<Module>("my IR", TheContext);
-
-    // Build a simple IR
-    // Set up function main (returns i32, no params)
-    std::vector<Type *> Parameters;
-    FunctionType *FT =
-        FunctionType::get(Type::getInt32Ty(TheContext), Parameters, false);
-    Function *F =
-        Function::Create(FT, Function::ExternalLinkage, "main", TheModule.get());
-
-    // Create basic block of main
-    BasicBlock *bb = BasicBlock::Create(TheContext, "entry", F);
-    Builder.SetInsertPoint(bb);
-
-    // Return a value
-    Value *val = ConstantInt::get(TheContext, APInt(32, 2));
-    Builder.CreateRet(val);
-
-    //compile_to_file(std::move(TheModule));
-    return;
-*/
-/*
-    bool synchronized = false;
-    // TODO: LLVM doesn't support exceptions
-    //try 
-    {
-        program();
-        synchronized = true;
-        // This may cause the exception (repeatedly getting FILE_END)
-        // BUT, this indicates synchronization, so an error isn't reported.
-        require(TokenType::FILE_END);
-    }
-    //catch (std::runtime_error& err)
-    //{
-    //    if (!synchronized) err_handler->reportError(err.what(), curr_token.line);
-    //}
-*/
 }
 
 void Parser::program()
@@ -348,12 +311,12 @@ void Parser::program()
     BasicBlock *bb = BasicBlock::Create(TheContext, "entry", main);
     Builder.SetInsertPoint(bb);
 
-    //program_header(); 
-    //program_body(); 
-    //require(TokenType::PERIOD, false);
+    program_header(); 
+    program_body(); 
+    require(TokenType::PERIOD, false);
 
     // Return 0 from the main function always
-    Value *val = ConstantInt::get(TheContext, APInt(32, 2));
+    Value *val = ConstantInt::get(TheContext, APInt(32, 0));
     Builder.CreateRet(val);
 }
 
@@ -468,7 +431,7 @@ void Parser::proc_header()
         int entry_reg = symtable_manager->get_current_proc_next_reg(false);
         // Weird syntax; it is an iterator so it has to be derefrenced (*)
         // params_vec stores pointers to SymTableEntry so that also gets dereferenced (->)
-        (*it)->reg = entry_reg;
+        //(*it)->reg = entry_reg;
     }
 
     *codegen_out << ") {\n";
@@ -607,13 +570,10 @@ SymTableEntry* Parser::var_declaration(bool is_global, bool need_alloc)
         {
             // Allocate space for this variable and associate the 
             //  register number with the entry
-            *codegen_out << "\t" << next_reg() << " = alloca " 
-                << SymbolTypeStrings[entry->sym_type] << '\n';
+            Type* type = Type::getInt64Ty(TheContext);
+            Builder.CreateAlloca(type, 0, nullptr, id);
         }
     }
-
-    entry->reg = reg_no;
-
     return entry;
 }
 
@@ -696,6 +656,7 @@ void Parser::assignment_statement(std::string identifier)
         convert_type(rhs, rhs_reg_str, lhs->sym_type);
     }
 
+    /*
     // Have to do this first because get_val might generate more LLVM code
     *codegen_out << "\tstore "
         << SymbolTypeStrings[rhs.sym_type]
@@ -705,6 +666,7 @@ void Parser::assignment_statement(std::string identifier)
         << SymbolTypeStrings[rhs.sym_type]
         << "* %" 
         << lhs->reg << '\n';
+    */
 }
 
 void Parser::proc_call(std::string identifier)
@@ -1345,7 +1307,7 @@ MyValue Parser::name(SymbolType hintType)
         require(TokenType::R_BRACKET);
     }
 
-    val.reg = entry->reg;
+    //val.reg = entry->reg;
     val.is_ptr = true;
     return val;
 }

@@ -6,6 +6,11 @@ int compile_to_file(std::unique_ptr<llvm::Module> TheModule)
     using namespace llvm;
     using namespace llvm::sys;
 
+    //TheModule->dump();
+    TheModule->print(llvm::errs(), nullptr);
+
+    return 0;
+
 
     // Initialize the target registry etc.
     InitializeAllTargetInfos();
