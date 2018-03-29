@@ -8,7 +8,7 @@ filename="${1%.*}"
 ./bin/compiler $1
 
 #Ensure llvm > 3.5 is used
-llc "${filename}.ll"
+#llc "${filename}.ll"
 
 clang "${filename}.s" ./src/runtime/runtime.c -o "${filename##*/}.out"
 

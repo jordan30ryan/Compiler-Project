@@ -39,14 +39,14 @@ bool compile(char* filename, ErrHandler* err_handler)
     std::unique_ptr<llvm::Module> TheModule = parser->parse();
 
     // Compile the llvm to a file
-    compile_to_file(std::move(TheModule));
+    filenamestr.append(".s");
+    compile_to_file(std::move(TheModule), filenamestr);
 
     // Delete instances
     delete sym_manager;
     delete scanner;
     delete parser;
 
-    // TODO: Compile ll / link with runtime?
     return true;
 }
 

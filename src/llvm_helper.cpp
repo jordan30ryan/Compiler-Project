@@ -1,6 +1,6 @@
 #include "llvm_helper.h"
 
-int compile_to_file(std::unique_ptr<llvm::Module> TheModule)
+int compile_to_file(std::unique_ptr<llvm::Module> TheModule, std::string filename)
 {
     // Applies only to this scope
     using namespace llvm;
@@ -44,9 +44,9 @@ int compile_to_file(std::unique_ptr<llvm::Module> TheModule)
     TheModule->setDataLayout(TheTargetMachine->createDataLayout());
 
     //auto Filename = "output.o";
-    auto Filename = "output.s";
+    //auto Filename = "output.s";
     std::error_code EC;
-    raw_fd_ostream dest(Filename, EC, sys::fs::F_None);
+    raw_fd_ostream dest(filename, EC, sys::fs::F_None);
 
     if (EC) {
         errs() << "Could not open file: " << EC.message();

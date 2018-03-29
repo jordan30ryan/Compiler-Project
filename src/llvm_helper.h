@@ -33,5 +33,5 @@
 #include <utility>
 #include <vector>
 
-int compile_to_file(std::unique_ptr<llvm::Module> TheModule);
+int compile_to_file(std::unique_ptr<llvm::Module>, std::string);
 
