@@ -766,3 +766,16 @@ Motivation:
     Felt like a lot of recent additions are hack-ish
     LLVM assembly is usually not generated directly
 
+================================================================================
+3/28
+
+TODO:
+    procedures
+    arrays
+    strings
+    global vars
+    negative vars
+    TESTING
+
+
+
