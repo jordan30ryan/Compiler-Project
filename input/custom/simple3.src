@@ -1,0 +1,18 @@
+// Basic test of what's working right now.
+program typeConv is
+    integer a;
+    float f;
+begin
+    //a := 1.5; // Type conversion from literal
+    a := 1;
+    //f := a; // Type conversion from variable
+    //f := f + 0.5;
+    putinteger(a); // prints 1
+    //putchar(':'); // separator
+
+    // Type conversion for param
+    //putinteger(f); // prints 1
+    //putchar(':'); // separator
+    //putfloat(f); // prints 1.5
+
+end program.

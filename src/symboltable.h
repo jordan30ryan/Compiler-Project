@@ -2,6 +2,9 @@
 #include "token.h"
 #include "errhandler.h"
 
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Function.h"
+
 #include <sstream>
 #include <unordered_map>
 #include <stack>
@@ -17,7 +20,12 @@ struct SymTableEntry
     TokenType type; 
 
     // if type==IDENTIFIER, 
-    //  stores identifier type (i.e. Variable type or Procedure)
+    // stores the llvm variable allocated space
+    llvm::AllocaInst* value;
+    
+    // Maybe just keep this? No need for the other info then?
+    llvm::Function* function;
+
     SymbolType sym_type = S_UNDEFINED;
 
     // If this is a procedure, this

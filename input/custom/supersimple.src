@@ -1,0 +1,10 @@
+program simple is
+    float a;
+begin
+    a := 2.0;
+    a := a * 5;
+    a := a - 1;
+    a := a / 4;
+    a := a + 3;
+end program.
+

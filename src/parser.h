@@ -43,9 +43,9 @@ private:
     // Get value of val; can be either a literal or a register
     // If it's a variable, it loads from the variable's pointer and returns a temp register.
     // If it's a literal, it just returns the literal in string form for use in llvm generation
-    std::string get_val(MyValue val);
+    //std::string get_val(MyValue val);
     // Get next unnamed register.
-    std::string next_reg();
+    //std::string next_reg();
     int reg_no = 0; // Current numbered register.
     // Like next_reg but for labels
     std::string next_label();
@@ -86,29 +86,29 @@ private:
 
     SymTableEntry* var_declaration(bool is_global, bool need_alloc=true);
     void type_mark();
-    MyValue lower_bound();
-    MyValue upper_bound();
+    llvm::Value* lower_bound();
+    llvm::Value* upper_bound();
 
     bool statement();
     void identifier_statement();
     void assignment_statement(std::string);
     void proc_call(std::string);
-    std::vector<MyValue> argument_list(SymTableEntry* proc_entry);
+    std::vector<llvm::Value*> argument_list(SymTableEntry* proc_entry);
 
     void if_statement();
     void loop_statement();
     void return_statement();
 
-    MyValue expression(SymbolType hintType);
+    llvm::Value* expression(SymbolType hintType);
     // _pr functions are needed for eliminating left recursion
-    MyValue expression_pr(MyValue lhs, SymbolType hintType); 
-    MyValue arith_op(SymbolType hintType);
-    MyValue arith_op_pr(MyValue lhs, SymbolType hintType); 
-    MyValue relation(SymbolType hintType);
-    MyValue relation_pr(MyValue lhs, SymbolType hintType); 
-    MyValue term(SymbolType hintType);
-    MyValue term_pr(MyValue lhs, SymbolType hintType);
-    MyValue factor(SymbolType hintType);
-    MyValue name(SymbolType hintType);
+    llvm::Value* expression_pr(llvm::Value* lhs, SymbolType hintType); 
+    llvm::Value* arith_op(SymbolType hintType);
+    llvm::Value* arith_op_pr(llvm::Value* lhs, SymbolType hintType); 
+    llvm::Value* relation(SymbolType hintType);
+    llvm::Value* relation_pr(llvm::Value* lhs, SymbolType hintType); 
+    llvm::Value* term(SymbolType hintType);
+    llvm::Value* term_pr(llvm::Value* lhs, SymbolType hintType);
+    llvm::Value* factor(SymbolType hintType);
+    llvm::Value* name(SymbolType hintType);
 };
 

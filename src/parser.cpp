@@ -84,11 +84,14 @@ Token Parser::require(TokenType expected_type, bool error)
 void Parser::decl_builtins()
 {
     // PUTINTEGER(i32)
-    std::vector<Type*> Params(1, Type::getInt64Ty(TheContext));
+    std::vector<Type*> Params(1, Type::getInt32Ty(TheContext));
     FunctionType *FT =
         FunctionType::get(Type::getVoidTy(TheContext), Params, false);
     Function *F =
         Function::Create(FT, Function::ExternalLinkage, "PUTINTEGER", TheModule.get());
+    SymTableEntry* entry = symtable_manager->resolve_symbol("PUTINTEGER");
+    entry->function = F;
+
 /*
     *codegen_out << "declare void @PUTINTEGER(i32)" << '\n';
     *codegen_out << "declare void @PUTFLOAT(float)" << '\n';
@@ -107,22 +110,7 @@ void Parser::decl_builtins()
 }
 
 // Get next available register number for use in LLVM
-std::string Parser::next_reg() { return ""; }
-/*
-{
-    int reg = symtable_manager->get_current_proc_next_reg(true);
-    if (reg == -1) 
-    {
-        // Not currently in a procedure; use the general counter
-        reg_no++;
-        reg = reg_no;
-    }
-    std::ostringstream stream;
-    //stream << '%' << reg;
-    stream << reg;
-    return stream.str();
-}
-*/
+//std::string Parser::next_reg() { return ""; }
 
 std::string Parser::next_label()
 {
@@ -132,6 +120,7 @@ std::string Parser::next_label()
     return stream.str();
 }
 
+/*
 // Returns the literal value of a given Value as a string
 std::string Parser::get_val(MyValue val) 
 {
@@ -143,12 +132,6 @@ std::string Parser::get_val(MyValue val)
         // Value is a variable register. Access its value (not pointer to it)
         if (val.is_ptr)
         {
-            *codegen_out << '\t' << next_reg() << " = load " 
-                        << SymbolTypeStrings[val.sym_type]
-                        << ", "
-                        << SymbolTypeStrings[val.sym_type]
-                        << "* %" << val.reg << '\n';
-            return_reg = reg_no;
         }
         else return_reg = val.reg;
 
@@ -160,10 +143,10 @@ std::string Parser::get_val(MyValue val)
         switch (val.sym_type)
         {
         case S_INTEGER:
-            ConstantInt::get(TheContext, APInt(64, val.float_value));
+            ConstantInt::get(TheContext, APInt(32, val.int_value));
             break;
         case S_BOOL:
-            ConstantInt::get(TheContext, APInt(1, val.float_value));
+            ConstantInt::get(TheContext, APInt(1, val.int_value));
             break;
         case S_FLOAT:
             ConstantFP::get(TheContext, APFloat(val.float_value));
@@ -186,8 +169,10 @@ std::string Parser::get_val(MyValue val)
 
     return stream.str();
 }
+*/
 
-void Parser::convert_type(MyValue& val, std::string& val_reg_str, SymbolType required_type)
+/*
+void Parser::convert_type(Value& val, std::string& val_reg_str, SymbolType required_type)
 {
     if (required_type == S_UNDEFINED) return;
     else if (required_type == S_INTEGER && val.sym_type == S_FLOAT)
@@ -237,7 +222,7 @@ void Parser::convert_type(MyValue& val, std::string& val_reg_str, SymbolType req
     else if (required_type == S_BOOL && val.sym_type == S_INTEGER)
     {
         val.sym_type = S_BOOL;
-        //*codegen_out << '\t' << next_reg() << " = trunc i32 " 
+        // *codegen_out << '\t' << next_reg() << " = trunc i32 " 
             //<< val_reg_str << " to i1" << '\n';
         *codegen_out << '\t' << next_reg() << " = icmp ne i32 " 
             << val_reg_str << ", 0" << '\n';
@@ -269,6 +254,7 @@ void Parser::convert_type(MyValue& val, std::string& val_reg_str, SymbolType req
         return;
     }
 }
+*/
 
 std::unique_ptr<llvm::Module> Parser::parse() 
 {
@@ -299,6 +285,14 @@ void Parser::program()
     program_header(); 
     program_body(); 
     require(TokenType::PERIOD, false);
+
+    // TODO: For testing; remove later
+    /*
+    Value *fl = ConstantFP::get(TheContext, APFloat(5.1));
+    //Value *v = Builder.CreateFAdd(fl, fl, "asdf");
+    Value *ret = Builder.CreateFPToUI(fl, Type::getInt32Ty(TheContext));
+    Builder.CreateRet(ret);
+    */
 
     // Return 0 from the main function always
     Value *val = ConstantInt::get(TheContext, APInt(32, 0));
@@ -505,8 +499,10 @@ SymTableEntry* Parser::var_declaration(bool is_global, bool need_alloc)
         err_handler->reportError(stream.str(), curr_token.line);
     }
 
-    std::string llvm_type;
+    // The llvm type to allocate for this variable
+    Type* allocation_type;
 
+    // entry sym_type is reduntant with entry's LLVM value
     switch (typemark)
     {
     case RS_STRING:
@@ -517,12 +513,15 @@ SymTableEntry* Parser::var_declaration(bool is_global, bool need_alloc)
         break;
     case RS_INTEGER:
         entry->sym_type = S_INTEGER;
+        allocation_type = Type::getInt32Ty(TheContext);
         break;
     case RS_FLOAT:
         entry->sym_type = S_FLOAT;
+        allocation_type = Type::getFloatTy(TheContext);
         break;
     case RS_BOOL:
         entry->sym_type = S_BOOL;
+        allocation_type = Type::getInt1Ty(TheContext);
         break;
     default:
         std::ostringstream stream;
@@ -539,9 +538,9 @@ SymTableEntry* Parser::var_declaration(bool is_global, bool need_alloc)
     {
         advance();
 
-        MyValue lower = lower_bound();
+        Value* lower = lower_bound();
         require(TokenType::COLON);
-        MyValue upper = upper_bound();
+        Value* upper = upper_bound();
 
         require(TokenType::R_BRACKET);
         // TODO: setup the variable as an array
@@ -555,29 +554,30 @@ SymTableEntry* Parser::var_declaration(bool is_global, bool need_alloc)
         }
         else
         {
-            // Allocate space for this variable and associate the 
-            //  register number with the entry
-            Type* type = Type::getInt64Ty(TheContext);
-            Builder.CreateAlloca(type, 0, nullptr, id);
+            // Allocate space for this variable 
+            entry->value 
+                = Builder.CreateAlloca(allocation_type, 0, nullptr, id);
         }
     }
     return entry;
 }
 
-MyValue Parser::lower_bound()
+Value* Parser::lower_bound()
 {
     if (P_DEBUG) std::cout << "lower_bound" << '\n';
     // Minus allowed in spec now
     if (token() == TokenType::MINUS) advance();
-    return require(TokenType::INTEGER).val;
+    return ConstantInt::get(TheContext, 
+        APInt(32, require(TokenType::INTEGER).val.int_value));
 }
 
-MyValue Parser::upper_bound()
+Value* Parser::upper_bound()
 {
     if (P_DEBUG) std::cout << "upper_bound" << '\n';
     // Minus allowed in spec now
     if (token() == TokenType::MINUS) advance();
-    return require(TokenType::INTEGER).val;
+    return ConstantInt::get(TheContext, 
+        APInt(32, require(TokenType::INTEGER).val.int_value));
 }
 
 bool Parser::statement()
@@ -623,37 +623,27 @@ void Parser::assignment_statement(std::string identifier)
     // already have identifier; need to check for indexing first
     if (token() == TokenType::L_BRACKET)
     {
+        //TODO
         advance();
-        MyValue idx = expression(S_INTEGER);
+        Value* idx = expression(S_INTEGER);
         require(TokenType::R_BRACKET);
     }
     SymTableEntry* lhs = symtable_manager->resolve_symbol(identifier); 
     // TODO: something with indexing
     require(TokenType::ASSIGNMENT);
 
-    MyValue rhs = expression(lhs->sym_type);
-
-    // Get the register for the expression rhs. 
-    // Also load from mem if it's a variable.
-    std::string rhs_reg_str = get_val(rhs);
+    Value* rhs = expression(lhs->sym_type);
 
     // Type conversion
+    /*
     if (lhs->sym_type != rhs.sym_type)
     {
         convert_type(rhs, rhs_reg_str, lhs->sym_type);
     }
-
-    /*
-    // Have to do this first because get_val might generate more LLVM code
-    *codegen_out << "\tstore "
-        << SymbolTypeStrings[rhs.sym_type]
-        << ' '
-        << rhs_reg_str 
-        << ", "
-        << SymbolTypeStrings[rhs.sym_type]
-        << "* %" 
-        << lhs->reg << '\n';
     */
+
+    // Store rhs into lhs
+    Builder.CreateStore(rhs, lhs->value);
 }
 
 void Parser::proc_call(std::string identifier)
@@ -668,42 +658,28 @@ void Parser::proc_call(std::string identifier)
         std::ostringstream stream;
         stream << "Procedure " << identifier << " not defined\n";
         err_handler->reportError(stream.str(), curr_token.line);
+        return;
     }
 
-    std::vector<MyValue> arg_list;
+
+    std::vector<Value*> arg_list;
     require(TokenType::L_PAREN);
     if (token() != TokenType::R_PAREN)
         arg_list = argument_list(proc_entry);
     require(TokenType::R_PAREN);
-    
-    std::vector<std::string> arg_list_strings;
-    for (auto it : arg_list)
-    {
-        std::ostringstream stringbuilder;
-        stringbuilder 
-            << SymbolTypeStrings[it.sym_type]
-            << ' '
-            << get_val(it);
-        arg_list_strings.push_back(stringbuilder.str());
-    }
 
-    *codegen_out << "\tcall void @" << identifier << "(";
-    for (auto it = arg_list_strings.begin(); it != arg_list_strings.end(); ++it)
-    {
-        if (it != arg_list_strings.begin())
-            *codegen_out << ", ";
-        *codegen_out << *it;
-    }
-    *codegen_out << ")\n";
+    Builder.CreateCall(proc_entry->function, arg_list);
 }
 
-std::vector<MyValue> Parser::argument_list(SymTableEntry* proc_entry)
+std::vector<Value*> Parser::argument_list(SymTableEntry* proc_entry)
 {
     if (P_DEBUG) std::cout << "arg list" << '\n';
-    std::vector <MyValue> vec;
+    std::vector<Value*> vec;
     for (auto param : proc_entry->parameters)
     {
-        MyValue val = expression(param->sym_type);
+        Value* val = expression(param->sym_type);
+
+        /*
         // Expression should do type conversion.
         // If it's not the right type now, it probably can't be converted.
         if (val.sym_type != param->sym_type)
@@ -715,6 +691,7 @@ std::vector<MyValue> Parser::argument_list(SymTableEntry* proc_entry)
                 << "\n\tExpected:\t" << SymbolTypeStrings[param->sym_type];
             err_handler->reportError(stream.str(), curr_token.line);
         }
+        */
 
         vec.push_back(val); 
 
@@ -734,19 +711,21 @@ void Parser::if_statement()
     require(TokenType::RS_IF);
 
     require(TokenType::L_PAREN);
-    MyValue condition = expression(S_BOOL);
+    Value* condition = expression(S_BOOL);
     require(TokenType::R_PAREN);
 
     require(TokenType::RS_THEN);
 
-    std::string condition_reg = get_val(condition);
+    //std::string condition_reg = get_val(condition);
 
     std::string then_label = next_label();
     std::string else_label = next_label();
     std::string after_label = next_label();
 
+/*
     *codegen_out << '\t' << "br i1 " << condition_reg 
         << ", label %" << then_label << ", label %" << else_label << '\n';
+*/
 
 
     *codegen_out << then_label << ": \n"; // begin then block
@@ -803,14 +782,16 @@ void Parser::loop_statement()
     *codegen_out << start_loop_label << ": \n"; // begin for block (expr check)
 
     // Generate expression code in for block
-    MyValue condition = expression(S_BOOL);
+    Value* condition = expression(S_BOOL);
     require(TokenType::R_PAREN);
 
-    std::string condition_reg = get_val(condition);
+    //std::string condition_reg = get_val(condition);
 
+    /*
     *codegen_out << "\tbr i1 " << condition_reg 
         << ", label %" << loop_stmnts_label 
         << ", label %" << after_loop_label << '\n';
+        */
 
     *codegen_out << loop_stmnts_label << ": \n"; // begin for statements block
 
@@ -840,11 +821,11 @@ void Parser::return_statement()
 // hintType - the expected type (e.g. if this is an assignment)
 //  used as a hint to expression on what type to convert to 
 //  (if type conversion is needed)
-MyValue Parser::expression(SymbolType hintType=S_UNDEFINED)
+Value* Parser::expression(SymbolType hintType=S_UNDEFINED)
 {
     if (P_DEBUG) std::cout << "expr" << '\n';
 
-    MyValue retval;
+    Value* retval;
 
     // arith_op is required and defined as:
     //  relation, arith_op_pr
@@ -855,21 +836,14 @@ MyValue Parser::expression(SymbolType hintType=S_UNDEFINED)
     {
         // not <arith_op>
         advance();
-        MyValue val = arith_op(hintType);
-        std::string valstr = get_val(val);
-        if (val.sym_type == S_INTEGER)
+        Value* val = arith_op(hintType);
+        if (val->getType()->isIntegerTy(32))
         {
-            *codegen_out << '\t' << next_reg() << " = xor i32 " 
-                << valstr << ", -1" << '\n';
-            val.reg = reg_no;
-            val.is_ptr = false;
+            retval = Builder.CreateXor(val, ConstantInt::get(TheContext, APInt(32, -1)));
         }
-        else if (val.sym_type == S_BOOL)
+        if (val->getType()->isIntegerTy(1))
         {
-            *codegen_out << '\t' << next_reg() << " = xor i1 " 
-                << valstr << ", 1" << '\n';
-            val.reg = reg_no;
-            val.is_ptr = false;
+            retval = Builder.CreateXor(val, ConstantInt::get(TheContext, APInt(1, 1)));
         }
         else
         {
@@ -887,22 +861,24 @@ MyValue Parser::expression(SymbolType hintType=S_UNDEFINED)
         //  (and optionally another expression_pr, and so on...)
         //  OR, expression_pr(val) will just return val unmodified 
         //  if there is no operator & or | as the first token.
-        MyValue val = arith_op(hintType); 
+        Value* val = arith_op(hintType); 
         retval = expression_pr(val, hintType);
     }
 
     // Type conversion to expected type before returning from expression.
+    /*
     if (hintType != retval.sym_type)
     {
         std::string retval_str = get_val(retval);
         convert_type(retval, retval_str, hintType);
     }
+    */
 
     return retval;
 }
 
 // lhs - left hand side of this operation. 
-MyValue Parser::expression_pr(MyValue lhs, SymbolType hintType)
+Value* Parser::expression_pr(Value* lhs, SymbolType hintType)
 {
     if (P_DEBUG) std::cout << "expr prime" << '\n';
 
@@ -912,13 +888,9 @@ MyValue Parser::expression_pr(MyValue lhs, SymbolType hintType)
     {
         TokenType op = advance().type;
 
-        MyValue rhs = arith_op(hintType);
+        Value* rhs = arith_op(hintType);
 
-        // Need to get value string here because it might requrie 
-        //  code gen (for loading from variable pointers)
-        std::string lhs_str = get_val(lhs);
-        std::string rhs_str = get_val(rhs);
-
+        /*
         // If one is a bool and one an int, convert
         if (lhs.sym_type == S_BOOL && rhs.sym_type == S_INTEGER)
         {
@@ -941,20 +913,13 @@ MyValue Parser::expression_pr(MyValue lhs, SymbolType hintType)
             // Types aren't the same or aren't both bool/int
             err_handler->reportError("Bitwise or boolean operations are only defined on bool and integer types", curr_token.line);
         }
+        */
 
-        *codegen_out << '\t' << next_reg() << " = "
-            << (op == TokenType::AND ? "and" : "or") 
-            << ' '
-            << SymbolTypeStrings[lhs.sym_type]
-            << ' '
-            << lhs_str
-            << ", "
-            << rhs_str
-            << '\n';
-
-        MyValue result;
-        result.reg = reg_no;
-        result.sym_type = lhs.sym_type;
+        Value* result;
+        if (op == TokenType::AND)
+            result = Builder.CreateAnd(lhs, rhs);
+        else
+            result = Builder.CreateOr(lhs, rhs);
 
         return expression_pr(result, hintType);
     }
@@ -963,15 +928,15 @@ MyValue Parser::expression_pr(MyValue lhs, SymbolType hintType)
     else return lhs;
 }
 
-MyValue Parser::arith_op(SymbolType hintType)
+Value* Parser::arith_op(SymbolType hintType)
 {
     if (P_DEBUG) std::cout << "arith op" << '\n';
 
-    MyValue val = relation(hintType);
+    Value* val = relation(hintType);
     return arith_op_pr(val, hintType);
 }
 
-MyValue Parser::arith_op_pr(MyValue lhs, SymbolType hintType)
+Value* Parser::arith_op_pr(Value* lhs, SymbolType hintType)
 {
     if (P_DEBUG) std::cout << "arith op pr" << '\n';
 
@@ -980,25 +945,21 @@ MyValue Parser::arith_op_pr(MyValue lhs, SymbolType hintType)
         // Advance and save current token's operator.
         TokenType op = advance().type;
 
-        MyValue rhs = relation(hintType); 
+        Value* rhs = relation(hintType); 
 
-        // Need to get value string here because it might requrie 
-        //  code gen (for loading from variable pointers)
-        std::string lhs_str = get_val(lhs);
-        std::string rhs_str = get_val(rhs);
-
+        /*
         // If one is int and one is float, 
         //  convert all to float to get the most precision.
         // Any other types can't be used here.
         if (lhs.sym_type == S_INTEGER && rhs.sym_type == S_FLOAT)
         {
             // Convert lhs to float
-            convert_type(lhs, lhs_str, S_FLOAT);
+            //convert_type(lhs, lhs_str, S_FLOAT);
         }
         else if (lhs.sym_type == S_FLOAT && rhs.sym_type == S_INTEGER)
         {
             // Convert rhs to float
-            convert_type(rhs, rhs_str, S_FLOAT);
+            //convert_type(rhs, rhs_str, S_FLOAT);
         }
         else if (lhs.sym_type != rhs.sym_type 
                     && lhs.sym_type != S_FLOAT
@@ -1008,7 +969,11 @@ MyValue Parser::arith_op_pr(MyValue lhs, SymbolType hintType)
             err_handler->reportError("Arithmetic operations are only defined on float and integer types", curr_token.line);
             // TODO: Return?
         }
+        */
 
+        
+
+        /*
         *codegen_out << '\t' << next_reg() << " = "
             << (op == TokenType::PLUS 
                     ?  lhs.sym_type == S_FLOAT ? "fadd" : "add" 
@@ -1020,43 +985,52 @@ MyValue Parser::arith_op_pr(MyValue lhs, SymbolType hintType)
             << ", "
             << rhs_str
             << '\n';
+        */
 
-        MyValue result;
-        result.reg = reg_no;
-        result.sym_type = lhs.sym_type;
+        Value* result;
+        if (op == TokenType::PLUS)
+        {
+            if (lhs->getType()->isFloatTy())
+                result = Builder.CreateFAdd(lhs, rhs);
+            else
+                result = Builder.CreateAdd(lhs, rhs);
+        }
+        else
+        {
+            if (lhs->getType()->isFloatTy())
+                result = Builder.CreateFSub(lhs, rhs);
+            else
+                result = Builder.CreateSub(lhs, rhs);
+        }
 
         return arith_op_pr(result, hintType);
     }
     else return lhs;
 }
 
-MyValue Parser::relation(SymbolType hintType)
+Value* Parser::relation(SymbolType hintType)
 {
     if (P_DEBUG) std::cout << "relation" << '\n';
 
-    MyValue val = term(hintType);
+    Value* val = term(hintType);
     return relation_pr(val, hintType);
 }
 
-MyValue Parser::relation_pr(MyValue lhs, SymbolType hintType)
+Value* Parser::relation_pr(Value* lhs, SymbolType hintType)
 {
     if (P_DEBUG) std::cout << "relation pr" << '\n';
 
     if ((token() == TokenType::LT)
-        | (token() == TokenType::GT)
-        | (token() == TokenType::LT_EQ)
-        | (token() == TokenType::GT_EQ)
-        | (token() == TokenType::EQUALS)
-        | (token() == TokenType::NOTEQUAL))
+        || (token() == TokenType::GT)
+        || (token() == TokenType::LT_EQ)
+        || (token() == TokenType::GT_EQ)
+        || (token() == TokenType::EQUALS)
+        || (token() == TokenType::NOTEQUAL))
     {
         TokenType op = advance().type;
-        MyValue rhs = term(hintType);
+        Value* rhs = term(hintType);
 
-        // Need to get value string here because it might requrie 
-        //  code gen (for loading from variable pointers)
-        std::string lhs_str = get_val(lhs);
-        std::string rhs_str = get_val(rhs);
-
+        /*
         // Type conversion
         if (lhs.sym_type == S_STRING || rhs.sym_type == S_STRING)
         {
@@ -1087,73 +1061,68 @@ MyValue Parser::relation_pr(MyValue lhs, SymbolType hintType)
                 else convert_type(rhs, rhs_str, S_INTEGER);
             }
         }
+        */
 
-        std::string llvm_op;
+        Value* result;
         switch (op)
         {
             // TODO: ordered? not ordered? signed? unsigned?
             case LT:
-                llvm_op = 
-                    lhs.sym_type == S_FLOAT ? "olt" : "slt";
+                if (lhs->getType()->isFloatTy())
+                    result = Builder.CreateFCmpOLE(lhs, rhs);
+                else
+                    result = Builder.CreateICmpSLT(lhs, rhs);
                 break;
             case GT:
-                llvm_op = 
-                    lhs.sym_type == S_FLOAT ? "ogt" : "sgt";
+                if (lhs->getType()->isFloatTy())
+                    result = Builder.CreateFCmpOGT(lhs, rhs);
+                else
+                    result = Builder.CreateICmpSGT(lhs, rhs);
                 break;
             case LT_EQ:
-                llvm_op = 
-                    lhs.sym_type == S_FLOAT ? "ole" : "sle";
+                if (lhs->getType()->isFloatTy())
+                    result = Builder.CreateFCmpOLE(lhs, rhs);
+                else
+                    result = Builder.CreateICmpSLE(lhs, rhs);
                 break;
             case GT_EQ:
-                llvm_op = 
-                    lhs.sym_type == S_FLOAT ? "oge" : "sge";
+                if (lhs->getType()->isFloatTy())
+                    result = Builder.CreateFCmpOGE(lhs, rhs);
+                else
+                    result = Builder.CreateICmpSGE(lhs, rhs);
                 break;
             case EQUALS:
-                llvm_op = 
-                    lhs.sym_type == S_FLOAT ? "oeq" : "eq";
+                if (lhs->getType()->isFloatTy())
+                    result = Builder.CreateFCmpOEQ(lhs, rhs);
+                else
+                    result = Builder.CreateICmpEQ(lhs, rhs);
                 break;
             case NOTEQUAL:
-                llvm_op = 
-                    lhs.sym_type == S_FLOAT ? "one" : "ne";
+                if (lhs->getType()->isFloatTy())
+                    result = Builder.CreateFCmpONE(lhs, rhs);
+                else
+                    result = Builder.CreateICmpNE(lhs, rhs);
                 break;
             default:
-                // This shouldn't happen; how'd we get in this outer if anyway lol
+                // This shouldn't happen
                 break;
         }
-
-        *codegen_out << '\t' << next_reg() << " = "
-            // Type checking above will convert it to either a float or int-like type
-            << (lhs.sym_type == S_FLOAT ? "fcmp" : "icmp")
-            << ' '
-            << llvm_op
-            << ' '
-            << SymbolTypeStrings[lhs.sym_type]
-            << ' '
-            << lhs_str
-            << ", "
-            << rhs_str
-            << '\n';
-
-        MyValue result;
-        result.reg = reg_no;
-        // All relational compares return a bool
-        result.sym_type = S_BOOL;
 
         return relation_pr(result, hintType);
     }
     else return lhs;
 }
 
-MyValue Parser::term(SymbolType hintType)
+Value* Parser::term(SymbolType hintType)
 {
     if (P_DEBUG) std::cout << "term" << '\n';
 
-    MyValue val = factor(hintType);
+    Value* val = factor(hintType);
     return term_pr(val, hintType);
 }
 
 // Multiplication / Division 
-MyValue Parser::term_pr(MyValue lhs, SymbolType hintType)
+Value* Parser::term_pr(Value* lhs, SymbolType hintType)
 {
     if (P_DEBUG) std::cout << "term pr" << '\n';
 
@@ -1162,13 +1131,10 @@ MyValue Parser::term_pr(MyValue lhs, SymbolType hintType)
         || token() == TokenType::DIVISION)
     {
         TokenType op = advance().type;
-        MyValue rhs = factor(hintType);
+        Value* rhs = factor(hintType);
 
-        // Need to get value string here because it might requrie 
-        //  code gen (for loading from variable pointers)
-        std::string lhs_str = get_val(lhs);
-        std::string rhs_str = get_val(rhs);
-
+        /*
+        // Type checking
         if (lhs.sym_type == S_INTEGER && rhs.sym_type == S_FLOAT)
         {
             // Convert lhs to float
@@ -1186,37 +1152,34 @@ MyValue Parser::term_pr(MyValue lhs, SymbolType hintType)
             // Types aren't the same or aren't both float/int
             err_handler->reportError("Term operations (multiplication and division) are only defined on float and integer types.", curr_token.line);
         }
+        */
 
-        *codegen_out << '\t' << next_reg() << " = "
-            // Multiplication
-            << (op == TokenType::MULTIPLICATION 
-                // Multiplication
-                // fmul (floating) / mul (ints)
-                ? lhs.sym_type == S_FLOAT ? "fmul" : "mul"
-                // Division
-                // fdiv (floating) / udiv (unsigned int)
-                : lhs.sym_type == S_FLOAT ? "fdiv" : "sdiv") 
-            << ' '
-            << SymbolTypeStrings[lhs.sym_type]
-            << ' '
-            << lhs_str
-            << ", "
-            << rhs_str
-            << '\n';
+        Value* result;
 
-        MyValue result;
-        result.reg = reg_no;
-        result.sym_type = lhs.sym_type;
+        if (op == TokenType::MULTIPLICATION)
+        {
+            if (lhs->getType()->isFloatTy())
+                result = Builder.CreateFMul(lhs, rhs);
+            else
+                result = Builder.CreateMul(lhs, rhs);
+        }
+        else
+        {
+            if (lhs->getType()->isFloatTy())
+                result = Builder.CreateFDiv(lhs, rhs);
+            else
+                result = Builder.CreateSDiv(lhs, rhs);
+        }
 
         return term_pr(result, hintType);
     }
     else return lhs;
 }
 
-MyValue Parser::factor(SymbolType hintType)
+Value* Parser::factor(SymbolType hintType)
 {
     if (P_DEBUG) std::cout << "factor" << '\n';
-    MyValue retval;
+    Value* retval;
 
     // Token is one of:
     //  (expression), [-] name, [-] float|integer, string, char, bool 
@@ -1228,21 +1191,22 @@ MyValue Parser::factor(SymbolType hintType)
     }
     else if (token() == TokenType::MINUS)
     {
+        // TODO Generate instructions to mult. by -1?
+        // TODO Multiply constants first or just let optimizer handle?
         advance();
         if (token() == TokenType::INTEGER)
         {
-            retval = advance().val;
-            retval.int_value = -1 * retval.int_value;
+            //retval = advance().val;
+            //retval.int_value = -1 * retval.int_value;
         }
         else if (token() == TokenType::FLOAT) 
         {
-            retval = advance().val;
-            retval.float_value = -1.0 * retval.float_value;
+            //retval = advance().val;
+            //retval.float_value = -1.0 * retval.float_value;
         }
         else if (token() == TokenType::IDENTIFIER) 
         {
-            retval = name(hintType);
-            // TODO Generate instructions here to mult. id. by -1?
+            return name(hintType);
         }
         else
         {
@@ -1256,15 +1220,35 @@ MyValue Parser::factor(SymbolType hintType)
     {
         retval = name(hintType);
     }
-    else if (curr_token.val.sym_type == S_STRING 
-            || curr_token.val.sym_type == S_CHAR 
-            || curr_token.val.sym_type == S_INTEGER
-            || curr_token.val.sym_type == S_FLOAT
-            || curr_token.val.sym_type == S_BOOL)
+    else if (curr_token.val.sym_type == S_STRING)
     {
-        // Literal values
         // Consume the token and get the value
-        retval = advance().val;
+        MyValue mval = advance().val;
+        //TODO
+    }
+    else if (curr_token.val.sym_type == S_CHAR)
+    {
+        // Consume the token and get the value
+        MyValue mval = advance().val;
+        //TODO
+    }
+    else if (curr_token.val.sym_type == S_INTEGER)
+    {
+        // Consume the token and get the value
+        MyValue mval = advance().val;
+        retval = ConstantInt::get(TheContext, APInt(32, mval.int_value));
+    }
+    else if (curr_token.val.sym_type == S_FLOAT)
+    {
+        // Consume the token and get the value
+        MyValue mval = advance().val;
+        retval = ConstantFP::get(TheContext, APFloat(mval.float_value));
+    }
+    else if (curr_token.val.sym_type == S_BOOL)
+    {
+        // Consume the token and get the value
+        MyValue mval = advance().val;
+        retval = ConstantInt::get(TheContext, APInt(1, mval.int_value));
     }
     else
     {
@@ -1277,14 +1261,14 @@ MyValue Parser::factor(SymbolType hintType)
     return retval;
 }
 
-MyValue Parser::name(SymbolType hintType)
+Value* Parser::name(SymbolType hintType)
 {
     if (P_DEBUG) std::cout << "name" << '\n';
-    MyValue val;
 
     std::string id = require(TokenType::IDENTIFIER).val.string_value;
     SymTableEntry* entry = symtable_manager->resolve_symbol(id);
-    val.sym_type = entry->sym_type;
+
+    Value* val = Builder.CreateLoad(entry->value, id);
 
     if (token() == TokenType::L_BRACKET)
     {
@@ -1294,8 +1278,6 @@ MyValue Parser::name(SymbolType hintType)
         require(TokenType::R_BRACKET);
     }
 
-    //val.reg = entry->reg;
-    val.is_ptr = true;
     return val;
 }
 

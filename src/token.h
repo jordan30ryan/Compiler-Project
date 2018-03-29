@@ -29,16 +29,10 @@ struct MyValue
 {
     SymbolType sym_type;
 
-    // LLVM Register number. -1 if literal or unassigned.
-    int reg = -1;
-    // LLVM Resgister - is it a pointer?
-    bool is_ptr = false;
-
     std::string string_value;
     char char_value;
     int int_value;
-    double float_value;
-    //SymTableEntry* symbol;
+    float float_value;
 };
 
 // Represents a single token from the source file
