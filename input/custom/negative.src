@@ -1,0 +1,23 @@
+program negative is 
+    integer ai;
+    float af;
+begin
+    ai := -1;
+    putinteger(ai);
+    putchar('_');
+    ai := -ai;
+    putinteger(ai);
+    putchar('_');
+    ai := - ai;
+    putinteger(ai);
+    putchar('_');
+    af := -1;
+    putfloat(af);
+    putchar('_');
+    af := -1.3;
+    putfloat(af);
+    putchar('_');
+    af := -af;
+    putfloat(af);
+    
+end program

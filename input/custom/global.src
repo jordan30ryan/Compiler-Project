@@ -1,16 +1,18 @@
 program globals is
     global integer a;
+    /*
     procedure asdf()
         global integer b;
     begin
         b := 2;
         putinteger(a);
     end procedure;
+    */
 begin 
     a := 1;
     putinteger(a);
     a := 2;
-    asdf();
+    //asdf();
     //b := 2;
     //a := b;
 end program.

@@ -456,6 +456,15 @@ SymTableEntry* Parser::var_declaration(bool is_global, bool need_alloc)
         if (is_global)
         {
             //TODO
+            //entry->value = 
+            GlobalVariable* global = new GlobalVariable(*TheModule, 
+                allocation_type, 
+                false,
+                GlobalValue::ExternalLinkage,
+                0,
+                id);
+            entry->value = global;
+
         }
         else
         {
@@ -1095,26 +1104,37 @@ Value* Parser::factor(Type* hintType)
     }
     else if (token() == TokenType::MINUS)
     {
-        // TODO Generate instructions to mult. by -1?
-        // TODO Multiply constants first or just let optimizer handle?
         advance();
+
         if (token() == TokenType::INTEGER)
         {
+            MyValue mval = advance().val;
+            APInt negated_int = APInt(32, mval.int_value);
+            negated_int.negate();
+            return ConstantInt::get(TheContext, negated_int);
         }
         else if (token() == TokenType::FLOAT) 
         {
+            MyValue mval = advance().val;
+            APFloat negated_float = APFloat(mval.float_value);
+            negated_float.changeSign();
+            return ConstantFP::get(TheContext, negated_float);
         }
         else if (token() == TokenType::IDENTIFIER) 
         {
-            return name(hintType);
+            Value* nameVal = name(hintType);
+            if (nameVal->getType() == Type::getInt32Ty(TheContext))
+                return Builder.CreateNeg(nameVal);
+            else if (nameVal->getType() == Type::getFloatTy(TheContext))
+                return Builder.CreateFNeg(nameVal);
         }
-        else
-        {
-            std::ostringstream stream;
-            stream << "Bad token following negative sign: " << TokenTypeStrings[token()];
-            err_handler->reportError(stream.str(), curr_token.line);
-            advance();
-        }
+
+        // One of the paths above should have returned
+        // Being here is an error
+        std::ostringstream stream;
+        stream << "Bad token following negative sign: " << TokenTypeStrings[token()];
+        err_handler->reportError(stream.str(), curr_token.line);
+        advance();
     }
     else if (token() == TokenType::IDENTIFIER)
     {

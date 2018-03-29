@@ -21,7 +21,8 @@ struct SymTableEntry
 
     // if type==IDENTIFIER, 
     // stores the llvm variable allocated space
-    llvm::AllocaInst* value;
+    //llvm::AllocaInst* value;
+    llvm::Value* value;
     
     // Maybe just keep this? No need for the other info then?
     llvm::Function* function;
