@@ -54,8 +54,8 @@ int compile_to_file(std::unique_ptr<llvm::Module> TheModule, std::string filenam
     }
 
     legacy::PassManager pass;
-    //auto FileType = TargetMachine::CGFT_ObjectFile;
-    auto FileType = TargetMachine::CGFT_AssemblyFile;
+    auto FileType = TargetMachine::CGFT_ObjectFile;
+    //auto FileType = TargetMachine::CGFT_AssemblyFile;
 
 
     if (TheTargetMachine->addPassesToEmitFile(pass, dest, FileType)) {

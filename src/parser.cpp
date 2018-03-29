@@ -1,5 +1,4 @@
 #include "parser.h"
-    //vec.push_back(val); 
 
 #define P_DEBUG false
 
@@ -10,13 +9,14 @@ const char* TokenTypeStrings[] =
 "RS_IN", "RS_OUT", "RS_INOUT", "RS_PROGRAM", "RS_IS", "RS_BEGIN", "RS_END", "RS_GLOBAL", "RS_PROCEDURE", "RS_STRING", "RS_CHAR", "RS_INTEGER", "RS_FLOAT", "RS_BOOL", "RS_IF", "RS_THEN", "RS_ELSE", "RS_FOR", "RS_RETURN", "RS_TRUE", "RS_FALSE", "RS_NOT"
 };
 
+/*
 const char* SymbolTypeStrings[] = 
 {
     "S_UNDEFINED", "S_STRING", "i8", "i32", "float", "i1", "S_PROCEDURE"
 };
+*/
 
 // Initialize llvm stuff
-
 using namespace llvm;
 using namespace llvm::sys;
 
@@ -113,11 +113,7 @@ void Parser::decl_builtins()
 Value* Parser::convert_type(Value* val, Type* required_type)
 {
     Value* retval;
-    //std::cout << "start" << std::endl;
-    //val->print(llvm::errs(), nullptr);
-    //std::cout << std::endl;
-    //required_type->print(llvm::errs(), nullptr);
-    //std::cout << std::endl;
+
     if (required_type == val->getType() || required_type == nullptr) return nullptr;
 
     if (required_type == Type::getInt32Ty(TheContext)
@@ -155,12 +151,6 @@ Value* Parser::convert_type(Value* val, Type* required_type)
         */
         return nullptr;
     }
-    //std::cout << "end" << std::endl;
-    //val->print(llvm::errs(), nullptr);
-    //std::cout << std::endl;
-    //required_type->print(llvm::errs(), nullptr);
-    //std::cout << std::endl;
-    //std::cout << std::endl;
 
     return retval;
 }
@@ -264,19 +254,14 @@ void Parser::proc_declaration(bool is_global)
     proc_header();
     proc_body();
 
-    //*codegen_out << "\tret void\n";
-    //*codegen_out << "}\n";
+    Builder.CreateRetVoid();
 
     // Reset to scope above this proc decl
     symtable_manager->reset_scope();
 
-    // Add the finished procedure definition to a vector 
-    //  to be added at the end of the file at the end of parsing.
-    // See documentation for more info.
-    //procedure_defs.push_back((std::ostringstream*)codegen_out);
-    // Reset codegen stream up a stream
-    //codegen_out = stream_stack.top();
-    //stream_stack.pop();
+    // Get previous IP from proc manager
+    //  and restore it so the builder appends to it again
+    Builder.restoreIP(symtable_manager->get_insert_point());
 }
 
 void Parser::proc_header()
@@ -286,18 +271,16 @@ void Parser::proc_header()
 
     // Setup symbol table so the procedure's sym table is now being used
     std::string proc_id = require(TokenType::IDENTIFIER).val.string_value;
+
+    IRBuilderBase::InsertPoint ip = Builder.saveIP();
+    symtable_manager->save_insert_point(ip);
+    //TheModule->print(llvm::errs(), nullptr);
+    //ip->print(llvm::errs(), nullptr);
+
     // Sets the current scope to this procedure's scope
     symtable_manager->set_proc_scope(proc_id);
 
-    //stream_stack.push(codegen_out);
-    // Start outputting to a new stream
-    //codegen_out = new std::ostringstream;
-
-    // Output floating point numbers in scientific notation.
-    //codegen_out->setf(std::ios_base::scientific);
-
-    //*codegen_out << "define void @" << proc_id << '(';
-
+    // Parse params
     require(TokenType::L_PAREN);
     if (token() != TokenType::R_PAREN)
         parameter_list(); 
@@ -306,22 +289,61 @@ void Parser::proc_header()
     std::vector<SymTableEntry*> params_vec 
         = symtable_manager->get_current_proc_params();
 
-    for (auto it = params_vec.begin(); it != params_vec.end(); ++it)
+    std::vector<Type *> parameters;
+
+    // TODO: Handle out/inout types
+    for (auto param : params_vec)
     {
-        // TODO: codegen w/ api
-        /*
-        // TODO pointer type? depends on whether it's out/in
-        if (it != params_vec.begin()) *codegen_out << ", ";
-        *codegen_out << SymbolTypeStrings[(*it)->sym_type] 
-            << "* " << next_reg();
-        //int entry_reg = symtable_manager->get_current_proc_next_reg(false);
-        // Weird syntax; it is an iterator so it has to be derefrenced (*)
-        // params_vec stores pointers to SymTableEntry so that also gets dereferenced (->)
-        //(*it)->reg = entry_reg;
-        */
+        //Type::getInt32PtrTy(TheContext)
+        Type* param_type;
+        switch (param->sym_type)
+        {
+        case S_INTEGER:
+            param_type = Type::getInt32Ty(TheContext);
+            break;
+        case S_FLOAT:
+            param_type = Type::getFloatTy(TheContext);
+            break;
+        case S_STRING:
+            //TODO
+            param_type = Type::getInt8Ty(TheContext);
+            break;
+        case S_CHAR:
+            param_type = Type::getInt8Ty(TheContext);
+            break;
+        case S_BOOL:
+            param_type = Type::getInt1Ty(TheContext);
+            break;
+        default:
+            // TODO: Err 
+            break;
+        }
+        parameters.push_back(param_type);
     }
 
-    //*codegen_out << ") {\n";
+    FunctionType *FT =
+        FunctionType::get(Type::getVoidTy(TheContext), parameters, false);
+
+    Function* F = Function::Create(FT, 
+        Function::ExternalLinkage, 
+        proc_id, 
+        TheModule.get());
+
+    verifyFunction(*F);
+
+    // Set arg names to their real ids
+    int k = 0;
+    for (auto &arg : F->args())
+    {
+        arg.setName(params_vec[k++]->id);
+    }
+
+    symtable_manager->set_curr_proc_function(F);
+
+    BasicBlock *bb = BasicBlock::Create(TheContext, "entry", F);
+
+    // Set IP to this function's basic block
+    Builder.SetInsertPoint(bb);
 }
 
 void Parser::proc_body()
@@ -383,7 +405,6 @@ void Parser::parameter()
 
     symtable_manager->add_param_to_proc(entry);
 }
-
 
 // need_alloc - variable needs to be allocated before using (defaults to true)
 //  need_alloc==false for parameter variable declarations

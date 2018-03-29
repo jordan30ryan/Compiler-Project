@@ -1,6 +1,6 @@
 # Super basic makefile
 c: CC=clang++
-c: CFLAGS=-Wall -std=c++11 `llvm-config --cxxflags --ldflags --system-libs --libs core` -ggdb -Wno-unknown-warning-option
+c: CFLAGS=-Wall -std=c++11 `llvm-config --cxxflags --ldflags --system-libs --libs core` -ggdb -Wno-unknown-warning-option -O0
 
 #g: CC=g++
 #g: CFLAGS=-Wall --std=c++11 -Wno-char-subscripts -ggdb

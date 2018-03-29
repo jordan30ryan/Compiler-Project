@@ -778,4 +778,12 @@ TODO:
     TESTING
 
 
+================================================================================
+3/29
+
+Procedures with no params working.
+Procedure params:
+    Need to pass by ref or some other way?
+    if we pass by ref, we need to make sure everything passed into a function is now a pointer. this means that expressions need to be made into a pointer before being passed into the function. So before calling a function, every parameter would need to be allocated and assigned to a pointer, then those pointers would get passed in. Of course, all variables are already pointers, so maybe we'd have to check whether it's a name before calling expression? If it's a name then just pass in the name's value without doing a load first. Inside the function, then, the parameters would be treated like proper variables and be loaded/stored. What about the case where there's the in/out/inout stuff? For inout, it should be fine. For IN or OUT, the codegen wouldn't change, but it might just be an error for the program to modify something marked as IN or read something marked as OUT (no codegen would happen unless the program is correct)
+
 

@@ -4,14 +4,12 @@
 #include "scanner.h"
 #include "parser.h"
 
-#include <vector>
-#include <iostream>
-
 #include "llvm/IR/Module.h"
 
 #include <iostream>
 #include <cstdint>
 #include <cstring>
+#include <vector>
 
 
 bool compile(char* filename, ErrHandler* err_handler)

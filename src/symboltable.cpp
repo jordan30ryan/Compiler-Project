@@ -104,8 +104,8 @@ void SymbolTableManager::add_symbol(bool is_global, std::string id,
     // Only insert when not defined yet.
     else     
     {
-        if (is_global) global_symbols.insert({id, new SymTableEntry(type, stype)});
-        else curr_symbols->insert({id, new SymTableEntry(type, stype)});
+        if (is_global) global_symbols.insert({id, new SymTableEntry(type, stype, id)});
+        else curr_symbols->insert({id, new SymTableEntry(type, stype, id)});
     }
 }
 
@@ -120,7 +120,7 @@ void SymbolTableManager::add_builtin_proc(bool is_global, std::string id,
     SymTableEntry* proc_entry = resolve_symbol(id);
 
     // Setup proc's parameter
-    SymTableEntry* param_entry = new SymTableEntry(IDENTIFIER, param_sym_type);
+    SymTableEntry* param_entry = new SymTableEntry(IDENTIFIER, param_sym_type, id);
     param_entry->param_type = param_type; // IN|OUT|INOUT
 
     // Add parameter to proc's parameters
@@ -134,13 +134,15 @@ void SymbolTableManager::promote_to_global(std::string id, SymTableEntry* entry)
 {
     if (scope_stack.size() != 0)
     {
-        err_handler->reportWarning("Global symbols can only be declared in the outermost scope. ");
+        err_handler->reportWarning(
+            "Global symbols can only be declared in the outermost scope. ");
     }
     else
     {
         if (entry == NULL)
         {
-            err_handler->reportError("Variable cannot be promoted to global scope before definition.");
+            err_handler->reportError(
+                "Variable cannot be promoted to global scope before definition.");
         }
         else 
         {
@@ -184,6 +186,31 @@ std::vector<SymTableEntry*> SymbolTableManager::get_current_proc_params()
     else 
         // TODO: This is probably an error...
         return std::vector<SymTableEntry*>();
+}
+
+llvm::IRBuilderBase::InsertPoint SymbolTableManager::get_insert_point()
+{
+    if (curr_proc != NULL)
+    {
+        return curr_proc->ip;
+    }
+    else return global_ip; 
+}
+
+void SymbolTableManager::save_insert_point(llvm::IRBuilderBase::InsertPoint ip)
+{
+    if (curr_proc != NULL)
+        curr_proc->ip = ip;
+    else
+        global_ip = ip;
+}
+
+void SymbolTableManager::set_curr_proc_function(llvm::Function* F)
+{
+    if (curr_proc != NULL)
+    {
+        curr_proc->function = F;
+    }
 }
 
 void SymbolTableManager::reset_scope()

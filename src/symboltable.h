@@ -4,6 +4,7 @@
 
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 
 #include <sstream>
 #include <unordered_map>
@@ -17,15 +18,16 @@ typedef std::unordered_map<std::string, SymTableEntry*> SymTable;
 //  or a reserved word mapped to its TokenType.
 struct SymTableEntry
 {
-    TokenType type; 
+    // For reserved words 
+    SymTableEntry(TokenType t) : type(t) {}
+    // For identifers where the type is known
+    SymTableEntry(TokenType t, SymbolType st, std::string i) 
+        : type(t), sym_type(st), id(i) {}
 
-    // if type==IDENTIFIER, 
-    // stores the llvm variable allocated space
-    //llvm::AllocaInst* value;
-    llvm::Value* value;
-    
-    // Maybe just keep this? No need for the other info then?
-    llvm::Function* function;
+    // Because these might be used in contexts other than the map
+    std::string id;
+
+    TokenType type; 
 
     SymbolType sym_type = S_UNDEFINED;
 
@@ -40,10 +42,18 @@ struct SymTableEntry
     // One of in | out | inout
     TokenType param_type;
 
-    // For reserved words 
-    SymTableEntry(TokenType t) : type(t) {}
-    // For identifers where the type is known
-    SymTableEntry(TokenType t, SymbolType st) : type(t), sym_type(st) {}
+
+    // if type==IDENTIFIER, 
+    // stores the llvm variable allocated space
+    //llvm::AllocaInst* value;
+    llvm::Value* value;
+    
+    // Maybe just keep this? No need for the other info then?
+    llvm::Function* function;
+
+    // If this is a function, this is the insert point that the builder
+    //  should reset to when it needs to append to this function
+    llvm::IRBuilderBase::InsertPoint ip;
 };
 
 class SymbolTableManager
@@ -86,6 +96,13 @@ public:
     // Get params of the current procedure
     std::vector<SymTableEntry*> get_current_proc_params();
 
+    // Sets/Gets the insert point for the IR Builder to use for this function
+    void save_insert_point(llvm::IRBuilderBase::InsertPoint ip);
+    llvm::IRBuilderBase::InsertPoint get_insert_point();
+
+    // Set the current procedure's llvm function
+    void set_curr_proc_function(llvm::Function* F);
+
     // Reset curr_symbols to one scope up (pop from the stack)
     void reset_scope();
 
@@ -107,5 +124,9 @@ private:
     // The second element of the pair is the entry for the proc's scope itself.
     // (essentially, this tracks curr_symbols and curr_proc for inner scopes)
     std::stack<std::pair<SymTable*, SymTableEntry*>> scope_stack;
+
+    // The outermost insert point. Setting insert point to this in the Builder
+    //  will generate code in main of the output IR
+    llvm::IRBuilderBase::InsertPoint global_ip;
 };
 

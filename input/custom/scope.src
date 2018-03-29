@@ -1,0 +1,9 @@
+program PROCS is
+    procedure s1()
+        integer a;
+    begin
+        a := 1;
+    end procedure;
+begin
+    s1(); // Defined - declared in this scope
+end program.
