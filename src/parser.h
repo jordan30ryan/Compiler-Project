@@ -37,19 +37,11 @@ private:
     std::vector<std::ostringstream*> procedure_defs;
     std::stack<std::ostream*> stream_stack;
 
-    // For use in LLVM assembly codegen. 
-    // Declare builtin functions in the llvm output file
+    // For use in LLVM codegen. 
+    // Declare builtin functions in the LLVM IR
+    void decl_single_builtin(std::string name, llvm::Type* paramtype);
     void decl_builtins();
-    // Get value of val; can be either a literal or a register
-    // If it's a variable, it loads from the variable's pointer and returns a temp register.
-    // If it's a literal, it just returns the literal in string form for use in llvm generation
-    //std::string get_val(MyValue val);
-    // Get next unnamed register.
-    //std::string next_reg();
-    int reg_no = 0; // Current numbered register.
-    // Like next_reg but for labels
     std::string next_label();
-    int label_no = 0;
 
     ErrHandler* err_handler;
     SymbolTableManager* symtable_manager;
@@ -67,10 +59,7 @@ private:
     Token require(TokenType t, bool error=true);
 
     // For type conversion
-    // Val - the value to convert.
-    // reg_str - the register of val
-    // required_type - the type to convert to.
-    void convert_type(MyValue& val, std::string& val_reg_str, SymbolType required_type);
+    llvm::Value* convert_type(llvm::Value* val, llvm::Type* required_type);
 
     void program();
     void program_header();
@@ -99,16 +88,16 @@ private:
     void loop_statement();
     void return_statement();
 
-    llvm::Value* expression(SymbolType hintType);
+    llvm::Value* expression(llvm::Type* hintType);
     // _pr functions are needed for eliminating left recursion
-    llvm::Value* expression_pr(llvm::Value* lhs, SymbolType hintType); 
-    llvm::Value* arith_op(SymbolType hintType);
-    llvm::Value* arith_op_pr(llvm::Value* lhs, SymbolType hintType); 
-    llvm::Value* relation(SymbolType hintType);
-    llvm::Value* relation_pr(llvm::Value* lhs, SymbolType hintType); 
-    llvm::Value* term(SymbolType hintType);
-    llvm::Value* term_pr(llvm::Value* lhs, SymbolType hintType);
-    llvm::Value* factor(SymbolType hintType);
-    llvm::Value* name(SymbolType hintType);
+    llvm::Value* expression_pr(llvm::Value* lhs, llvm::Type* hintType); 
+    llvm::Value* arith_op(llvm::Type* hintType);
+    llvm::Value* arith_op_pr(llvm::Value* lhs, llvm::Type* hintType); 
+    llvm::Value* relation(llvm::Type* hintType);
+    llvm::Value* relation_pr(llvm::Value* lhs, llvm::Type* hintType); 
+    llvm::Value* term(llvm::Type* hintType);
+    llvm::Value* term_pr(llvm::Value* lhs, llvm::Type* hintType);
+    llvm::Value* factor(llvm::Type* hintType);
+    llvm::Value* name(llvm::Type* hintType);
 };
 
