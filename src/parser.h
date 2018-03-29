@@ -23,20 +23,14 @@
 class Parser
 {
 public:
-    Parser(ErrHandler* handler, SymbolTableManager* manager, Scanner* scan, std::string filename);
+    Parser(ErrHandler* handler, 
+        SymbolTableManager* manager, 
+        Scanner* scan, 
+        std::string filename);
+
     ~Parser();
-    //void parse();
     std::unique_ptr<llvm::Module> parse();
 private:
-    // The stream to output LLVM to. Can be a file or stdout (for debugging)
-    std::ofstream llvm_out;
-
-    // The codegen output. Can be llvm_out or an ostringstream to be appended
-    //  to llvm_out at the end (for procedures)
-    std::ostream* codegen_out;
-    std::vector<std::ostringstream*> procedure_defs;
-    std::stack<std::ostream*> stream_stack;
-
     // For use in LLVM codegen. 
     // Declare builtin functions in the LLVM IR
     void decl_single_builtin(std::string name, llvm::Type* paramtype);

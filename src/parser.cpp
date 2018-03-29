@@ -31,9 +31,6 @@ Parser::Parser(ErrHandler* handler, SymbolTableManager* manager, Scanner* scan, 
     curr_token.type = UNKNOWN;
     curr_token.val.sym_type = S_UNDEFINED;
 
-    // TODO temporarary
-    codegen_out = new std::ostringstream;
-
     TheModule = make_unique<Module>("my IR", TheContext);
 }
 
@@ -206,6 +203,7 @@ void Parser::program()
 void Parser::program_header()
 {
     if (P_DEBUG) std::cout << "program header" << '\n';
+
     require(TokenType::RS_PROGRAM);
 
     require(TokenType::IDENTIFIER);
@@ -217,6 +215,7 @@ void Parser::program_header()
 void Parser::program_body()
 {
     if (P_DEBUG) std::cout << "program body" << '\n';
+
     bool declarations = true;
     while (true)
     {
@@ -243,6 +242,7 @@ void Parser::program_body()
 void Parser::declaration()
 {
     if (P_DEBUG) std::cout << "declaration" << '\n';
+
     bool is_global = false;
     if (token() == TokenType::RS_GLOBAL)
     {
@@ -260,11 +260,12 @@ void Parser::declaration()
 void Parser::proc_declaration(bool is_global)
 {
     if (P_DEBUG) std::cout << "proc decl" << '\n';
+
     proc_header();
     proc_body();
 
-    *codegen_out << "\tret void\n";
-    *codegen_out << "}\n";
+    //*codegen_out << "\tret void\n";
+    //*codegen_out << "}\n";
 
     // Reset to scope above this proc decl
     symtable_manager->reset_scope();
@@ -272,10 +273,10 @@ void Parser::proc_declaration(bool is_global)
     // Add the finished procedure definition to a vector 
     //  to be added at the end of the file at the end of parsing.
     // See documentation for more info.
-    procedure_defs.push_back((std::ostringstream*)codegen_out);
+    //procedure_defs.push_back((std::ostringstream*)codegen_out);
     // Reset codegen stream up a stream
-    codegen_out = stream_stack.top();
-    stream_stack.pop();
+    //codegen_out = stream_stack.top();
+    //stream_stack.pop();
 }
 
 void Parser::proc_header()
@@ -288,14 +289,14 @@ void Parser::proc_header()
     // Sets the current scope to this procedure's scope
     symtable_manager->set_proc_scope(proc_id);
 
-    stream_stack.push(codegen_out);
+    //stream_stack.push(codegen_out);
     // Start outputting to a new stream
-    codegen_out = new std::ostringstream;
+    //codegen_out = new std::ostringstream;
 
     // Output floating point numbers in scientific notation.
-    codegen_out->setf(std::ios_base::scientific);
+    //codegen_out->setf(std::ios_base::scientific);
 
-    *codegen_out << "define void @" << proc_id << '(';
+    //*codegen_out << "define void @" << proc_id << '(';
 
     require(TokenType::L_PAREN);
     if (token() != TokenType::R_PAREN)
@@ -320,7 +321,7 @@ void Parser::proc_header()
         */
     }
 
-    *codegen_out << ") {\n";
+    //*codegen_out << ") {\n";
 }
 
 void Parser::proc_body()
