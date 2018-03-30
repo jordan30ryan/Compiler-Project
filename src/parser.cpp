@@ -632,7 +632,7 @@ std::vector<Value*> Parser::argument_list(SymTableEntry* proc_entry)
     for (auto& parm : f->args())
     {
         AllocaInst* valptr;
-        // If it's just a name, return a pointer to the var (don't load)
+        //TODO : How to get a pointer for a variable that is to be passed by ref?
         if (token() == TokenType::IDENTIFIER)
             valptr = cast<AllocaInst>(name(parm.getType(), false));
         // Otherwise, parse an expression then convert to a pointer
@@ -646,7 +646,7 @@ std::vector<Value*> Parser::argument_list(SymTableEntry* proc_entry)
             Type* realType = cast<PointerType>(parm.getType())->getElementType();
             //realType->print(llvm::errs(), nullptr);
             //parm.print(llvm::errs(), nullptr);
-            // TODO: realtype is void here for some reason
+
             Value* val = expression(realType);
             valptr = Builder.CreateAlloca(realType);
             // Store val into valptr
@@ -688,19 +688,14 @@ void Parser::if_statement()
 
     require(TokenType::RS_THEN);
 
-    //std::string condition_reg = get_val(condition);
+    // TODO
+    //BasicBlock* then_block = BasicBlock::Create(TheContext, "then", 
+    //BasicBlock* else_block = BasicBlock::Create(TheContext, "after", 
+    //BasicBlock* after_block = BasicBlock::Create(TheContext, "after", 
 
-    //std::string then_label = next_label();
-    //std::string else_label = next_label();
-    //std::string after_label = next_label();
+    //Builder.CreateCondBr(condition, then_block, else_block);
 
-/*
-    *codegen_out << '\t' << "br i1 " << condition_reg 
-        << ", label %" << then_label << ", label %" << else_label << '\n';
-*/
-
-
-    //*codegen_out << then_label << ": \n"; // begin then block
+    //Builder.setInsertPoint(then_block);
 
     bool first_stmnt = true;
     while (true)

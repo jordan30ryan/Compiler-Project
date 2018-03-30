@@ -794,4 +794,8 @@ in proc args:
 Can't just get name() if token is an identifier, because there might be an expression starting with a var
 
 LLVM doesn't like when functions are passed global variables (even though global variables are already pointers...)
+link issue.
 
+
+
+param issue: pass by ref is an issue if param type is INas it will get modified if its a pointer.
