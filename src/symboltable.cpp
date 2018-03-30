@@ -2,7 +2,7 @@
 
 SymbolTableManager::SymbolTableManager(ErrHandler* handler) : err_handler(handler) {}
 
-SymTableEntry* SymbolTableManager::resolve_symbol(std::string id, bool check)
+SymTableEntry* SymbolTableManager::resolve_symbol(std::string id, bool check, TokenType paramIntent)
 {
     // exists but not well-defined, and is expected to be (check ==true)    
     bool check_err = false; 
@@ -17,6 +17,19 @@ SymTableEntry* SymbolTableManager::resolve_symbol(std::string id, bool check)
         {
             // We're checking for it to exist but it's type is undefined
             check_err = true;
+        }
+
+        if (entry->param_type != TokenType::UNKNOWN)
+        {
+            // Entry is a parameter; check its type and the intent of 
+            //  the function using this variable
+
+            if (entry->param_type == TokenType::RS_IN && paramIntent == RS_OUT)
+                err_handler->reportError("Cannot write to a read-only parameter");
+            else if (entry->param_type == TokenType::RS_OUT && paramIntent == RS_IN)
+                err_handler->reportError("Cannot read from a write-only variable");
+            else if (entry->param_type == TokenType::RS_INOUT || paramIntent == TokenType::UNKNOWN)
+                ;// Not an error; it's r/w so all operations are permitted.
         }
     }
     else if (global_symbols.count(id) != 0)
@@ -117,7 +130,7 @@ void SymbolTableManager::add_builtin_proc(bool is_global, std::string id,
     // Add proc first
     add_symbol(is_global, id, type, stype);
     // Get proc
-    SymTableEntry* proc_entry = resolve_symbol(id);
+    SymTableEntry* proc_entry = resolve_symbol(id, true);
 
     // Setup proc's parameter
     SymTableEntry* param_entry = new SymTableEntry(IDENTIFIER, param_sym_type, id);

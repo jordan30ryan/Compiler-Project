@@ -88,7 +88,7 @@ void Parser::decl_single_builtin(std::string name, Type* paramtype)
         Function::Create(FT, Function::ExternalLinkage, name, TheModule.get());
 
     // Associate the LLVM function we created with its symboltable entry
-    SymTableEntry* entry = symtable_manager->resolve_symbol(name);
+    SymTableEntry* entry = symtable_manager->resolve_symbol(name, true);
     entry->function = F;
 }
 
@@ -558,7 +558,8 @@ void Parser::assignment_statement(std::string identifier)
         require(TokenType::R_BRACKET);
     }
 
-    SymTableEntry* entry = symtable_manager->resolve_symbol(identifier); 
+    // RS_OUT - we want to write to this variable
+    SymTableEntry* entry = symtable_manager->resolve_symbol(identifier, true, RS_OUT); 
     Value* lhs = entry->value;
 
     require(TokenType::ASSIGNMENT);
@@ -585,7 +586,7 @@ void Parser::proc_call(std::string identifier)
     // already have identifier
 
     // Check symtable for the proc
-    SymTableEntry* proc_entry = symtable_manager->resolve_symbol(identifier); 
+    SymTableEntry* proc_entry = symtable_manager->resolve_symbol(identifier, true); 
     if (proc_entry == NULL || proc_entry->sym_type != S_PROCEDURE)
     {
         std::ostringstream stream;
@@ -1214,7 +1215,9 @@ Value* Parser::name(Type* hintType, bool load)
     if (P_DEBUG) std::cout << "name" << '\n';
 
     std::string id = require(TokenType::IDENTIFIER).val.string_value;
-    SymTableEntry* entry = symtable_manager->resolve_symbol(id);
+
+    // RS_IN - we expect to be able to read this variable's value
+    SymTableEntry* entry = symtable_manager->resolve_symbol(id, true, RS_IN);
 
     Value* val;
     if (load)

@@ -1,0 +1,13 @@
+program parameters is
+    procedure a(integer ia out, bool b in, char c inout)
+    begin
+        putinteger(ia);// err; can't read from a variable declared as out
+        putbool(b);
+        putchar(c);
+    end procedure;
+    
+    integer b;
+begin
+    b := 1;
+    a(b, true, 's');
+end program.

@@ -1,0 +1,15 @@
+program paramtypes is
+    procedure foo(integer a out, integer b in)
+    begin
+        a := b;
+    end procedure;
+
+    integer a;
+    integer b1;
+begin
+    a := 0;
+    b1 := 5;
+    foo(a, b1);
+    putinteger(a);
+end program.
+

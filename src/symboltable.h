@@ -66,7 +66,12 @@ public:
     // If check is true - function expects the variable to exist and 
     //  reports an error if it does not.
     // WARNING RETURNS NULL AND REPORTS TO ERR_HANDLER IF NOT FOUND.
-    SymTableEntry* resolve_symbol(std::string id, bool check=true); 
+    // paramIntent - the intention for this symbol; used to check parameters
+    // Parameters can be IN (read only) or OUT (write only) or INOUT (read/write)
+    // The intent for the parameter can be IN (it wants to read) or OUT (it wants to write)
+    // If we expect to be able to read but the type is OUT, it's an error
+    // Same thing if we expect to write but the type is IN
+    SymTableEntry* resolve_symbol(std::string id, bool check, TokenType paramIntent=TokenType::UNKNOWN); 
 
     // Setup the global table with reserved words and builtin procedures
     void init_tables();
