@@ -24,12 +24,12 @@ struct SymTableEntry
     SymTableEntry(TokenType t, SymbolType st, std::string i) 
         : type(t), sym_type(st), id(i) {}
 
-    // Because these might be used in contexts other than the map
-    std::string id;
-
     TokenType type; 
 
     SymbolType sym_type = S_UNDEFINED;
+
+    // Because these might be used in contexts other than the map
+    std::string id;
 
     // If this is a procedure, this
     //  stores the proc local symbol table
@@ -40,7 +40,7 @@ struct SymTableEntry
 
     // For a parameter
     // One of in | out | inout
-    TokenType param_type;
+    TokenType param_type = TokenType::UNKNOWN;
 
 
     // if type==IDENTIFIER, 

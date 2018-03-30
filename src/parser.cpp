@@ -94,11 +94,17 @@ void Parser::decl_single_builtin(std::string name, Type* paramtype)
 
 void Parser::decl_builtins()
 {
-    decl_single_builtin("PUTINTEGER", Type::getInt32Ty(TheContext));
-    decl_single_builtin("PUTFLOAT", Type::getFloatTy(TheContext));
-    decl_single_builtin("PUTCHAR", Type::getInt8Ty(TheContext));
-    decl_single_builtin("PUTSTRING", Type::getInt32Ty(TheContext));
-    decl_single_builtin("PUTBOOL", Type::getInt1Ty(TheContext));
+    //decl_single_builtin("PUTINTEGER", Type::getInt32Ty(TheContext));
+    //decl_single_builtin("PUTFLOAT", Type::getFloatTy(TheContext));
+    //decl_single_builtin("PUTCHAR", Type::getInt8Ty(TheContext));
+    //decl_single_builtin("PUTSTRING", Type::getInt32Ty(TheContext));
+    //decl_single_builtin("PUTBOOL", Type::getInt1Ty(TheContext));
+
+    decl_single_builtin("PUTINTEGER", Type::getInt32PtrTy(TheContext));
+    decl_single_builtin("PUTFLOAT", Type::getFloatPtrTy(TheContext));
+    decl_single_builtin("PUTCHAR", Type::getInt8PtrTy(TheContext));
+    decl_single_builtin("PUTSTRING", Type::getInt32PtrTy(TheContext));
+    decl_single_builtin("PUTBOOL", Type::getInt1PtrTy(TheContext));
 
     decl_single_builtin("GETINTEGER", Type::getInt32PtrTy(TheContext));
     decl_single_builtin("GETFLOAT", Type::getFloatPtrTy(TheContext));
@@ -140,15 +146,9 @@ Value* Parser::convert_type(Value* val, Type* required_type)
     }
     else 
     {
-        /*
         std::ostringstream stream;
         stream << "Conflicting types in conversion: ";
-        required_type->print(llvm::errs(), nullptr);
-        std::cout << std::endl;
-        val->print(llvm::errs(), nullptr);
-        std::cout << std::endl;
         err_handler->reportError(stream.str(), curr_token.line);
-        */
         return nullptr;
     }
 
@@ -274,8 +274,6 @@ void Parser::proc_header()
 
     IRBuilderBase::InsertPoint ip = Builder.saveIP();
     symtable_manager->save_insert_point(ip);
-    //TheModule->print(llvm::errs(), nullptr);
-    //ip->print(llvm::errs(), nullptr);
 
     // Sets the current scope to this procedure's scope
     symtable_manager->set_proc_scope(proc_id);
@@ -299,20 +297,20 @@ void Parser::proc_header()
         switch (param->sym_type)
         {
         case S_INTEGER:
-            param_type = Type::getInt32Ty(TheContext);
+            param_type = Type::getInt32PtrTy(TheContext);
             break;
         case S_FLOAT:
-            param_type = Type::getFloatTy(TheContext);
+            param_type = Type::getFloatPtrTy(TheContext);
             break;
         case S_STRING:
             //TODO
-            param_type = Type::getInt8Ty(TheContext);
+            param_type = Type::getInt8PtrTy(TheContext);
             break;
         case S_CHAR:
-            param_type = Type::getInt8Ty(TheContext);
+            param_type = Type::getInt8PtrTy(TheContext);
             break;
         case S_BOOL:
-            param_type = Type::getInt1Ty(TheContext);
+            param_type = Type::getInt1PtrTy(TheContext);
             break;
         default:
             // TODO: Err 
@@ -335,6 +333,7 @@ void Parser::proc_header()
     int k = 0;
     for (auto &arg : F->args())
     {
+        params_vec[k]->value = &arg;
         arg.setName(params_vec[k++]->id);
     }
 
@@ -619,11 +618,28 @@ std::vector<Value*> Parser::argument_list(SymTableEntry* proc_entry)
     Function* f = proc_entry->function;
     for (auto& parm : f->args())
     {
-        Value* val = expression(parm.getType());
+        AllocaInst* valptr;
+        // If it's just a name, return a pointer to the var (don't load)
+        if (token() == TokenType::IDENTIFIER)
+            valptr = cast<AllocaInst>(name(parm.getType(), false));
+        // Otherwise, parse an expression then convert to a pointer
+        else
+        {
+            // All parameters are pointers, so this is necessary 
+            // Params need to be pointers for pass by ref (out or inout)
+            //  but expressions are never pointers, so we need to get
+            //  a pointer to the value the expression returns then we
+            //  can pass that into the function call
+            Type* realType = cast<PointerType>(&parm)->getElementType();
+            Value* val = expression(realType);
+            valptr = Builder.CreateAlloca(realType);
+            // Store val into valptr
+            Builder.CreateStore(val, valptr);
+        }
 
         // Expression should do type conversion.
         // If it's not the right type now, it probably can't be converted.
-        if (parm.getType() != val->getType())
+        if (parm.getType() != valptr->getAllocatedType())
         {
             std::ostringstream stream;
             stream 
@@ -634,7 +650,7 @@ std::vector<Value*> Parser::argument_list(SymTableEntry* proc_entry)
             err_handler->reportError(stream.str(), curr_token.line);
         }
 
-        vec.push_back(val); 
+        vec.push_back(valptr); 
 
         if (token() == TokenType::COMMA) 
         {
@@ -1197,14 +1213,18 @@ Value* Parser::factor(Type* hintType)
     return retval;
 }
 
-Value* Parser::name(Type* hintType)
+Value* Parser::name(Type* hintType, bool load)
 {
     if (P_DEBUG) std::cout << "name" << '\n';
 
     std::string id = require(TokenType::IDENTIFIER).val.string_value;
     SymTableEntry* entry = symtable_manager->resolve_symbol(id);
 
-    Value* val = Builder.CreateLoad(entry->value, id);
+    Value* val;
+    if (load)
+        val = Builder.CreateLoad(entry->value, id);
+    else
+        val = entry->value;
 
     if (token() == TokenType::L_BRACKET)
     {
