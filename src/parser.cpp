@@ -1,6 +1,6 @@
 #include "parser.h"
 
-#define P_DEBUG false
+#define P_DEBUG true
 
 // To assist in error printing 
 const char* TokenTypeStrings[] = 
@@ -94,12 +94,6 @@ void Parser::decl_single_builtin(std::string name, Type* paramtype)
 
 void Parser::decl_builtins()
 {
-    //decl_single_builtin("PUTINTEGER", Type::getInt32Ty(TheContext));
-    //decl_single_builtin("PUTFLOAT", Type::getFloatTy(TheContext));
-    //decl_single_builtin("PUTCHAR", Type::getInt8Ty(TheContext));
-    //decl_single_builtin("PUTSTRING", Type::getInt32Ty(TheContext));
-    //decl_single_builtin("PUTBOOL", Type::getInt1Ty(TheContext));
-
     decl_single_builtin("PUTINTEGER", Type::getInt32PtrTy(TheContext));
     decl_single_builtin("PUTFLOAT", Type::getFloatPtrTy(TheContext));
     decl_single_builtin("PUTCHAR", Type::getInt8PtrTy(TheContext));
@@ -146,9 +140,12 @@ Value* Parser::convert_type(Value* val, Type* required_type)
     }
     else 
     {
-        std::ostringstream stream;
-        stream << "Conflicting types in conversion: ";
-        err_handler->reportError(stream.str(), curr_token.line);
+        TheModule->print(llvm::errs(), nullptr);
+
+        err_handler->reportError("Conflicting types in conversion: req'd:\n", curr_token.line);
+        required_type->print(llvm::errs(), nullptr);
+        err_handler->reportError("got: \n", curr_token.line);
+        val->getType()->print(llvm::errs(), nullptr);
         return nullptr;
     }
 
@@ -292,7 +289,6 @@ void Parser::proc_header()
     // TODO: Handle out/inout types
     for (auto param : params_vec)
     {
-        //Type::getInt32PtrTy(TheContext)
         Type* param_type;
         switch (param->sym_type)
         {
@@ -435,6 +431,7 @@ SymTableEntry* Parser::var_declaration(bool is_global, bool need_alloc)
         break;
     case RS_CHAR:
         entry->sym_type = S_CHAR;
+        allocation_type = Type::getInt8Ty(TheContext);
         break;
     case RS_INTEGER:
         entry->sym_type = S_INTEGER;
@@ -475,8 +472,6 @@ SymTableEntry* Parser::var_declaration(bool is_global, bool need_alloc)
     {
         if (is_global)
         {
-            //TODO
-            //entry->value = 
             GlobalVariable* global = new GlobalVariable(*TheModule, 
                 allocation_type, 
                 false,
@@ -630,7 +625,10 @@ std::vector<Value*> Parser::argument_list(SymTableEntry* proc_entry)
             //  but expressions are never pointers, so we need to get
             //  a pointer to the value the expression returns then we
             //  can pass that into the function call
-            Type* realType = cast<PointerType>(&parm)->getElementType();
+            Type* realType = cast<PointerType>(parm.getType())->getElementType();
+            //realType->print(llvm::errs(), nullptr);
+            //parm.print(llvm::errs(), nullptr);
+            // TODO: realtype is void here for some reason
             Value* val = expression(realType);
             valptr = Builder.CreateAlloca(realType);
             // Store val into valptr
@@ -639,15 +637,13 @@ std::vector<Value*> Parser::argument_list(SymTableEntry* proc_entry)
 
         // Expression should do type conversion.
         // If it's not the right type now, it probably can't be converted.
-        if (parm.getType() != valptr->getAllocatedType())
+        if (parm.getType() != valptr->getType())
         {
-            std::ostringstream stream;
-            stream 
-                << "Procedure call paramater type doesn't match expected type."
-                //<< "\n\tGot:\t\t" << 
-                //<< "\n\tExpected:\t" << 
-                ;
-            err_handler->reportError(stream.str(), curr_token.line);
+            err_handler->reportError("Procedure call paramater type doesn't match expected type. \n\tGot:\t\t", curr_token.line);
+            parm.getType()->print(llvm::errs(), nullptr);
+
+            err_handler->reportError("\n\tExpected:\t", curr_token.line);
+            valptr->getType()->print(llvm::errs(), nullptr);
         }
 
         vec.push_back(valptr); 
@@ -1197,7 +1193,7 @@ Value* Parser::factor(Type* hintType)
         MyValue mval = advance().val;
         retval = ConstantFP::get(TheContext, APFloat(mval.float_value));
     }
-    else if (token() == BOOL)
+    else if (token() == RS_TRUE || token() == RS_FALSE)
     {
         MyValue mval = advance().val;
         retval = ConstantInt::get(TheContext, APInt(1, mval.int_value));

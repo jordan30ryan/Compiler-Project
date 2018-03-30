@@ -1,33 +1,31 @@
 #include <stdio.h>
 
-void PUTINTEGER(int val)
+void PUTINTEGER(int* val)
 {
-    printf("%d", val);
+    printf("%d", *val);
 }
 
-void PUTCHAR(char val)
+void PUTCHAR(char* val)
 {
-    printf("%c", val);
+    printf("%c", *val);
 }
 
-void PUTFLOAT(float val)
+void PUTFLOAT(float* val)
 {
-    printf("%f", val);
+    printf("%f", *val);
 }
 
-void PUTBOOL(int val)
+void PUTBOOL(int* val)
 {
-    printf("%s", val? "true" : "false");
+    printf("%s", *val? "true" : "false");
 }
 
-void PUTSTRING(char* str)
+void PUTSTRING(char** str)
 {
-    printf("%s", str);
+    printf("%s", *str);
 }
 
-int GETINTEGER()
+void GETINTEGER(int* val)
 {
-    int ret;
-    scanf("%d", &ret);
-    return ret;
+    scanf("%d", val);
 }
