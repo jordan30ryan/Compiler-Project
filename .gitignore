@@ -3,3 +3,4 @@ bin/
 *.ll
 *.out
 *.s
+examples/

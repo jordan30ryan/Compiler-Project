@@ -1,6 +1,6 @@
 #include "parser.h"
 
-#define P_DEBUG true
+#define P_DEBUG false
 
 // To assist in error printing 
 const char* TokenTypeStrings[] = 
@@ -423,6 +423,9 @@ SymTableEntry* Parser::var_declaration(bool is_global, bool need_alloc)
     // The llvm type to allocate for this variable
     Type* allocation_type;
 
+    // For initializing globals, if applicable
+    Constant* global_init_constant;
+
     // entry sym_type is reduntant with entry's LLVM value
     switch (typemark)
     {
@@ -432,18 +435,30 @@ SymTableEntry* Parser::var_declaration(bool is_global, bool need_alloc)
     case RS_CHAR:
         entry->sym_type = S_CHAR;
         allocation_type = Type::getInt8Ty(TheContext);
+        if (is_global) 
+            global_init_constant 
+                = ConstantInt::get(TheContext, APInt(8, 0));
         break;
     case RS_INTEGER:
         entry->sym_type = S_INTEGER;
         allocation_type = Type::getInt32Ty(TheContext);
+        if (is_global) 
+            global_init_constant 
+                = ConstantInt::get(TheContext, APInt(32, 0));
         break;
     case RS_FLOAT:
         entry->sym_type = S_FLOAT;
         allocation_type = Type::getFloatTy(TheContext);
+        if (is_global) 
+            global_init_constant 
+                = ConstantFP::get(TheContext, APFloat(0.));
         break;
     case RS_BOOL:
         entry->sym_type = S_BOOL;
         allocation_type = Type::getInt1Ty(TheContext);
+        if (is_global) 
+            global_init_constant 
+                = ConstantInt::get(TheContext, APInt(1, 0));
         break;
     default:
         std::ostringstream stream;
@@ -476,8 +491,10 @@ SymTableEntry* Parser::var_declaration(bool is_global, bool need_alloc)
                 allocation_type, 
                 false,
                 GlobalValue::ExternalLinkage,
-                0,
-                id);
+                global_init_constant,
+                id,
+                nullptr,
+                GlobalValue::ThreadLocalMode::LocalDynamicTLSModel);
             entry->value = global;
 
         }

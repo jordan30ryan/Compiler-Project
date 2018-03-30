@@ -1,4 +1,4 @@
-=== BUILD ===
+BUILD===========================================================================
 
 clang++:
 make
@@ -7,62 +7,55 @@ g++:
 make g
 
 
-=== USAGE ===
+USAGE===========================================================================
 
-./compile.sh <input_file>.src
-./<input_file>.out
+Compile with:
+    ./compile.sh <input_file>.src
+Run with:
+    ./<input_file>.out
 
+FILES===========================================================================
 
-=== FILES ===
+main.cpp        - Handles command line args and each step of the compile process
 
-main.cpp        - Entry point. Handles command line args and each step of the compile process
+errhandler.h    - Handles reporting errors and keeping track of error count
 
 token.h         - Stores custom data types (i.e. Token, TokenType, etc.)
 
-scanner.h       - Scanner class definition
+scanner.h       - Scanner/Lexer
 
-errhandler.h    - handles reporting errors and keeping track of error count
+parser.h        - Parser/Codegen
+
+symboltable.h   - Manages the symbol table
+
+llvm_helper.h   - Handles compilation to LLVM IR or machine code
 
 
-=== NOTES ===
-
-................................................................................
+NOTES===========================================================================
 
 struct TokenType 
 This contains every type of token the scanner can output and the parser uses.
 
 A few notable entries:
 
-TokenType:: - Value - Explanation
+TokenType:: - Means - Explanation
 ---------------------------------
-EQUALS      - ==    - Comparision; "is equal to". Returns a bool
+EQUALS      - ==    - Comparision, or "is equal to". Returns a bool
 ASSIGNMENT  - :=    - Assigns the right side expression to the left variable 
 RS_[...]    - [...] - The reserved word [...]. 
 
 
 ................................................................................
 
+Procedure parameters
 
-Procedure code generation
+To support assignment of variables declared as OUT or INOUT, parameters
+    need to be passed in by reference. To simplify this, the ability to
+    pass parameters in by reference was added. This means that any parameters
+    that are either OUT or INOUT are automatically passed by reference to
+    the LLVM function that corresponds to the original procedure.
 
-This was a problem because procedures occur in the middle of defining other code.
-When defining a program (the outermost scope), multiple procedures can be defined
-    inside the program, and each procedure can have procedures inside it.
-When doing codegen, if we encounter a proc, we need to switch to compiling code for
-    the procedure and not main() or the program's scope; in llvm functions all
-    need to be defined separate, so main can't have procedures inside it.
-
-Current solution is the ostream object used for code generation, codegen_out,
-    can point to multiple streams; it can point to llvm_out, which is an ofstream
-    for the actual .ll file we're outputting, but codegen_out can also point to 
-    one of many ostringstreams, which are used for each procedure. These ostringstreams
-    are appended to a vector and at the end of parsing, they're all appended to the 
-    llvm_out stream (file). Because procedures can be defined in procedures,
-    we also need a stack of streams to keep track of where we left off when we're done
-    defining a procedure. This stack contains all procedure ostringstreams 
-    we're in the middle of, and llvm_out at the bottom, 
-    unless codegen_out is currently llvm_out.
-
+................................................................................
 
 
 
