@@ -52,6 +52,8 @@ void GETFLOAT(float* val)
 void GETBOOL(int* val)
 {
     scanf("%d", val);
+    // Convert to bool; 0 = false, anything else = true
+    *val = *val != 0;
 }
 
 void GETSTRING(char** str)

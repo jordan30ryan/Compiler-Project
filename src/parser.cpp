@@ -495,8 +495,9 @@ SymTableEntry* Parser::var_declaration(bool is_global, bool need_alloc)
                 GlobalValue::ExternalLinkage,
                 global_init_constant,
                 id,
-                nullptr,
-                GlobalValue::ThreadLocalMode::LocalDynamicTLSModel);
+                nullptr
+                //GlobalValue::ThreadLocalMode::LocalDynamicTLSModel
+                );
             entry->value = global;
 
         }
