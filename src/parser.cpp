@@ -174,6 +174,8 @@ void Parser::program()
     Function* main =
         Function::Create(FT, Function::ExternalLinkage, "main", TheModule.get());
 
+    symtable_manager->set_curr_proc_function(main);
+
     // Create basic block of main
     BasicBlock *bb = BasicBlock::Create(TheContext, "entry", main);
     Builder.SetInsertPoint(bb);
@@ -631,26 +633,32 @@ std::vector<Value*> Parser::argument_list(SymTableEntry* proc_entry)
     Function* f = proc_entry->function;
     for (auto& parm : f->args())
     {
-        AllocaInst* valptr;
+        //AllocaInst* valptr;
+        Value* valptr;
+
         //TODO : How to get a pointer for a variable that is to be passed by ref?
-        if (token() == TokenType::IDENTIFIER)
-            valptr = cast<AllocaInst>(name(parm.getType(), false));
-        // Otherwise, parse an expression then convert to a pointer
+        //if (token() == TokenType::IDENTIFIER)
+        //    valptr = cast<AllocaInst>(name(parm.getType(), false));
+
+        // Parse an expression then convert to a pointer
+        // All parameters are pointers, so this is necessary 
+        // Params need to be pointers for pass by ref (out or inout)
+        //  but expressions are never pointers, so we need to get
+        //  a pointer to the value the expression returns then we
+        //  can pass that into the function call
+        Type* realType = cast<PointerType>(parm.getType())->getElementType();
+
+        Value* expr_result = expression(realType);
+        if (auto *ptr = dyn_cast<LoadInst>(expr_result))
+        {
+            // val is a pointer type, just use the raw pointer
+            valptr = ptr->getPointerOperand();
+        }
         else
         {
-            // All parameters are pointers, so this is necessary 
-            // Params need to be pointers for pass by ref (out or inout)
-            //  but expressions are never pointers, so we need to get
-            //  a pointer to the value the expression returns then we
-            //  can pass that into the function call
-            Type* realType = cast<PointerType>(parm.getType())->getElementType();
-            //realType->print(llvm::errs(), nullptr);
-            //parm.print(llvm::errs(), nullptr);
-
-            Value* val = expression(realType);
             valptr = Builder.CreateAlloca(realType);
             // Store val into valptr
-            Builder.CreateStore(val, valptr);
+            Builder.CreateStore(expr_result, valptr);
         }
 
         // Expression should do type conversion.
@@ -688,16 +696,18 @@ void Parser::if_statement()
 
     require(TokenType::RS_THEN);
 
-    // TODO
-    //BasicBlock* then_block = BasicBlock::Create(TheContext, "then", 
-    //BasicBlock* else_block = BasicBlock::Create(TheContext, "after", 
-    //BasicBlock* after_block = BasicBlock::Create(TheContext, "after", 
+    Function* TheFunction = symtable_manager->get_curr_proc_function();
+    
+    BasicBlock* then_block = BasicBlock::Create(TheContext, "then", TheFunction);
+    BasicBlock* else_block = BasicBlock::Create(TheContext, "else");
+    BasicBlock* after_block = BasicBlock::Create(TheContext, "after");
 
-    //Builder.CreateCondBr(condition, then_block, else_block);
+    Builder.CreateCondBr(condition, then_block, else_block);
 
-    //Builder.setInsertPoint(then_block);
+    Builder.SetInsertPoint(then_block);
 
     bool first_stmnt = true;
+    bool explicit_else = false;
     while (true)
     {
         bool valid = statement();
@@ -711,19 +721,33 @@ void Parser::if_statement()
 
         if (token() == TokenType::RS_END) 
         {
-            //*codegen_out << '\t' << "br label %" << after_label << '\n';
+            // Break from then to after block
+            Builder.CreateBr(after_block);
+            if (!explicit_else)
+            {
+                // Connect a dummy else block that just breaks to after block, 
+                //  if there was no explicit else block defined
+                TheFunction->getBasicBlockList().push_back(else_block);
+                Builder.SetInsertPoint(else_block);
+                Builder.CreateBr(after_block);
+            }
             break;
         }
         if (token() == TokenType::RS_ELSE) 
         {
-            //*codegen_out << '\t' << "br label %" << after_label << '\n';
-            //*codegen_out << else_label << ": \n"; // begin else block
+            explicit_else = true;
+            // Break from then to after block
+            Builder.CreateBr(after_block);
+            // Connect else block
+            TheFunction->getBasicBlockList().push_back(else_block);
+            Builder.SetInsertPoint(else_block);
             advance();
             continue;
         }
     }
 
-    //*codegen_out << after_label << ": \n"; // begin after block
+    TheFunction->getBasicBlockList().push_back(after_block);
+    Builder.SetInsertPoint(after_block);
     
     require(TokenType::RS_END);
     require(TokenType::RS_IF);
@@ -783,6 +807,14 @@ void Parser::return_statement()
 {
     if (P_DEBUG) std::cout << "return" << '\n';
     require(TokenType::RS_RETURN);
+
+    Builder.CreateRetVoid();
+
+    // If there are any statements are after the return, they are unreachable
+    BasicBlock* unreachable = BasicBlock::Create(TheContext, "unreachable");
+    symtable_manager->get_curr_proc_function()->getBasicBlockList()
+        .push_back(unreachable);
+    Builder.SetInsertPoint(unreachable);
 }
 
 // hintType - the expected type (e.g. if this is an assignment)
@@ -1222,7 +1254,7 @@ Value* Parser::factor(Type* hintType)
     return retval;
 }
 
-Value* Parser::name(Type* hintType, bool load)
+Value* Parser::name(Type* hintType)
 {
     if (P_DEBUG) std::cout << "name" << '\n';
 
@@ -1232,10 +1264,7 @@ Value* Parser::name(Type* hintType, bool load)
     SymTableEntry* entry = symtable_manager->resolve_symbol(id, true, RS_IN);
 
     Value* val;
-    if (load)
-        val = Builder.CreateLoad(entry->value, id);
-    else
-        val = entry->value;
+    val = Builder.CreateLoad(entry->value, id);
 
     if (token() == TokenType::L_BRACKET)
     {

@@ -1,0 +1,31 @@
+program test_program is
+    integer fibb_result;
+    integer input;
+    procedure fibb(integer n in, integer result out)
+        integer a;
+        integer b;
+    begin
+        if (n < 0) then
+            result := -1;
+            return;
+        end if;
+        if (n == 0) then
+            result := 0;
+            return;
+        end if;
+        if (n == 1) then
+            result := 1;
+            return;
+        end if;
+        
+        fibb(n-1, a);
+        fibb(n-2, b);
+
+        result := a + b;
+    end procedure;
+begin
+    fibb_result := -1234;
+    getinteger(input);
+    fibb(input, fibb_result);
+    putInteger(fibb_result);
+end program.

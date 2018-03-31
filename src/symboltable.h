@@ -108,6 +108,9 @@ public:
     // Set the current procedure's llvm function
     void set_curr_proc_function(llvm::Function* F);
 
+    // Return the current procedure's function, or null
+    llvm::Function* get_curr_proc_function();
+
     // Reset curr_symbols to one scope up (pop from the stack)
     void reset_scope();
 
@@ -130,8 +133,8 @@ private:
     // (essentially, this tracks curr_symbols and curr_proc for inner scopes)
     std::stack<std::pair<SymTable*, SymTableEntry*>> scope_stack;
 
-    // The outermost insert point. Setting insert point to this in the Builder
-    //  will generate code in main of the output IR
-    llvm::IRBuilderBase::InsertPoint global_ip;
+    // The outermost symtable entry, storing info about 
+    //  the outermost (main) function
+    SymTableEntry* global_entry = new SymTableEntry(IDENTIFIER, S_PROCEDURE, "MAIN");
 };
 

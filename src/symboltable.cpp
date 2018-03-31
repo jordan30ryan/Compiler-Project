@@ -207,7 +207,7 @@ llvm::IRBuilderBase::InsertPoint SymbolTableManager::get_insert_point()
     {
         return curr_proc->ip;
     }
-    else return global_ip; 
+    else return global_entry->ip; 
 }
 
 void SymbolTableManager::save_insert_point(llvm::IRBuilderBase::InsertPoint ip)
@@ -215,15 +215,23 @@ void SymbolTableManager::save_insert_point(llvm::IRBuilderBase::InsertPoint ip)
     if (curr_proc != NULL)
         curr_proc->ip = ip;
     else
-        global_ip = ip;
+        global_entry->ip = ip;
 }
 
 void SymbolTableManager::set_curr_proc_function(llvm::Function* F)
 {
     if (curr_proc != NULL)
-    {
         curr_proc->function = F;
-    }
+    else
+        global_entry->function = F;
+}
+
+llvm::Function* SymbolTableManager::get_curr_proc_function()
+{
+    if (curr_proc != NULL)
+        return curr_proc->function;
+    else 
+        return global_entry->function;
 }
 
 void SymbolTableManager::reset_scope()

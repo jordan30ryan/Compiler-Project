@@ -93,6 +93,6 @@ private:
     llvm::Value* term(llvm::Type* hintType);
     llvm::Value* term_pr(llvm::Value* lhs, llvm::Type* hintType);
     llvm::Value* factor(llvm::Type* hintType);
-    llvm::Value* name(llvm::Type* hintType, bool load=true);
+    llvm::Value* name(llvm::Type* hintType);
 };
 
