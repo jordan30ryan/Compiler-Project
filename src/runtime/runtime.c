@@ -7,9 +7,11 @@ void PUTINTEGER(int* val)
     printf("%d", *val);
 }
 
-void PUTCHAR(char* val)
+// Chars are treated as i8
+void PUTCHAR(int* val)
 {
-    printf("%c", *val);
+    char c = (char)*val;
+    printf("%c", c);
 }
 
 void PUTFLOAT(float* val)
@@ -34,9 +36,12 @@ void GETINTEGER(int* val)
     scanf("%d", val);
 }
 
-void GETCHAR(char* val)
+// Chars are treated as i8
+void GETCHAR(int* val)
 {
-    scanf("%c", val);
+    char a;
+    scanf(" %c", &a);
+    *val = (int)a;
 }
 
 void GETFLOAT(float* val)

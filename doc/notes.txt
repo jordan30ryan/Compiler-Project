@@ -798,4 +798,14 @@ link issue.
 
 
 
-param issue: pass by ref is an issue if param type is INas it will get modified if its a pointer.
+param issue: pass by ref is an issue if param type is INas it will get modified if its a pointero
+
+
+================================================================================
+3/31
+
+Need to change .ll output to have globals not be defined locally.
+Changing from locally defined to globally defined doesn't work when using llc to a .s file
+BUT compiling the ll file directly with clang while compiling & linking to runtime seems to work.
+
+

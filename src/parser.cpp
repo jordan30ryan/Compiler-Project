@@ -763,28 +763,29 @@ void Parser::loop_statement()
     assignment_statement(curr_token.val.string_value); 
     require(TokenType::SEMICOLON);
 
-    //std::string start_loop_label = next_label();
-    //std::string loop_stmnts_label = next_label();
-    //std::string after_loop_label = next_label();
+    Function* TheFunction = symtable_manager->get_curr_proc_function();
+    
+    BasicBlock* start_loop_block = BasicBlock::Create(TheContext, "start_loop", TheFunction);
+    BasicBlock* loop_stmnts_block = BasicBlock::Create(TheContext, "loop_stmnts");
+    BasicBlock* after_loop_block = BasicBlock::Create(TheContext, "after_loop");
 
-    // Need to explicitly break from a basic block.
-    //*codegen_out << "\tbr label %" << start_loop_label << '\n'; 
+    // Unconditionally break to the start block of the for
+    Builder.CreateBr(start_loop_block); 
 
-    //*codegen_out << start_loop_label << ": \n"; // begin for block (expr check)
+    // Begin for block(where expression is checked)
+    TheFunction->getBasicBlockList().push_back(start_loop_block);
+    Builder.SetInsertPoint(start_loop_block); 
 
-    // Generate expression code in for block
+    // Check expression
     Value* condition = expression(Type::getInt1Ty(TheContext));
     require(TokenType::R_PAREN);
 
-    //std::string condition_reg = get_val(condition);
+    // Branch to statements or after loop denepding on condition
+    Builder.CreateCondBr(condition, loop_stmnts_block, after_loop_block);
 
-    /*
-    *codegen_out << "\tbr i1 " << condition_reg 
-        << ", label %" << loop_stmnts_label 
-        << ", label %" << after_loop_label << '\n';
-        */
-
-    //*codegen_out << loop_stmnts_label << ": \n"; // begin for statements block
+    // Begin for statements block
+    TheFunction->getBasicBlockList().push_back(loop_stmnts_block);
+    Builder.SetInsertPoint(loop_stmnts_block);
 
     // Consume and generate code for all inner for statements
     while (true)
@@ -794,10 +795,12 @@ void Parser::loop_statement()
         if (token() == TokenType::RS_END) break;
     }
 
-    // End of for statements; jmp to beginning of for
-    //*codegen_out << "\tbr label %" << start_loop_label << '\n';
+    // End of for statements; jmp to beginning of for (to check expr)
+    Builder.CreateBr(start_loop_block);
     
-    //*codegen_out << after_loop_label << ": \n"; // begin block after for
+    // Begin block after for
+    TheFunction->getBasicBlockList().push_back(after_loop_block);
+    Builder.SetInsertPoint(after_loop_block);
 
     require(TokenType::RS_END); // Just to be sure, also to advance the token
     require(TokenType::RS_FOR);

@@ -9,11 +9,11 @@ filename="${1%.*}"
 ./bin/compiler $1 2> "${filename}.ll"
 
 #Ensure llvm > 3.5 is used
-llc "${filename}.ll"
+#llc "${filename}.ll"
 
-clang "${filename}.s" ./src/runtime/runtime.c -o "${filename##*/}.out"
+clang "${filename}.ll" ./src/runtime/runtime.c -o "${filename##*/}.out" -g
 
 #Remove intermediates
 rm "${filename}.ll"
-rm "${filename}.s"
+#rm "${filename}.s"
 
