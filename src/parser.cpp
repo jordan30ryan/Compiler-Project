@@ -286,61 +286,90 @@ void Parser::proc_header()
     std::vector<SymTableEntry*> params_vec 
         = symtable_manager->get_current_proc_params();
 
-    std::vector<Type *> parameters;
+    std::vector<Type*> param_type_vec;
 
-    // TODO: Handle out/inout types
     for (auto param : params_vec)
     {
         Type* param_type;
         switch (param->sym_type)
         {
         case S_INTEGER:
-            param_type = Type::getInt32PtrTy(TheContext);
+            // If param is type IN, pass by val
+            if (param->param_type == RS_IN)
+                param_type = Type::getInt32Ty(TheContext);
+            else
+                param_type = Type::getInt32PtrTy(TheContext);
             break;
         case S_FLOAT:
-            param_type = Type::getFloatPtrTy(TheContext);
+            if (param->param_type == RS_IN)
+                param_type = Type::getFloatTy(TheContext);
+            else
+                param_type = Type::getFloatPtrTy(TheContext);
             break;
         case S_STRING:
             //TODO
-            param_type = Type::getInt8PtrTy(TheContext);
+            if (param->param_type == RS_IN)
+                param_type = Type::getInt8Ty(TheContext);
+            else
+                param_type = Type::getInt8PtrTy(TheContext);
             break;
         case S_CHAR:
-            param_type = Type::getInt8PtrTy(TheContext);
+            if (param->param_type == RS_IN)
+                param_type = Type::getInt8Ty(TheContext);
+            else
+                param_type = Type::getInt8PtrTy(TheContext);
             break;
         case S_BOOL:
-            param_type = Type::getInt1PtrTy(TheContext);
+            if (param->param_type == RS_IN)
+                param_type = Type::getInt1Ty(TheContext);
+            else
+                param_type = Type::getInt1PtrTy(TheContext);
             break;
         default:
             // TODO: Err 
             break;
         }
-        parameters.push_back(param_type);
+        param_type_vec.push_back(param_type);
     }
 
     FunctionType *FT =
-        FunctionType::get(Type::getVoidTy(TheContext), parameters, false);
+        FunctionType::get(Type::getVoidTy(TheContext), param_type_vec, false);
 
     Function* F = Function::Create(FT, 
         Function::ExternalLinkage, 
         proc_id, 
         TheModule.get());
 
+    // Ensure function is valid in IR 
     verifyFunction(*F);
-
-    // Set arg names to their real ids
-    int k = 0;
-    for (auto &arg : F->args())
-    {
-        params_vec[k]->value = &arg;
-        arg.setName(params_vec[k++]->id);
-    }
 
     symtable_manager->set_curr_proc_function(F);
 
-    BasicBlock *bb = BasicBlock::Create(TheContext, "entry", F);
-
     // Set IP to this function's basic block
+    BasicBlock *bb = BasicBlock::Create(TheContext, "entry", F);
     Builder.SetInsertPoint(bb);
+
+    // Set arg names to their real ids
+    // Also, allocate pointers for pass-by-val params
+    int k = 0;
+    for (auto &arg : F->args())
+    {
+        if (isa<PointerType>(arg.getType()))
+        {
+            // arg is already a pointer type
+            params_vec[k]->value = &arg;
+        }
+        else
+        {
+            // arg is a non-pointer type. 
+            // Allocate to pointer to use as a var
+            AllocaInst* ptr_arg = Builder.CreateAlloca(arg.getType());
+            // Store the argument value into the pointer
+            Builder.CreateStore(&arg, ptr_arg);
+            params_vec[k]->value = ptr_arg;
+        }
+        arg.setName(params_vec[k++]->id);
+    }
 }
 
 void Parser::proc_body()
@@ -634,46 +663,48 @@ std::vector<Value*> Parser::argument_list(SymTableEntry* proc_entry)
     Function* f = proc_entry->function;
     for (auto& parm : f->args())
     {
-        //AllocaInst* valptr;
-        Value* valptr;
+        Value* param_val;
 
-        //TODO : How to get a pointer for a variable that is to be passed by ref?
-        //if (token() == TokenType::IDENTIFIER)
-        //    valptr = cast<AllocaInst>(name(parm.getType(), false));
-
-        // Parse an expression then convert to a pointer
-        // All parameters are pointers, so this is necessary 
+        // Parse an expression for a by ref type
         // Params need to be pointers for pass by ref (out or inout)
-        //  but expressions are never pointers, so we need to get
-        //  a pointer to the value the expression returns then we
-        //  can pass that into the function call
-        Type* realType = cast<PointerType>(parm.getType())->getElementType();
+        if (PointerType* ptr_ty = dyn_cast<PointerType>(parm.getType()))
+        {
+            Type* real_type = ptr_ty->getElementType();
 
-        Value* expr_result = expression(realType);
-        if (auto *ptr = dyn_cast<LoadInst>(expr_result))
-        {
-            // val is a pointer type, just use the raw pointer
-            valptr = ptr->getPointerOperand();
+            Value* expr_result = expression(real_type);
+            if (auto *ptr = dyn_cast<LoadInst>(expr_result))
+            {
+                // val is a pointer type, just use the raw pointer (pass by ref)
+                param_val = ptr->getPointerOperand();
+            }
+            else
+            {
+                // Expressions are never pointers, so we need to get
+                //  a pointer to the value the expression returns then we
+                //  can pass that into the function call
+                param_val = Builder.CreateAlloca(real_type);
+                // Store val into valptr
+                Builder.CreateStore(expr_result, param_val);
+            }
         }
-        else
+        else 
         {
-            valptr = Builder.CreateAlloca(realType);
-            // Store val into valptr
-            Builder.CreateStore(expr_result, valptr);
+            // Parameter is an IN type (pass by value)
+            param_val = expression(parm.getType());
         }
 
         // Expression should do type conversion.
         // If it's not the right type now, it probably can't be converted.
-        if (parm.getType() != valptr->getType())
+        if (parm.getType() != param_val->getType())
         {
             err_handler->reportError("Procedure call paramater type doesn't match expected type. \n\tGot:\t\t", curr_token.line);
             parm.getType()->print(llvm::errs(), nullptr);
 
             err_handler->reportError("\n\tExpected:\t", curr_token.line);
-            valptr->getType()->print(llvm::errs(), nullptr);
+            param_val->getType()->print(llvm::errs(), nullptr);
         }
 
-        vec.push_back(valptr); 
+        vec.push_back(param_val); 
 
         if (token() == TokenType::COMMA) 
         {

@@ -809,3 +809,34 @@ Changing from locally defined to globally defined doesn't work when using llc to
 BUT compiling the ll file directly with clang while compiling & linking to runtime seems to work.
 
 
+Need to rethink parameter types. IN paramaters can be reassigned within the function, but 
+their values will change back after the function is exited
+
+
+
+Okay.
+Parameters are now done. 
+
+OUT and INOUT parameters are passed by pointer.
+IN parameters are passed by value, then allocated to a pointer
+    (because all variables are treated as pointers)
+
+The only really "bad" access violation is writing to a readonly parameter.
+    If that parameter is used after being passed, it should not be modified
+    by that function. This is taken care of becuase of the above.
+This leaves reading from writeonly variables, which is only wrong because
+    it is technically undefined behavior (the variable isn't designed to be 
+    read so it may be uninitialized)
+Regardless, all violations are reported by the compiler as warnings.
+
+
+
+
+TODO:
+    arrays
+    strings
+    TESTING
+        all test files
+        negation (negating an int twice. it uses negate() which I'm not sure if this will change a negative int to positive)
+
+

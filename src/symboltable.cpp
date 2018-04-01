@@ -25,9 +25,9 @@ SymTableEntry* SymbolTableManager::resolve_symbol(std::string id, bool check, To
             //  the function using this variable
 
             if (entry->param_type == TokenType::RS_IN && paramIntent == RS_OUT)
-                err_handler->reportError("Cannot write to a read-only parameter");
+                err_handler->reportWarning("Writing to a read-only parameter");
             else if (entry->param_type == TokenType::RS_OUT && paramIntent == RS_IN)
-                err_handler->reportError("Cannot read from a write-only variable");
+                err_handler->reportWarning("Reading from a write-only variable");
             else if (entry->param_type == TokenType::RS_INOUT || paramIntent == TokenType::UNKNOWN)
                 ;// Not an error; it's r/w so all operations are permitted.
         }
