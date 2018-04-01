@@ -8,12 +8,8 @@ filename="${1%.*}"
 #Debug version prints llvm IR to stderr
 ./bin/compiler $1 2> "${filename}.ll"
 
-#Ensure llvm > 3.5 is used
-#llc "${filename}.ll"
-
-clang "${filename}.ll" ./src/runtime/runtime.c -o "${filename##*/}.out" -g
+clang "${filename}.ll" ./src/runtime/runtime.c -o "${filename##*/}.out" -g -O3
 
 #Remove intermediates
 rm "${filename}.ll"
-#rm "${filename}.s"
 
