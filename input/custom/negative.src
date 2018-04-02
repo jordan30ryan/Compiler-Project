@@ -3,21 +3,21 @@ program negative is
     float af;
 begin
     ai := -1;
-    putinteger(ai);
+    putinteger(ai);//-1
     putchar('_');
     ai := -ai;
-    putinteger(ai);
+    putinteger(ai);//+1
     putchar('_');
     ai := - ai;
-    putinteger(ai);
+    putinteger(ai);//-1
     putchar('_');
     af := -1;
-    putfloat(af);
+    putfloat(af);//-1
     putchar('_');
     af := -1.3;
-    putfloat(af);
+    putfloat(af);//-1.3
     putchar('_');
     af := -af;
-    putfloat(af);
+    putfloat(af);//+1.3
     
 end program

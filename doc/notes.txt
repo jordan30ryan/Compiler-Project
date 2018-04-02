@@ -839,4 +839,15 @@ TODO:
         all test files
         negation (negating an int twice. it uses negate() which I'm not sure if this will change a negative int to positive)
 
+================================================================================
+4/2
 
+TODO: 
+    arrays
+    strings
+    error handling 
+        Break on infinite loops
+        Continue parsing but don't generate code
+        No segfaults when LLVM Module is in a bad state (this hapens a lot)
+    testing
+    
