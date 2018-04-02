@@ -5,9 +5,10 @@ set -e
 
 filename="${1%.*}"
 
-#Debug version prints llvm IR to stderr
-./bin/compiler $1 2> "${filename}.ll"
+#Write out .ll file from .src file
+./bin/compiler $1 
 
+#Compile/link the .ll file and runtime
 clang "${filename}.ll" ./src/runtime/runtime.c -o "${filename##*/}.out" -g -O3
 
 #Remove intermediates

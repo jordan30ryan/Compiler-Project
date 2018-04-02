@@ -143,9 +143,9 @@ Value* Parser::convert_type(Value* val, Type* required_type)
         TheModule->print(llvm::errs(), nullptr);
 
         err_handler->reportError("Conflicting types in conversion: req'd:\n", curr_token.line);
-        required_type->print(llvm::errs(), nullptr);
+        required_type->print(llvm::errs(), false);
         err_handler->reportError("got: \n", curr_token.line);
-        val->getType()->print(llvm::errs(), nullptr);
+        val->getType()->print(llvm::errs(), false);
         return nullptr;
     }
 
@@ -698,10 +698,10 @@ std::vector<Value*> Parser::argument_list(SymTableEntry* proc_entry)
         if (parm.getType() != param_val->getType())
         {
             err_handler->reportError("Procedure call paramater type doesn't match expected type. \n\tGot:\t\t", curr_token.line);
-            parm.getType()->print(llvm::errs(), nullptr);
+            parm.getType()->print(llvm::errs(), false);
 
             err_handler->reportError("\n\tExpected:\t", curr_token.line);
-            param_val->getType()->print(llvm::errs(), nullptr);
+            param_val->getType()->print(llvm::errs(), false);
         }
 
         vec.push_back(param_val); 
@@ -1131,6 +1131,7 @@ Value* Parser::relation_pr(Value* lhs, Type* hintType)
                 break;
             default:
                 // This shouldn't happen
+                result = nullptr;
                 break;
         }
 
@@ -1205,7 +1206,7 @@ Value* Parser::term_pr(Value* lhs, Type* hintType)
 Value* Parser::factor(Type* hintType)
 {
     if (P_DEBUG) std::cout << "factor" << '\n';
-    Value* retval;
+    Value* retval = nullptr;
 
     // Token is one of:
     //  (expression), [-] name, [-] float|integer, string, char, bool 

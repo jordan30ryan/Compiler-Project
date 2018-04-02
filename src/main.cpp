@@ -36,8 +36,8 @@ bool compile(char* filename, ErrHandler* err_handler)
     Parser* parser = new Parser(err_handler, sym_manager, scanner, filenamestr);
     std::unique_ptr<llvm::Module> TheModule = parser->parse();
 
-    // Compile the llvm to a file
-    filenamestr.append(".s");
+    // Compile the IR to a file
+    filenamestr.append(".ll");
     compile_to_file(std::move(TheModule), filenamestr);
 
     // Delete instances
@@ -68,9 +68,13 @@ int main(int argc, char** argv)
         compile(argv[k], err_handler);
     }
 
+    if (err_handler->warnings)
+    {
+        std::cerr << err_handler->warnings << " warning(s) reported\n";
+    }
     if (err_handler->errors)
     {
-        std::cerr << err_handler->errors << " error(s) reported during scanner/parser phase.\n";
+        std::cerr << err_handler->errors << " error(s) reported\n";
         return 2;
     }   
 
