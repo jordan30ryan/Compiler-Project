@@ -1,0 +1,9 @@
+program allocarr is
+    integer a[0:5];
+    integer b[-1:2];
+    global integer ga[0:5];
+    global integer gb[-1:2];
+begin
+    a[0] := 1;
+end program.
+

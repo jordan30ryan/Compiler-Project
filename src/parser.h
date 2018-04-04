@@ -70,8 +70,8 @@ private:
 
     SymTableEntry* var_declaration(bool is_global, bool need_alloc=true);
     void type_mark();
-    llvm::Value* lower_bound();
-    llvm::Value* upper_bound();
+    int lower_bound();
+    int upper_bound();
 
     bool statement();
     void identifier_statement();

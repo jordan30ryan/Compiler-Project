@@ -31,6 +31,11 @@ struct SymTableEntry
     // Because these might be used in contexts other than the map
     std::string id;
 
+    // Array bounds (if this variable is an array)
+    bool is_arr = false;
+    int lower_b = 0;
+    int upper_b = 0;
+
     // If this is a procedure, this
     //  stores the proc local symbol table
     SymTable* local_symbols;

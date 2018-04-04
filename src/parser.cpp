@@ -501,17 +501,26 @@ SymTableEntry* Parser::var_declaration(bool is_global, bool need_alloc)
     // Only insert into global symbols if prefixed with RS_GLOBAL (is_global == true)
     if (is_global) symtable_manager->promote_to_global(id, entry);
 
+    Value* arr_size = nullptr;
+
     // Indexing
     if (token() == TokenType::L_BRACKET)
     {
         advance();
 
-        Value* lower = lower_bound();
+        int lower = lower_bound();
         require(TokenType::COLON);
-        Value* upper = upper_bound();
+        int upper = upper_bound();
 
         require(TokenType::R_BRACKET);
-        // TODO: setup the variable as an array
+
+        entry->is_arr = true;
+        entry->lower_b = lower;
+        entry->upper_b = upper;
+
+        int diff = upper - lower;
+        allocation_type = ArrayType::get(allocation_type, diff);
+        arr_size = ConstantInt::get(TheContext, APInt(32, diff));
     }
 
     if (need_alloc)
@@ -527,35 +536,50 @@ SymTableEntry* Parser::var_declaration(bool is_global, bool need_alloc)
                 nullptr
                 //GlobalValue::ThreadLocalMode::LocalDynamicTLSModel
                 );
+            // Everywhere else uses this 
+            global->setAlignment(16);
+            // Initializer (all zero)
+            global->setInitializer(ConstantAggregateZero::get(allocation_type));
             entry->value = global;
-
         }
         else
         {
             // Allocate space for this variable 
             entry->value 
-                = Builder.CreateAlloca(allocation_type, 0, nullptr, id);
+                = Builder.CreateAlloca(allocation_type, nullptr, id);
         }
     }
     return entry;
 }
 
-Value* Parser::lower_bound()
+int Parser::lower_bound()
 {
     if (P_DEBUG) std::cout << "lower_bound" << '\n';
     // Minus allowed in spec now
-    if (token() == TokenType::MINUS) advance();
-    return ConstantInt::get(TheContext, 
-        APInt(32, require(TokenType::INTEGER).val.int_value));
+    bool negative = false;
+    if (token() == TokenType::MINUS) 
+    {
+        negative = true;
+        advance();
+    }
+    int val = require(TokenType::INTEGER).val.int_value;
+    if (negative) val = -val;
+    return val;
 }
 
-Value* Parser::upper_bound()
+int Parser::upper_bound()
 {
     if (P_DEBUG) std::cout << "upper_bound" << '\n';
     // Minus allowed in spec now
-    if (token() == TokenType::MINUS) advance();
-    return ConstantInt::get(TheContext, 
-        APInt(32, require(TokenType::INTEGER).val.int_value));
+    bool negative = false;
+    if (token() == TokenType::MINUS) 
+    {
+        negative = true;
+        advance();
+    }
+    int val = require(TokenType::INTEGER).val.int_value;
+    if (negative) val = -val;
+    return val;
 }
 
 bool Parser::statement()
@@ -598,32 +622,44 @@ void Parser::assignment_statement(std::string identifier)
 {
     if (P_DEBUG) std::cout << "assignment stmnt" << '\n';
 
-    // already have identifier; need to check for indexing first
-    if (token() == TokenType::L_BRACKET)
-    {
-        // TODO: something with indexing
-        advance();
-        Value* idx = expression(Type::getInt32Ty(TheContext));
-        require(TokenType::R_BRACKET);
-    }
-
     // RS_OUT - we want to write to this variable
     SymTableEntry* entry = symtable_manager->resolve_symbol(identifier, true, RS_OUT); 
+
+    // already have identifier; need to check for indexing first
+    Value* idx = nullptr;
+    if (token() == TokenType::L_BRACKET)
+    {
+        advance();
+        Value* raw_idx = expression(Type::getInt32Ty(TheContext));
+        require(TokenType::R_BRACKET);
+        // Normalize index (subtract lower bound from index)
+        idx = Builder.CreateSub(raw_idx, ConstantInt::get(TheContext, 
+            APInt(32, entry->lower_b)));
+    }
+
     Value* lhs = entry->value;
+
+    if (entry->is_arr)
+    {
+        if (idx == nullptr)
+        {
+            // rhs must be an array of the same size as lhs
+        }
+        else
+        {
+            // Index with: [0, idx]
+            const std::vector<Value*> GEPIdxs 
+                {ConstantInt::get(TheContext, APInt(64, 0)), idx};
+            Builder.CreateGEP(lhs, ArrayRef<Value*>(GEPIdxs));
+        }
+    }
+
 
     require(TokenType::ASSIGNMENT);
 
     Type* lhs_stored_type = 
         cast<PointerType>(lhs->getType())->getElementType();
     Value* rhs = expression(lhs_stored_type);
-
-    /* this isn't needed right?
-    // Type conversion
-    if (lhs_stored_type != rhs->getType())
-    {
-        rhs = convert_type(rhs, lhs_stored_type);
-    }
-    */
 
     // Store rhs into lhs(ptr)
     Builder.CreateStore(rhs, lhs);

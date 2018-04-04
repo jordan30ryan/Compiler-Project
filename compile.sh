@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Causes the script to exit if any command returns non zero
 set -e
