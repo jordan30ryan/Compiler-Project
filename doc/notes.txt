@@ -850,4 +850,14 @@ TODO:
         Continue parsing but don't generate code
         No segfaults when LLVM Module is in a bad state (this hapens a lot)
     testing
+
+
+================================================================================
+4/3
+
+Arrays:
+    Shallow or deep copy?
+    How to do other full array operations (+,-,*,/)???
+        ALL operators supported??
+
     
