@@ -48,6 +48,10 @@ int compile_to_file(std::unique_ptr<llvm::Module> TheModule, std::string filenam
     return 0;
 
 
+    // Don't compile to machine code becuase linking to runtime 
+    //  only works with .ll files for some reason
+
+
     /*
     // Initialize the target registry etc.
     InitializeAllTargetInfos();

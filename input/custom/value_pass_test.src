@@ -1,0 +1,7 @@
+program valpass is
+    integer a;
+begin
+    a := 0;
+    putinteger(a);
+    putinteger(0);
+end program

@@ -1,6 +1,6 @@
 program ifprog is
 begin
-    if ('a' == 'a') then
+    if ('b' == 'a') then
         putchar('y');
     else
         putchar('n');

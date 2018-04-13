@@ -9,13 +9,6 @@ const char* TokenTypeStrings[] =
 "RS_IN", "RS_OUT", "RS_INOUT", "RS_PROGRAM", "RS_IS", "RS_BEGIN", "RS_END", "RS_GLOBAL", "RS_PROCEDURE", "RS_STRING", "RS_CHAR", "RS_INTEGER", "RS_FLOAT", "RS_BOOL", "RS_IF", "RS_THEN", "RS_ELSE", "RS_FOR", "RS_RETURN", "RS_TRUE", "RS_FALSE", "RS_NOT"
 };
 
-/*
-const char* SymbolTypeStrings[] = 
-{
-    "S_UNDEFINED", "S_STRING", "i8", "i32", "float", "i1", "S_PROCEDURE"
-};
-*/
-
 // Initialize llvm stuff
 using namespace llvm;
 using namespace llvm::sys;
@@ -106,9 +99,6 @@ void Parser::decl_builtins()
     decl_single_builtin("GETSTRING", Type::getInt32PtrTy(TheContext));
     decl_single_builtin("GETBOOL", Type::getInt1PtrTy(TheContext));
 }
-
-// Get next available register number for use in LLVM
-//std::string Parser::next_reg() { return ""; }
 
 Value* Parser::convert_type(Value* val, Type* required_type)
 {
@@ -326,7 +316,7 @@ void Parser::proc_header()
                 param_type = Type::getInt1PtrTy(TheContext);
             break;
         default:
-            // TODO: Err 
+            err_handler->reportError("Invalid symbol type", curr_token.line);
             break;
         }
         param_type_vec.push_back(param_type);
@@ -650,15 +640,17 @@ void Parser::assignment_statement(std::string identifier)
             // Index with: [0, idx]
             const std::vector<Value*> GEPIdxs 
                 {ConstantInt::get(TheContext, APInt(64, 0)), idx};
-            Builder.CreateGEP(lhs, ArrayRef<Value*>(GEPIdxs));
+            lhs = Builder.CreateGEP(lhs, ArrayRef<Value*>(GEPIdxs));
         }
     }
 
 
-    require(TokenType::ASSIGNMENT);
 
     Type* lhs_stored_type = 
         cast<PointerType>(lhs->getType())->getElementType();
+
+    require(TokenType::ASSIGNMENT);
+
     Value* rhs = expression(lhs_stored_type);
 
     // Store rhs into lhs(ptr)
@@ -1335,17 +1327,28 @@ Value* Parser::name(Type* hintType)
     // RS_IN - we expect to be able to read this variable's value
     SymTableEntry* entry = symtable_manager->resolve_symbol(id, true, RS_IN);
 
-    Value* val;
-    val = Builder.CreateLoad(entry->value, id);
+    Value* val_to_load;
+    val_to_load = entry->value;
 
     if (token() == TokenType::L_BRACKET)
     {
-        // TODO deal with indexing 
         advance();
-        expression(Type::getInt32Ty(TheContext));
+        Value* idxval = expression(Type::getInt32Ty(TheContext));
         require(TokenType::R_BRACKET);
+        // Normalize idxval (subtract the lower bound from the index)
+        Value* normalized_idx 
+            = Builder.CreateSub(idxval, 
+                ConstantInt::get(TheContext, APInt(32, entry->lower_b)));
+
+        // Index var (use GEP, which can then be loaded same as other vars)
+        const std::vector<Value*> GEPIdxs 
+            {ConstantInt::get(TheContext, APInt(64, 0)), normalized_idx};
+        val_to_load = Builder.CreateGEP(val_to_load, ArrayRef<Value*>(GEPIdxs));
     }
 
-    return val;
+    Value* retval;
+    retval = Builder.CreateLoad(val_to_load, id);
+
+    return retval;
 }
 

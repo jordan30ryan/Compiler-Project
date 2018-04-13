@@ -49,10 +49,18 @@ RS_[...]    - [...] - The reserved word [...].
 Procedure parameters
 
 To support assignment of variables declared as OUT or INOUT, parameters
-    need to be passed in by reference. To simplify this, the ability to
-    pass parameters in by reference was added. This means that any parameters
-    that are either OUT or INOUT are automatically passed by reference to
-    the LLVM function that corresponds to the original procedure.
+need to be passed in by reference. To simplify this, the ability to
+pass parameters in by reference was added. This means that any parameters
+that are either OUT or INOUT are automatically passed by reference to
+the LLVM function that corresponds to the original procedure.
+
+If a parameter being passed is already a variable, which is a pointer in IR,
+then its value is retrieved from the LoadInst.
+Expressions never return pointers, but if the expression was a variable, it
+will return a Value of type LoadInst with the loaded variable value; the
+original variable pointer is retrieved from the LoadInst in this case.
+This does create an unnecessary load instruction, but clang will very likely
+optimize those out.
 
 ................................................................................
 
