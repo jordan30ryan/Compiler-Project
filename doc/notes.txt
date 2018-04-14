@@ -861,3 +861,9 @@ Arrays:
         ALL operators supported??
 
     
+================================================================================
+4/14
+
+Strings are weird. Since they're the only native type that are arrays, need
+to put more thought into how they get stored.
+

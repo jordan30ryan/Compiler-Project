@@ -1076,13 +1076,10 @@ Value* Parser::relation_pr(Value* lhs, Type* hintType)
         Value* rhs = term(hintType);
 
         // Type conversion
-        /*
-        // TODO: Strings
         if (lhs->getType() == S_STRING || rhs->getType() == S_STRING)
         {
             err_handler->reportError("Relation operators are not defined for strings.", curr_token.line);
         }
-        */
         if (lhs->getType() != rhs->getType())
         {
             if (lhs->getType() == Type::getFloatTy(TheContext) 
@@ -1114,6 +1111,11 @@ Value* Parser::relation_pr(Value* lhs, Type* hintType)
                     convert_type(lhs, Type::getInt1Ty(TheContext));
                 else 
                     convert_type(rhs, Type::getInt32Ty(TheContext));
+            }
+            else
+            {
+
+                err_handler->reportError("Incompatible types for relational operators", curr_token.line);
             }
         }
 
@@ -1285,6 +1287,17 @@ Value* Parser::factor(Type* hintType)
     else if (token() == STRING)
     {
         MyValue mval = advance().val;
+        Value* val = 
+        GlobalVariable* string = new GlobalVariable(*TheModule, 
+            ArrayTy_0, 
+            true,
+            GlobalValue::ExternalLinkage,
+            0);
+        Constant *string_arr = ConstantDataArray::getString(TheContext, 
+            mval.string_value, true);
+        string->setInitializer(string_arr);
+
+        return string;
         //TODO
     }
     else if (token() == CHAR)

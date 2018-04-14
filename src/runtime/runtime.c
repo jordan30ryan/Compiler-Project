@@ -4,29 +4,29 @@
 
 void PUTINTEGER(int* val)
 {
-    printf("%d", *val);
+    printf("%d\n", *val);
 }
 
 // Chars are treated as i8
 void PUTCHAR(int* val)
 {
     char c = (char)*val;
-    printf("%c", c);
+    printf("%c\n", c);
 }
 
 void PUTFLOAT(float* val)
 {
-    printf("%f", *val);
+    printf("%f\n", *val);
 }
 
 void PUTBOOL(int* val)
 {
-    printf("%s", *val? "true" : "false");
+    printf("%s\n", *val? "true" : "false");
 }
 
 void PUTSTRING(char** str)
 {
-    printf("%s", *str);
+    printf("%s\n", *str);
 }
 
 /* GET */
