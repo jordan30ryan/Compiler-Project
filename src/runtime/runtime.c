@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 /* PUT */
 
@@ -24,9 +25,9 @@ void PUTBOOL(int* val)
     printf("%s\n", *val? "true" : "false");
 }
 
-void PUTSTRING(char** str)
+void PUTSTRING(char* str)
 {
-    printf("%s\n", *str);
+    printf("%s\n", str);
 }
 
 /* GET */
@@ -58,5 +59,6 @@ void GETBOOL(int* val)
 
 void GETSTRING(char** str)
 {
-    scanf("%s", *str);
+    *str = malloc(1024 * sizeof(char));
+    fgets(*str, 1024, stdin);
 }

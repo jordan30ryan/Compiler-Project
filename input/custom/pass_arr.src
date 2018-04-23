@@ -1,0 +1,14 @@
+program test is
+    integer vec[0:2];
+
+    procedure foo(integer v[0:2] in)
+    begin
+        putinteger(v[0]);
+        putinteger(v[1]);
+    end procedure;
+begin
+    vec[0] := 5;
+    vec[1] := 10;
+    putinteger(vec[0]);
+    foo(vec);
+end program.

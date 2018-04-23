@@ -867,3 +867,38 @@ Arrays:
 Strings are weird. Since they're the only native type that are arrays, need
 to put more thought into how they get stored.
 
+
+================================================================================
+4/21
+
+Strings???
+
+================================================================================
+4/22
+
+Strings.
+String variables need to be char**
+Because strings can be reassigned, they need to have one extra level of pointer
+This means they're stored as i8**, which is the same as a global i8*
+    (globals are always pointers)
+And string values are ALWAYS globals
+
+SO I think:
+    String vars
+        ; %str is i8**
+        %str = alloca i8* 
+        store i8* getelementptr ([13 x i8], [13 x i8]* @str, i32 0, i32 0), i8** %str
+    String print 
+        ; %tmp is an i8*
+        %tmp = getelementptr ([13 x i8], [13 x i8]* @str, i32 0, i32 0)
+        putstring(%tmp)
+    String get
+        %str = alloca i8*
+        getstring(%str)
+
+
+
+Arrays have the same issue of parameter passing. (in that it just crashes)
+
+
+

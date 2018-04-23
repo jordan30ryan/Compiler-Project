@@ -1,0 +1,7 @@
+program str is
+    string s;
+begin
+    getstring(s);
+    putstring(s);
+    putstring("hello world");
+end program

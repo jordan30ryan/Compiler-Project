@@ -90,13 +90,13 @@ void Parser::decl_builtins()
     decl_single_builtin("PUTINTEGER", Type::getInt32PtrTy(TheContext));
     decl_single_builtin("PUTFLOAT", Type::getFloatPtrTy(TheContext));
     decl_single_builtin("PUTCHAR", Type::getInt8PtrTy(TheContext));
-    decl_single_builtin("PUTSTRING", Type::getInt32PtrTy(TheContext));
+    decl_single_builtin("PUTSTRING", Type::getInt8PtrTy(TheContext));
     decl_single_builtin("PUTBOOL", Type::getInt1PtrTy(TheContext));
 
     decl_single_builtin("GETINTEGER", Type::getInt32PtrTy(TheContext));
     decl_single_builtin("GETFLOAT", Type::getFloatPtrTy(TheContext));
     decl_single_builtin("GETCHAR", Type::getInt8PtrTy(TheContext));
-    decl_single_builtin("GETSTRING", Type::getInt32PtrTy(TheContext));
+    decl_single_builtin("GETSTRING", Type::getInt8PtrTy(TheContext)->getPointerTo());
     decl_single_builtin("GETBOOL", Type::getInt1PtrTy(TheContext));
 }
 
@@ -128,14 +128,32 @@ Value* Parser::convert_type(Value* val, Type* required_type)
     {
         retval = Builder.CreateZExt(val, required_type);
     }
+    else if (required_type == Type::getInt8PtrTy(TheContext)
+            && val->getType()->getContainedType(0)->getArrayElementType() 
+                == Type::getInt8Ty(TheContext))
+    {
+        // String (required: i8*, actual: [? x i8]*)
+        // Deref to get [? x i8] which is equivalent to i8*
+        const std::vector<Value*> GEPIdxs 
+            {ConstantInt::get(TheContext, APInt(64, 0)), 
+                ConstantInt::get(TheContext, APInt(64, 0))};
+        retval = Builder.CreateGEP(val, ArrayRef<Value*>(GEPIdxs));
+    }
     else 
     {
         TheModule->print(llvm::errs(), nullptr);
 
-        err_handler->reportError("Conflicting types in conversion: req'd:\n", curr_token.line);
-        required_type->print(llvm::errs(), false);
-        err_handler->reportError("got: \n", curr_token.line);
-        val->getType()->print(llvm::errs(), false);
+        std::string str;
+        raw_string_ostream rso(str);
+
+        rso << "Conflicting types in conversion: req'd: ";
+        required_type->print(rso, false);
+        rso << " got: ";
+        val->getType()->print(rso, false);
+
+        rso.flush();
+
+        err_handler->reportError(str, curr_token.line);
         return nullptr;
     }
 
@@ -296,13 +314,6 @@ void Parser::proc_header()
             else
                 param_type = Type::getFloatPtrTy(TheContext);
             break;
-        case S_STRING:
-            //TODO
-            if (param->param_type == RS_IN)
-                param_type = Type::getInt8Ty(TheContext);
-            else
-                param_type = Type::getInt8PtrTy(TheContext);
-            break;
         case S_CHAR:
             if (param->param_type == RS_IN)
                 param_type = Type::getInt8Ty(TheContext);
@@ -315,9 +326,22 @@ void Parser::proc_header()
             else
                 param_type = Type::getInt1PtrTy(TheContext);
             break;
+        case S_STRING:
+            // Strings must be i8* (char*), but if they are 
+            //  OUT or INOUT, then they are i8** because the
+            //  string that is pointed to by the variable can
+            //  be modified, not just the string itself
+            param_type = Type::getInt8PtrTy(TheContext);
+            if (param->param_type != RS_IN)
+                param_type = param_type->getPointerTo();
+            break;
         default:
             err_handler->reportError("Invalid symbol type", curr_token.line);
             break;
+        }
+        if (param->is_arr) 
+        {
+            param_type = ArrayType::get(param_type, param->arr_size);
         }
         param_type_vec.push_back(param_type);
     }
@@ -452,6 +476,11 @@ SymTableEntry* Parser::var_declaration(bool is_global, bool need_alloc)
     {
     case RS_STRING:
         entry->sym_type = S_STRING;
+        // Strings are i8**
+        allocation_type = Type::getInt8PtrTy(TheContext);
+        if (is_global) 
+            global_init_constant
+                = ConstantInt::get(TheContext, APInt(8, 0));
         break;
     case RS_CHAR:
         entry->sym_type = S_CHAR;
@@ -491,8 +520,6 @@ SymTableEntry* Parser::var_declaration(bool is_global, bool need_alloc)
     // Only insert into global symbols if prefixed with RS_GLOBAL (is_global == true)
     if (is_global) symtable_manager->promote_to_global(id, entry);
 
-    Value* arr_size = nullptr;
-
     // Indexing
     if (token() == TokenType::L_BRACKET)
     {
@@ -509,8 +536,9 @@ SymTableEntry* Parser::var_declaration(bool is_global, bool need_alloc)
         entry->upper_b = upper;
 
         int diff = upper - lower;
+        entry->arr_size = diff;
+
         allocation_type = ArrayType::get(allocation_type, diff);
-        arr_size = ConstantInt::get(TheContext, APInt(32, diff));
     }
 
     if (need_alloc)
@@ -523,10 +551,8 @@ SymTableEntry* Parser::var_declaration(bool is_global, bool need_alloc)
                 GlobalValue::ExternalLinkage,
                 global_init_constant,
                 id,
-                nullptr
-                //GlobalValue::ThreadLocalMode::LocalDynamicTLSModel
-                );
-            // Everywhere else uses this 
+                nullptr);
+
             global->setAlignment(16);
             // Initializer (all zero)
             global->setInitializer(ConstantAggregateZero::get(allocation_type));
@@ -644,8 +670,6 @@ void Parser::assignment_statement(std::string identifier)
         }
     }
 
-
-
     Type* lhs_stored_type = 
         cast<PointerType>(lhs->getType())->getElementType();
 
@@ -689,6 +713,7 @@ std::vector<Value*> Parser::argument_list(SymTableEntry* proc_entry)
     std::vector<Value*> vec;
 
     Function* f = proc_entry->function;
+    int parmidx = 0;
     for (auto& parm : f->args())
     {
         Value* param_val;
@@ -697,23 +722,64 @@ std::vector<Value*> Parser::argument_list(SymTableEntry* proc_entry)
         // Params need to be pointers for pass by ref (out or inout)
         if (PointerType* ptr_ty = dyn_cast<PointerType>(parm.getType()))
         {
-            Type* real_type = ptr_ty->getElementType();
+            if (proc_entry->parameters[(parmidx)]->sym_type == S_STRING)
+            {
+                // It's a string. 
+                if (proc_entry->parameters[(parmidx)]->param_type == RS_IN)
+                {
+                    // Pass by value. Expect i8*
+                    param_val = expression(ptr_ty);
+                }
+                else
+                {
+                    // Pass by ref. Expect i8* but convert to i8**
+                    Type* real_type = ptr_ty->getElementType();
 
-            Value* expr_result = expression(real_type);
-            if (auto *ptr = dyn_cast<LoadInst>(expr_result))
-            {
-                // val is a pointer type, just use the raw pointer (pass by ref)
-                param_val = ptr->getPointerOperand();
+                    Value* expr_result = expression(real_type);
+                    if (auto *ptr = dyn_cast<LoadInst>(expr_result))
+                    {
+                        // val is a pointer type, just use the raw pointer (pass by ref)
+                        param_val = ptr->getPointerOperand();
+                    }
+                    else
+                    {
+                        // We need to get
+                        //  a pointer to the value the expression returns then we
+                        //  can pass that into the function call
+                        param_val = Builder.CreateAlloca(real_type);
+                        // Store val into valptr
+                        Builder.CreateStore(expr_result, param_val);
+                    }
+                }
             }
-            else
+            else 
             {
-                // Expressions are never pointers, so we need to get
-                //  a pointer to the value the expression returns then we
-                //  can pass that into the function call
-                param_val = Builder.CreateAlloca(real_type);
-                // Store val into valptr
-                Builder.CreateStore(expr_result, param_val);
+                // The type is a pointer to a basic variable.
+                // This case is for pass by ref 
+                Type* real_type = ptr_ty->getElementType();
+
+                Value* expr_result = expression(real_type);
+                if (auto *ptr = dyn_cast<LoadInst>(expr_result))
+                {
+                    // val is a pointer type, just use the raw pointer (pass by ref)
+                    param_val = ptr->getPointerOperand();
+                }
+                else
+                {
+                    // We need to get
+                    //  a pointer to the value the expression returns then we
+                    //  can pass that into the function call
+                    param_val = Builder.CreateAlloca(real_type);
+                    // Store val into valptr
+                    Builder.CreateStore(expr_result, param_val);
+                }
             }
+        }
+        else if (ArrayType* arr_ty = dyn_cast<ArrayType>(parm.getType()))
+        {
+            // It's an array
+            Value* expr_result = expression(arr_ty);
+            param_val = expr_result;
         }
         else 
         {
@@ -725,14 +791,22 @@ std::vector<Value*> Parser::argument_list(SymTableEntry* proc_entry)
         // If it's not the right type now, it probably can't be converted.
         if (parm.getType() != param_val->getType())
         {
-            err_handler->reportError("Procedure call paramater type doesn't match expected type. \n\tGot:\t\t", curr_token.line);
-            parm.getType()->print(llvm::errs(), false);
 
-            err_handler->reportError("\n\tExpected:\t", curr_token.line);
-            param_val->getType()->print(llvm::errs(), false);
+            std::string str;
+            raw_string_ostream rso(str);
+
+            rso << "Procedure call paramater type doesn't match expected type. req'd: ";
+            parm.getType()->print(rso, false);
+            rso << " got: ";
+            param_val->getType()->print(rso, false);
+
+            rso.flush();
+
+            err_handler->reportError(str, curr_token.line);
         }
 
         vec.push_back(param_val); 
+        parmidx++;
 
         if (token() == TokenType::COMMA) 
         {
@@ -1076,10 +1150,13 @@ Value* Parser::relation_pr(Value* lhs, Type* hintType)
         Value* rhs = term(hintType);
 
         // Type conversion
-        if (lhs->getType() == S_STRING || rhs->getType() == S_STRING)
+        /*
+        //TODO
+        if (lhs->getType() == Type::getInt8Ty(Context) || rhs->getType() == Type::getInt8Ty(Context))
         {
             err_handler->reportError("Relation operators are not defined for strings.", curr_token.line);
         }
+        */
         if (lhs->getType() != rhs->getType())
         {
             if (lhs->getType() == Type::getFloatTy(TheContext) 
@@ -1122,7 +1199,6 @@ Value* Parser::relation_pr(Value* lhs, Type* hintType)
         Value* result;
         switch (op)
         {
-            // TODO: ordered? not ordered? signed? unsigned?
             case LT:
                 if (lhs->getType()->isFloatTy())
                     result = Builder.CreateFCmpOLE(lhs, rhs);
@@ -1287,9 +1363,9 @@ Value* Parser::factor(Type* hintType)
     else if (token() == STRING)
     {
         MyValue mval = advance().val;
-        Value* val = 
+        int len = mval.string_value.length() + 1; // +1 for \0
         GlobalVariable* string = new GlobalVariable(*TheModule, 
-            ArrayTy_0, 
+            ArrayType::get(Type::getInt8Ty(TheContext), len), 
             true,
             GlobalValue::ExternalLinkage,
             0);
@@ -1297,8 +1373,7 @@ Value* Parser::factor(Type* hintType)
             mval.string_value, true);
         string->setInitializer(string_arr);
 
-        return string;
-        //TODO
+        retval = string;
     }
     else if (token() == CHAR)
     {

@@ -33,6 +33,7 @@ struct SymTableEntry
 
     // Array bounds (if this variable is an array)
     bool is_arr = false;
+    int arr_size = 0;
     int lower_b = 0;
     int upper_b = 0;
 
