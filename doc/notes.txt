@@ -901,4 +901,12 @@ SO I think:
 Arrays have the same issue of parameter passing. (in that it just crashes)
 
 
+================================================================================
+4/23
+
+
+Not working:
+test1b
+test1
+test_program_array
 

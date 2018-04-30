@@ -341,7 +341,13 @@ void Parser::proc_header()
         }
         if (param->is_arr) 
         {
-            param_type = ArrayType::get(param_type, param->arr_size);
+            if (PointerType* pointer_ty = dyn_cast<PointerType>(param_type))
+            {
+                param_type = pointer_ty->getElementType();
+                param_type = ArrayType::get(param_type, param->arr_size);
+                param_type = param_type->getPointerTo();
+            }
+            else param_type = ArrayType::get(param_type, param->arr_size);
         }
         param_type_vec.push_back(param_type);
     }
@@ -368,7 +374,7 @@ void Parser::proc_header()
     int k = 0;
     for (auto &arg : F->args())
     {
-        if (isa<PointerType>(arg.getType()))
+        if (isa<PointerType>(arg.getType()) || isa<ArrayType>(arg.getType()))
         {
             // arg is already a pointer type
             params_vec[k]->value = &arg;
@@ -655,6 +661,10 @@ void Parser::assignment_statement(std::string identifier)
 
     Value* lhs = entry->value;
 
+    // Handle pointer for the variable
+    Type* lhs_stored_type = 
+        cast<PointerType>(lhs->getType())->getElementType();
+
     if (entry->is_arr)
     {
         if (idx == nullptr)
@@ -667,11 +677,11 @@ void Parser::assignment_statement(std::string identifier)
             const std::vector<Value*> GEPIdxs 
                 {ConstantInt::get(TheContext, APInt(64, 0)), idx};
             lhs = Builder.CreateGEP(lhs, ArrayRef<Value*>(GEPIdxs));
+
+            lhs_stored_type = 
+                cast<ArrayType>(lhs_stored_type)->getArrayElementType();
         }
     }
-
-    Type* lhs_stored_type = 
-        cast<PointerType>(lhs->getType())->getElementType();
 
     require(TokenType::ASSIGNMENT);
 
@@ -1151,8 +1161,7 @@ Value* Parser::relation_pr(Value* lhs, Type* hintType)
 
         // Type conversion
         /*
-        //TODO
-        if (lhs->getType() == Type::getInt8Ty(Context) || rhs->getType() == Type::getInt8Ty(Context))
+        if (string)
         {
             err_handler->reportError("Relation operators are not defined for strings.", curr_token.line);
         }
@@ -1429,8 +1438,14 @@ Value* Parser::name(Type* hintType)
                 ConstantInt::get(TheContext, APInt(32, entry->lower_b)));
 
         // Index var (use GEP, which can then be loaded same as other vars)
-        const std::vector<Value*> GEPIdxs 
-            {ConstantInt::get(TheContext, APInt(64, 0)), normalized_idx};
+        std::vector<Value*> GEPIdxs;
+        // Need an extra index if we're dealing with a ptr to an array
+        if (isa<PointerType>(val_to_load->getType()))
+            GEPIdxs.push_back(ConstantInt::get(TheContext, APInt(32, 0)));
+        GEPIdxs.push_back(ConstantInt::get(TheContext, APInt(32, 0)));
+        GEPIdxs.push_back(normalized_idx);
+
+        //TheModule->print(llvm::errs(), nullptr);
         val_to_load = Builder.CreateGEP(val_to_load, ArrayRef<Value*>(GEPIdxs));
     }
 

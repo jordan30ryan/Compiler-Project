@@ -1,13 +1,12 @@
 BUILD===========================================================================
 
-clang++ (at least 5.0):
+With clang++ (at least 5.0):
 
     make
 
 
 
-If clang/llvm are installed as clang-5.0/llvm-5.0 
-(seems to be the default on ubuntu):
+If clang/llvm are installed as clang-5.0/llvm-5.0:
 
     make compiler-c5
 
