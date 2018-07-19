@@ -910,3 +910,28 @@ test1b
 test1
 test_program_array
 
+
+================================================================================
+6/13
+
+
+
+WORKING
+iterativeFib.src
+logicals.src
+math.src
+multipleProcs.src
+recursiveFib.src
+source.src
+test2.src
+test_heap.src
+test_program_minimal.src
+
+
+NOT WORKING
+test1b.src (unqualified array ops)
+test1.src (Same as test1b)
+test_program_array.src (array as param)
+vectorOps.src (unqualified array ops)
+
+

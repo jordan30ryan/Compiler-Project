@@ -33,9 +33,7 @@ TokenType Parser::token()
 {
     if (curr_token.type == TokenType::FILE_END)
     {
-        // Possibly desynchronized - this would go on infinitely, terminate here
-        // TODO: LLVM Doesn't support exceptions
-        //throw std::runtime_error("Repeated attempt to get FILE_END token. Terminating due to desynchronization.");
+        // Possibly desynchronized - this would go on infinitely
     }
     if (!curr_token_valid)
     {
@@ -669,7 +667,14 @@ void Parser::assignment_statement(std::string identifier)
     {
         if (idx == nullptr)
         {
-            // rhs must be an array of the same size as lhs
+            // Assignment to entire array
+
+            // expression must be an array of the same size as lhs
+            //TODO
+            /*
+            lhs_stored_type = 
+                ArrayType.get(lhs_stored_type, entry->arr_size);
+                */
         }
         else
         {
@@ -697,7 +702,9 @@ void Parser::proc_call(std::string identifier)
     // already have identifier
 
     // Check symtable for the proc
-    SymTableEntry* proc_entry = symtable_manager->resolve_symbol(identifier, true); 
+    SymTableEntry* proc_entry = 
+        symtable_manager->resolve_symbol(identifier, true); 
+
     if (proc_entry == NULL || proc_entry->sym_type != S_PROCEDURE)
     {
         std::ostringstream stream;
@@ -1160,12 +1167,6 @@ Value* Parser::relation_pr(Value* lhs, Type* hintType)
         Value* rhs = term(hintType);
 
         // Type conversion
-        /*
-        if (string)
-        {
-            err_handler->reportError("Relation operators are not defined for strings.", curr_token.line);
-        }
-        */
         if (lhs->getType() != rhs->getType())
         {
             if (lhs->getType() == Type::getFloatTy(TheContext) 
@@ -1201,7 +1202,8 @@ Value* Parser::relation_pr(Value* lhs, Type* hintType)
             else
             {
 
-                err_handler->reportError("Incompatible types for relational operators", curr_token.line);
+                err_handler->reportError("Incompatible types for relational operators", 
+                    curr_token.line);
             }
         }
 
@@ -1439,14 +1441,21 @@ Value* Parser::name(Type* hintType)
 
         // Index var (use GEP, which can then be loaded same as other vars)
         std::vector<Value*> GEPIdxs;
-        // Need an extra index if we're dealing with a ptr to an array
-        if (isa<PointerType>(val_to_load->getType()))
-            GEPIdxs.push_back(ConstantInt::get(TheContext, APInt(32, 0)));
-        GEPIdxs.push_back(ConstantInt::get(TheContext, APInt(32, 0)));
+        GEPIdxs.push_back(ConstantInt::get(TheContext, APInt(64, 0)));
+        //GEPIdxs.push_back(ConstantInt::get(TheContext, APInt(64, 0)));
         GEPIdxs.push_back(normalized_idx);
 
-        //TheModule->print(llvm::errs(), nullptr);
+        TheModule->print(llvm::errs(), NULL);
         val_to_load = Builder.CreateGEP(val_to_load, ArrayRef<Value*>(GEPIdxs));
+        // THe fuck is this
+        /*
+        else if (isa<ArrayType>(val_to_load->getType()))
+        {
+            std::vector<unsigned> Idxs;
+            Idxs.push_back(normalized_idx);
+            Builder.CreateExtractValue(val_to_load, ArrayRef<unsigned>(Idxs));
+        }
+        */
     }
 
     Value* retval;
