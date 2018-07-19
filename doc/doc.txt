@@ -22,19 +22,21 @@ Run with:
 
 FILES===========================================================================
 
-main.cpp        - Handles command line args and each step of the compile process
+src/
 
-errhandler.h    - Handles reporting errors and keeping track of error count
+    main.cpp        - Handles program args and organizing the compile process
 
-token.h         - Stores custom data types (i.e. Token, TokenType, etc.)
+    errhandler.h    - Handles reporting errors and keeping track of error count
 
-scanner.h       - Scanner/Lexer
+    token.h         - Stores custom data types (i.e. Token, TokenType, etc.)
 
-parser.h        - Parser/Codegen
+    scanner.h       - Scanner/Lexer
 
-symboltable.h   - Manages the symbol table
+    parser.h        - Parser/Codegen
 
-llvm_helper.h   - Handles compilation to LLVM IR or machine code
+    symboltable.h   - Manages the symbol table
+
+    llvm_helper.h   - Handles compilation to LLVM IR or machine code
 
 
 NOTES===========================================================================
@@ -66,12 +68,6 @@ then its value is retrieved from the LoadInst.
 Expressions never return pointers, but if the expression was a variable, it
 will return a Value of type LoadInst with the loaded variable value; the
 original variable pointer is retrieved from the LoadInst in this case.
-This does create an unnecessary load instruction, but clang will very likely
-optimize those out.
 
 ................................................................................
-
-
-
-
 

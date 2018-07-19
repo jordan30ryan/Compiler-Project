@@ -2,16 +2,20 @@
 
 EECE 5183 Project
 
-## BUILD
+## Dependencies
 
+clang (5.0 or above)
+llvm and llvm-config (5.0 or above)
+
+## BUILD
 
 With clang++ (at least 5.0):
 
     make
 
 
-
-If clang/llvm are installed as clang-5.0/llvm-5.0:
+If clang/llvm are installed as clang-5.0/llvm-5.0 
+    (this seems to be default for apt):
 
     make compiler-c5
 
@@ -19,8 +23,8 @@ If clang/llvm are installed as clang-5.0/llvm-5.0:
 
 Compile with:
 
-    compile.sh <input_file>.src
+    ./compile.sh <input_file>.src
 
 Run with:
 
-    <input_file>.out
+    ./<input_file>.out
